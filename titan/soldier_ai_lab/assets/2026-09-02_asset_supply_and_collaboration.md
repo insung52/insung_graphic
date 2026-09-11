@@ -1,6 +1,10 @@
 # 애니메이션 자산 공급 전략과 협업 방식 — 현재 상황 정리
 
-2026-09-02 / 진행중(P0 검증 대기) / 디자인팀이 애니메이션을 0부터 제작할 수 없고 유료 에셋도 배제하기로 하면서, 조달 전략을 "무료 인플레이스 클립 → 리타깃 → `EncodeRootBoneModifier`로 루트모션 합성" 파이프라인으로 재설계. 협업은 P0 검증(1주 타임박스) 후 비교 영상을 들고 공유하는 방식으로 결정.
+2026-09-02 (2026-09-03 정정) / 진행중(P0 검증 대기) / 디자인팀이 애니메이션을 0부터 제작할 수 없고 유료 에셋도 배제하기로 하면서, 조달 전략을 "무료 클립 → 리타깃 → `EncodeRootBoneModifier`로 루트모션 **재배치**" 파이프라인으로 재설계. 협업은 P0 검증(1주 타임박스) 후 비교 영상을 들고 공유하는 방식으로 결정.
+
+> **⚠ 2026-09-03 정정 2건 — 4절을 읽기 전에 14·15절을 먼저 볼 것.**
+> ① **인플레이스 클립을 쓰면 안 된다**(4절의 전제가 틀렸다) → 14절
+> ② `Enable_Warping`은 자체 제작이 아니라 **GASP의 `AM_WarpingAlpha`** 를 쓴다 → 15절
 
 > **폴더 규칙·진행 상황·미해결 항목**: `../CLAUDE.md` · `../CURRENT_STATE.md` · `../OPEN_ITEMS.md`
 >
@@ -114,13 +118,15 @@ class UEncodeRootBoneModifier : public UAnimationModifier
 };
 ```
 
-즉 **"발 두 개와 골반을 가중 평균해서 루트를 만들어라"** 같은 지시를 줄 수 있다. 이게 정확히
-인플레이스 클립을 루트모션 클립으로 바꾸는 작업이다.
+즉 **"발 두 개와 골반을 가중 평균해서 루트를 만들어라"** 같은 지시를 줄 수 있다. ~~이게 정확히
+인플레이스 클립을 루트모션 클립으로 바꾸는 작업이다.~~
+**→ 정정: 14절 참고. 인플레이스 클립에는 쓸 수 없다.**
 
 ### 4.2 파이프라인
 
 ```
-[1] 무료 인플레이스 클립 확보          (Mixamo / ASP / Lyra 등)
+[1] 무료 클립 확보  ★ 인플레이스가 아닌 것 (Mixamo는 "In Place" 체크 해제)
+      → 14절. 인플레이스 클립은 [3]에서 루트모션이 0으로 나온다
       ↓
 [2] IK Retargeter 로 UE5 Manny 스켈레톤으로 리타깃
       → 타깃 스켈레톤에 root 본이 있으므로 root가 생기지만, 아직 원점에 고정
@@ -132,10 +138,11 @@ class UEncodeRootBoneModifier : public UAnimationModifier
       BoneName=foot_l/foot_r, MotionType=TranslationSpeed, bNormalize=true,
       bUseCustomCurveName=true
       ↓
-[4b] Enable_Warping 커브 생성                                              ★ 필수
+[4b] Enable_Warping 커브 생성  →  AM_WarpingAlpha 적용                      ★ 필수
       "동작이 직선인 구간 = 1". 없으면 Orientation Warping이 영원히 안 켜지고
-      방향 커버가 전혀 안 된다. 루트 본 RotationSpeed를 뽑아 임계값 이하를 1로
-      만드는 방식이 유력(P0-4에서 검증)
+      방향 커버가 전혀 안 된다.
+      ~~루트 본 RotationSpeed를 뽑아 임계값 이하를 1로 만드는 방식이 유력~~
+      → 정정: 15절. GASP에 AM_WarpingAlpha 가 이미 있다. 자체 제작 불필요
       ↓
 [5] UFootstepAnimEventsModifier (선택)  →  발소리 싱크마커/노티파이
       ↓
@@ -367,3 +374,73 @@ F1·F2 반영으로 우선순위가 바뀌었다.
 5. **V5** (반나절) — Lyra 라이플 자산 실사
 6. 결과가 좋으면 → **비교 영상 제작 → 공유**
 7. 결과가 나쁘면 → 11절 기준대로 중단, 현행 유지
+
+---
+
+## 14. 정정 (2026-09-03) — 인플레이스 클립을 쓰면 안 된다
+
+**4절의 전제가 틀렸다.** 4.2절 [1]단계가 "무료 **인플레이스** 클립 확보"였고, 4.1절 끝에
+"이게 정확히 인플레이스 클립을 루트모션 클립으로 바꾸는 작업이다"라고 적었다. **아니다.**
+
+### 14.1 근거 — 엔진 소스 [A]
+
+`UE_5.8/Engine/Plugins/Animation/AnimationModifierLibrary/Source/.../Private/EncodeRootBoneModifier.cpp`
+
+```cpp
+:81   WeightedBoneTranslation += Extractor.GetGlobalBoneTransform(AnimKey, Bone).GetTranslation() * Weight;
+:84   WeightedBoneTranslation /= TotalWeight;
+:85   WeightedBoneTranslation.Z = RootTransformNew.GetTranslation().Z;   // Z는 원래 루트 값 유지
+:86   RootTransformNew.SetTranslation(WeightedBoneTranslation);
+...
+:119  ChildBoneNewTransform = Extractor.GetGlobalBoneTransform(AnimKey, Child).GetRelativeTransform(RootTransformNew);
+```
+
+루트 위치를 **지정한 본들의 글로벌 트랜스폼 XY 가중평균**으로 잡고(Z는 건드리지 않는다),
+자식 본을 새 루트 기준으로 재계산해서 **최종 포즈는 그대로 유지**한다.
+
+### 14.2 그래서 무엇이 달라지는가
+
+**이 모디파이어는 이미 몸에 있는 이동을 루트 트랙으로 "옮긴다". 없는 이동을 "만들지" 않는다.**
+
+| 입력 클립 | 골반/발의 XY 순이동 | `EncodeRootBone` 결과 |
+|---|---|---|
+| **인플레이스** | 0 (제자리에서 발만 순환) | 루트가 **제자리에서 흔들리기만** 한다. 루트모션 ≈ 0 |
+| **비(非)인플레이스** | 실제 전진 거리 | 루트가 **실제로 전진**하고 몸이 루트 기준으로 재정렬된다 ✅ |
+
+즉 Mixamo에서 **"In Place" 체크를 해제**하고 받아야 한다. 체크한 채로 받으면 파이프라인
+전체가 조용히 무의미해진다.
+
+### 14.3 왜 위험한가 — 실패가 두 겹으로 숨는다
+
+인플레이스 클립을 넣으면 **에러가 나지 않는다.** 대신:
+
+1. 루트모션이 0 → Motion Matching이 "이 클립은 정지 상태"로 판단 → 이동에 절대 선택되지 않음
+2. 루트 회전/이동 오차가 0 → `AM_WarpingAlpha`가 **전 구간 1**을 뱉음 → [C-27]의 바로 그 함정
+
+**한 번의 체크박스 실수가 두 군데서 조용히 터진다.** 그래서 `../CLAUDE.md` P9(커브 육안 검수)이
+필요하다.
+
+### 14.4 4.3절 "정직한 한계"에 추가
+
+| 한계 | 내용 |
+|---|---|
+| **합성이 아니라 재배치다** | `EncodeRootBone`은 루트모션을 *합성*하는 것이 아니라 *재배치*한다. 4절 제목의 "합성"이라는 표현 자체가 과장이었다. 원본에 이동이 있어야 한다 |
+
+---
+
+## 15. 정정 (2026-09-03) — `Enable_Warping` 은 GASP가 이미 만들어 준다
+
+4.2절 [4b]의 "루트 본 `RotationSpeed`를 뽑아 임계값 이하를 1로" 는 **자체 제작을 전제**한
+추정이었다. 그럴 필요가 없다.
+
+`Content/Blueprints/AnimModifiers/AM_WarpingAlpha` — GASP에 이미 있고, 커브 이름이 정확히
+`Enable_Warping` 이다. 형제로 `AM_OrientationWarpingAlpha`(`Enable_OrientationWarping`),
+`AM_RateWarpingAlpha`(`Enable_PlayRateWarping`)가 있다.
+
+CDO 실측 기본값: `SamplesPerSecond=30`, `BlendInTime=BlendOutTime=0.25`,
+`RotationAngleThreshold=TranslationAngleThreshold=5`, `bInvert=false`.
+
+판정 축도 추정과 달랐다 — `RotationSpeed` 단일 축이 아니라 **루트모션 회전 오차와 이동방향
+각도 오차를 각각** 보고 **둘 다 5° 미만**일 때만 직선으로 본다.
+
+전문: `../prototypes/2026-09-03_enable_warping_curve_generation.md` / **[C-25] 해결**
