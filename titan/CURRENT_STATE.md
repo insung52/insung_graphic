@@ -1,6 +1,7 @@
 # Titan (KADEX 전시회) — 현재 프로젝트 상태
 
-2026-09-01 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
+2026-09-10 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
+(최초 작성 2026-09-01, 이후 항목별로 날짜를 붙여 갱신 중.)
 
 이 문서는 "지금 뭐가 어디까지 되어 있는가"만 다룬다. 문서 자체의 목록(날짜/위치)은
 `DOCS_INDEX.md`, 신규 문서 작성 규칙은 `CLAUDE.md` 참고. 오래되면 이 문서도 다시 갱신 필요 —
@@ -44,33 +45,39 @@ GStreamer+NVDEC). 전송은 TCP interleaved만(UDP 아님). Linux 패키지 빌�
 기반 플러밍, RCWS(투사체 판정 서버 권위화 포함), 아군/적군 전투, UGV 구동, UAV까지 리플리케이션
 완료 + 실기 테스트 통과. 상세: `replication/replication_audit.md` §0-1/§8.
 
-## 5. 인게임 Settings 위젯 — Input 완료, Graphics 조사 단계
+## 5. 인게임 Settings 위젯 — Input 완료, Graphics 동작 확인(게임 레벨 검증만 남음)
 
-Input 탭 완료. Graphics 탭은 구현 전 전수 조사만 끝남(하드코딩 cvar, SceneCapture 설정,
-CCTV 라운드로빈 캡처 등) — 위젯 구현은 아직. 상세: `ui/graphics_settings_analysis.md`,
-`ui/ingame_settings_input_system.md`.
+Input 탭 완료(`ui/ingame_settings_input_system.md`).
 
-**2026-09-03 팔로업 + 실측 완료** — 조사 문서를 그동안의 변경(드론 교체, 프레임 상한 60 도입,
-UGV BP 교체, `SceneCaptureViewParity` 재작성, 문서 재편)에 맞춰 갱신(`§0-2`). 계획 변동 2건:
-**프레임레이트 상한은 물리 결정성 대책이라 탭에서 60 위로 못 올리게 해야 하고**, 창 모드는 실제
-운용이 런치 인자(`-fullscreen`)라 후순위로 내림.
+**Graphics 탭 — 2026-09-03~10 작업. 빌드·WBP까지 완료하고 실제 동작 확인됨**(`Graphics 탭 23개 항목
+생성` 로그, 헤더 5 + 항목 18). 상세는
+`ui/2026-09-10_graphics_settings_implementation.md`(구현·WBP 계약·검증 상태),
+설계 근거는 `ui/graphics_settings_analysis.md`(조사).
 
-**선행 과제였던 cvar 우선순위 실측 완료**(`DumpCVars -csv` 전수 덤프, `§0-2 F`) — `sg.*` 12개가
-전부 `SystemSettingsIni`로 고정돼 있어 **`UGameUserSettings` 품질 변경 경로는 완전 no-op**
-(예상했던 "반만 먹는다"보다 나쁨). 우회하려면 `Scalability::SetQualityLevels(L, bForce=true)`.
-렌더 스케일은 `r.ScreenPercentage` 직접 세팅으로 가능(1순위 후보 유지). VSync는 패키지에선
-정상 동작하나 **에디터에서는 구조적으로 안 먹으니 검증을 패키지에서 할 것**.
-**설계·스코프 확정**(문서 §9/§10): ini 하드코딩을 걷어내되 `sg.*`는 신규 `UTitanGraphicsSettings`
-(`UDeveloperSettings`, `Config/DefaultGame.ini`)로, 개별 Lumen/VSM 튜닝은
-`Config/DefaultScalability.ini`의 프리셋 재정의로 이관. 단일 소스라 **에디터/PIE/패키지가 구조적으로
-일치**한다(엔진 기본은 에디터/게임이 서로 다른 ini를 읽어서 갈라짐).
+핵심은 **런타임 품질 변경을 처음으로 가능하게 만든 것**이다. 그 전까지는 `sg.*` 12개가
+`WindowsEngine.ini`의 `[ConsoleVariables]`(`SetBySystemSettingsIni`)에 박혀 있어서
+`Scalability::SetQualityLevels`(`SetByScalability`)가 조용히 거부됐고, 품질 변경이 **완전 no-op**
+이었다(`DumpCVars` 전수 실측으로 확정). 이관 후 `sg.*`가 전부 `Scalability`로 풀리고 거부 경고가
+12줄 → 2줄로 줄었다(남은 2줄은 VRAM 안전장치라 의도적 고정).
 
-**확정 스코프**: 품질 프리셋 전체(**그림자·GI·반사가 최우선**) + 카메라 캡쳐 주기(CCTV/드론/전장을
-**따로** — 셋의 라운드로빈 메커니즘이 다르고 슬롯 엇갈림이 설계의 일부라 묶으면 깨짐) + AA 방식 +
-VSync. **제외**: 프레임 상한, 창 모드(이미 최적), 레벨 PPV. **보류**: 렌더 스케일·캡쳐 해상도
-(축/RTSP와 얽힘 — 캡쳐 해상도는 축 선택 화면 값과 실제로 겹침).
-가장 비싼 남은 과제는 **"품질 4단계가 각각 뭘 의미하는가" 설계**(§10-5) — 현재 튜닝이 GI Medium/
-Shadow High 단계에 종속돼 있어 단계를 바꾸면 무의미해진다. → 구현 착수 대기.
+- **구조**: 신규 `UTitanGraphicsSettings`(`UDeveloperSettings`, `Config/DefaultGame.ini`)가 단일
+  소스. `defaultconfig`라 P4로 공유되고 패키징에 포함되며, 에디터·게임 양쪽이 같은 파일을 읽어
+  **"에디터는 A인데 패키지는 B"가 구조적으로 불가능**해진다(엔진 기본은 서로 다른 ini를 읽어 갈라짐).
+  개별 Lumen/VSM 튜닝은 `Config/DefaultScalability.ini`의 프리셋 재정의로 이관.
+- **플랫폼 불일치 2건 해소** — 반사 방식이 Windows=SSR / Linux=Lumen으로 갈려 있던 것을 SSR로 통일,
+  Lumen 원거리 GI 튜닝이 Windows 전용 ini라 **Linux 납품 빌드에 아예 빠져 있던 것**을 공통화.
+  → **Linux 패키지 룩 실측 필요**(둘 다 그쪽이 바뀜).
+- **항목**: 헤더 5 + 항목 18. 품질 11축 + 반사/AA 방식 + VSync + **나무 WPO 거리·LOD 배율**(실측
+  곡선 기반 숫자 입력) + 카메라 캡쳐 주기 3종. `sg.FoliageQuality`는 이 레벨에서 효과가 0이라
+  제거(나무가 이미 구워진 ISM이라 `pcg.Quality`가 손댈 대상이 아님).
+- **제외**: 프레임 상한(물리 결정성 대책), 창 모드(운용이 `-fullscreen` 런치 인자), 레벨 PPV.
+  **보류**: 렌더 스케일·캡쳐 해상도(축/RTSP와 얽힘 — 캡쳐 해상도는 축 선택 화면 값과 실제로 겹침).
+- **게임 레벨 대상 탐색 확인 완료** — `New_kadex_0811`에서 `QuadCam 2개 / Drone 1개 / Truck 1개`,
+  `ISM/HISM 50개(인스턴스 94936)`. **50개의 소유 액터를 전수 확인해 전부 숲(`BP_SplineForest_*` 10개
+  + `TreeCollisionProxyBuilder`)임을 검증**했다 — 옛 문서의 `17개/58,400`은 plant 액터가 2→8개로
+  늘기 전 숫자였다(구현 문서 §8-1).
+- **남은 것**: VSync는 패키지에서만 검증 가능, Linux 패키지 룩 확인, 나무 WPO/LOD 값 변경이
+  실측 fps 곡선대로 움직이는지 확인.
 
 ## 6. 레벨 디자인 / UGV 자율주행 — 2026-08-21~27 집중 작업, 대부분 완료
 
@@ -85,6 +92,14 @@ Shadow High 단계에 종속돼 있어 단계를 바꾸면 무의미해진다. �
 `.uasset`을 1,150KB → 67KB로 줄였다 — BP는 이제 컴포넌트와 튜닝 값만 든 데이터 에셋이다.
 **UGV를 코드에서 찾을 때는 `BP_TestPlayerController.UGVVehicleClass`가 유일한 진입점**이고
 지금 `BP_UGV_0901_C`를 가리킨다. 구형 `BP_UGV_Vehicle_new`는 폴백으로 남아 있다.
+
+**2026-09-10 — 서스펜션 승차감 재튜닝.** 레벨의 작은 바위에 콜리전을 켜서 덜컹거림이 생기게 한
+뒤, 09-02의 값(휠 개수 스케일 규칙으로 기계 환산한 것 — 승차감을 본 적 없음)을 승차감 기준으로
+다시 잡았다: `SpringRate 900 → 200`, `SuspensionMaxRaise 12 → 16`, `SuspensionSmoothing 0 → 5`.
+같은 작업에서 **Chaos 5.8이 서스펜션을 힘이 아니라 PBD 컨스트레인트로 푼다**는 구조와,
+**`SpringPreload`·`RollbarScaling`이 엔진에서 동작하지 않는 죽은 값**이라는 사실이 확인됐다.
+서스펜션 값을 만지기 전에 `vehicle/ugv/2026-09-10_ugv_0901_suspension_tuning.md`를 볼 것.
+후속 후보는 같은 문서 §6(댐핑비 인하, 휠 클래스 3분할).
 
 ## 7. 적군/아군 AI·애니메이션·전투 — 2026-08-24~25 대규모 개편 완료, 분대 재편 검증 대기
 
@@ -127,6 +142,15 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
 출렁였다. 겉보기 크기 필터(`MinScreenSizeFraction`)가 화각에 반비례해 교전 광각에서 탐지
 사거리를 800m→45m로 무너뜨리던 버그도 같이 잡았다.
 
+**2026-09-10 — 수동 조종을 비행/짐벌 두 축으로 분리, 실동작 확인 완료.** "드론 짐벌 카메라만
+수동" 모드(`UAVGimbal`)를 추가해, 기체는 자율비행/교전 관측을 계속하면서 사람이 카메라만 돌려볼
+수 있다(전시에서 가장 많이 쓰이는 조합). 기존 토글들과 상호배타. 수동을 놓으면 짐벌이 기본
+자세로 천천히 복귀한다.
+
+같이 잡은 버그 둘: 수동 해제 시 **출발 위치로 576km/h 역주행**(자율비행 재진입을 "지상에서 새로
+시작"으로 오판해 이륙 단계로 들어가던 것)과, 교전 관측 중 수동을 껐다 켜면 **관측 상태를 잃고
+경로 끝까지 주행**하던 것.
+
 남은 것: **2대 PC 실환경 검증**, 그 후 구 `AUAVPawn`/`BP_UAV`와 폴백 분기 제거, 경로 고도
 상향(부감이 선호 범위 -45~-60°를 못 채움 — 교전 반경 R 대비 R×1.0~1.25 위가 기준), 도주 시작
 장면 프레이밍 개선(4단계 대상이 33개라 도주하는 적이 점으로 보임). 상세:
@@ -167,6 +191,11 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
 - **Vulkan ICD 미설치 시 `Failed to load Vulkan Driver`로 실행 불가** — `nvidia-smi`가 되고
   `libvulkan1`이 있어도 발생한다(로더 ≠ 드라이버). 검증은 `vulkaninfo --summary`로 해야 함.
   같은 문서 §7-1.
+- **UGV에 안티롤바가 없다** — `RollbarScaling=0.15`가 설정돼 있지만 엔진이 축을 **휠 클래스
+  기준**으로 묶는 탓에 6륜이 한 축이 되고, 롤바 코드가 `축당 휠 2개`만 처리해서 스킵된다.
+  한쪽 바퀴만 장애물을 타면 차체가 복원력 없이 기운다. 살리려면 휠 클래스를 앞/중/뒤 3개로
+  복제해야 함(`vehicle/ugv/2026-09-10_ugv_0901_suspension_tuning.md` §3/§6).
+- UGV 자율주행 튜닝 오버레이(`UUGVDriveTuningWidget`) — 코드 작성됨, **빌드/실동작 미확인**.
 - Graphics Settings 위젯 실제 구현 미착수(§5).
 - `guide/` 문서 내용 최신화 — 위 §10 2단계, 아직 시작 전.
 - Unreal 에셋/코드 정리(레거시 BP, 폴더 구조) — 별도 세션 착수 예정, 아직 시작 전.

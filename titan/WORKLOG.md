@@ -200,6 +200,85 @@
   없었다), 도주 중인 적 트래킹 제외, 3차 전환을 시나리오 스텝이 아니라 월드 상태로 게이트.
   **실동작 확인 완료.**
 
+## 2026년 9월 10일 — UGV 서스펜션 승차감 튜닝
+
+`New_kadex_0811`의 작은 바위 액터들에 콜리전을 켜서 주행 중 자연스러운 덜컹거림이 생기게 한
+뒤, 충격이 너무 날카로워서 서스펜션을 다시 잡은 작업. 상세:
+`vehicle/ugv/2026-09-10_ugv_0901_suspension_tuning.md`.
+
+- 09-02 교체 때의 서스펜션 값은 **휠 개수 스케일 규칙(× 16/6)으로 기계 환산한 것**이라
+  승차감을 본 적이 없었다. 승차감 기준으로 다시 잡아 `SpringRate 900 → 200`,
+  `SuspensionMaxRaise 12 → 16`, `SuspensionSmoothing 0 → 5`.
+- 구조 규명: **Chaos 5.8은 서스펜션을 힘이 아니라 PBD 컨스트레인트로 푼다.** 차체 운동
+  (`FPBDSuspensionConstraints`)·그립(`FSimpleSuspensionSim`)·바퀴 비주얼(`GetSuspensionOffset`)이
+  서로 다른 코드이고 같은 프로퍼티를 다르게 해석한다. 힘 기반 경로
+  (`AddForceAtPosition`)는 `p.Vehicle.DisableConstraintSuspension` 전용이라 이걸 읽고 판단하면
+  틀린다.
+- **죽은 값 2개 발견.** `SpringPreload`는 솔버에서 주석 처리돼 있어 UE 5.8에서 어떤 경로로도
+  동작하지 않는다(09-02에 180 → 450으로 환산한 건 효과 0). `RollbarScaling`은 축이 **휠 클래스
+  기준**으로 묶이는 탓에 6륜이 한 축이 되고, 롤바 코드가 `축당 휠 2개`만 처리해서 스킵된다 —
+  **이 차량은 안티롤바가 0**이다.
+- `MaxRaise`와 `MaxDrop`이 대칭이 아니라는 것도 확인. 압축량이 `MaxDrop` 기준으로 계산되므로
+  **MaxRaise는 차고를 안 바꾸고 "바닥 치기 전 여유"만 늘린다.** 기존 12cm는 12cm 넘는 돌에서
+  트래블이 끝나 충격이 감쇠 없이 차체로 직행하던 상태였다.
+
+## 2026년 9월 10일 — 드론 수동 조종 비행/짐벌 분리
+
+수동 조종이 `UAV` 하나로 비행+짐벌을 한 덩어리로 넘겨받던 걸 **두 축으로 분리**해, "기체는
+알아서 날고 사람은 카메라만 돌려본다"(`UAVGimbal`)를 가능하게 했다. 전시에서 가장 많이 쓰이는
+조합. 상세: `vehicle/drone/2026-09-10_drone_manual_control_split.md`, 동작 레퍼런스는
+`drone_flight_dev_guide.md` 17절.
+
+- 폰의 수동 상태를 bool → 모드 enum(`None/GimbalOnly/Full`)으로. 효과를 거는 쪽에서는 **비행/짐벌
+  두 질문으로 나눠서** 본다 — 뭉뚱그리면 "짐벌만 수동"이 비행까지 멈춘다.
+- 함정 넷: 짐벌 자동 로직 안에 **비행 몫(관측 지점 선정)이 섞여 있던 것**, 정찰 단계 Idle 가드가
+  교전 중 짐벌 입력을 통째로 버리던 것, **짐벌 버튼이 비행 IMC 안에 있어** "버튼 켰는데 무반응"
+  (상태 기계 로그는 멀쩡해 보여 헤맴), 같은 물리 축을 비행·카메라 두 용도로 쓰며 생긴 극성 왕복.
+- 곁가지로 **수동 해제 시 출발 위치로 576km/h 역주행**하던 버그를 잡았다. 자율비행 재진입을
+  "지상에서 새로 시작"으로 오판해 이륙 단계로 들어가고, 이륙 속도 상한을 스플라인 첫 포인트까지의
+  거리에서 역산한 결과. 교전 관측 중이었을 땐 **관측 상태까지 잃고 경로 끝으로 주행**하는 두 겹
+  버그였다(사용자가 "교전 트래킹에도 같은 버그 있을 수 있다"고 짚어줘서 발견).
+- 짐벌 기본 자세 복귀 추가. 사용자가 먼저 제안한 "스켈레탈 메시 본을 돌려 기본각을 바꾼다"는
+  누적 오프셋 구조상 복귀 자체를 못 만들어서, 코드 파라미터로 넣었다.
+
+## 2026-09-10 — Graphics 설정 탭 구현 (09-03 조사에 이어)
+
+상세: `ui/2026-09-10_graphics_settings_implementation.md`(구현·WBP 계약·함정 8건),
+설계 근거는 `ui/graphics_settings_analysis.md`.
+
+- **런타임 품질 변경이 처음으로 가능해졌다.** 그 전까지 `sg.*` 12개가 `WindowsEngine.ini`의
+  `[ConsoleVariables]`(`SetBySystemSettingsIni`)에 박혀 있어 `Scalability::SetQualityLevels`
+  (`SetByScalability`)가 조용히 거부됐고, 품질 변경이 **완전 no-op**이었다. 신규
+  `UTitanGraphicsSettings`(`UDeveloperSettings`, `Config/DefaultGame.ini`)로 이관 →
+  `DumpCVars sg.` 실측에서 12개 전부 `Scalability`로 풀림, 거부 경고 12줄 → 2줄.
+- **단일 소스 구조** — `defaultconfig`라 P4 공유 + 패키징 포함이고, 에디터·게임이 같은 파일을 읽어
+  "에디터는 A인데 패키지는 B"가 구조적으로 불가능해진다(엔진 기본은 에디터/게임이 서로 다른 ini를
+  읽어서 갈라진다 — `LaunchEngineLoop.cpp:2866`). 개별 Lumen/VSM 튜닝은
+  `Config/DefaultScalability.ini`의 프리셋 재정의로 옮겼다(엔진 프리셋 위에 키 단위 병합이라
+  덮을 키만 적으면 되고, 현재 쓰는 단계만 채우면 기본 화면이 동일하다).
+- **플랫폼 불일치 2건 해소** — 반사 방식이 Windows=SSR(범위 밖 값 3) / Linux=Lumen으로 갈려 있던 것을
+  SSR로 통일, Lumen 원거리 GI 튜닝이 Windows 전용 ini라 **Linux 납품 빌드에 아예 빠져 있던 것**을
+  공통 ini로 올렸다. 둘 다 **Linux 룩이 바뀌므로 패키지 실측 필요.**
+- **초목 품질 항목은 제거** — `sg.FoliageQuality`가 이 레벨에서 효과가 0이었다(나무가 PCG로 뿌린 뒤
+  레벨에 구워진 ISM/HISM이라 `pcg.Quality`는 런타임 생성 PCG만 갱신). 대신 실제로 성능을 지배하는
+  **WPO 거리·LOD 배율을 숫자 입력으로** 노출했다 — 실측 곡선이 있는 연속량이라 4단계로 쪼개면
+  정보를 버린다는 사용자 지적을 받아 드롭다운에서 `USpinBox`로 바꿨다.
+- 겪은 함정 8건은 문서 §7에. 특히 **액터 존재 여부로 UI를 비활성화하면 안 된다**(차량이 없는
+  `kadex_lobby`가 정작 설정을 하라고 만든 화면이라, 거기서만 드론·전장 항목이 비활성이 됐다) /
+  **Overlay에서 Fill은 겹침**(컨트롤이 라벨을 덮거나 쪼그라듦 — HorizontalBox + SizeBox로 재설계) /
+  `UDeveloperSettings` 상속 시 `Build.cs`에 모듈 명시 필요(컴파일은 통과하고 링크에서만 터짐).
+- **빌드·WBP까지 완료, 동작 확인됨** — `WBP_GraphicsRow`를 HorizontalBox + SizeBox로 재구성하고
+  `WBP_GraphicsSectionHeader`를 신설한 뒤 `[GameSettingsWidget] Graphics 탭 23개 항목 생성`
+  (헤더 5 + 항목 18) 로그 확인. 라벨/컨트롤 겹침·잘림 없음.
+- **게임 레벨 대상 탐색까지 확인** — `New_kadex_0811`에서 `QuadCam 2개 / Drone 1개 / Truck 1개`,
+  `ISM/HISM 50개(인스턴스 94936)`. 기대값으로 적어둔 `17개/58,400`과 안 맞아서 **에디터에서 소유
+  액터를 전수 확인**했더니 50개 전부 숲(`BP_SplineForest_*` 10개 + `TreeCollisionProxyBuilder` 1개)
+  소유였다 — 옛 인벤토리가 plant 액터 2개 시절 숫자였고 그 뒤 8개로 늘어난 것. 무관한 인스턴스
+  메시가 섞인 건 없다(프록시 4개는 `bHiddenInGame`이라 렌더 자체를 안 하고, 같이 잡히는 작은 바위
+  2종은 plant PCG가 고사리와 함께 뿌리는 숲 스캐터). 상세: 구현 문서 §8-1.
+- **남은 것**: VSync는 패키지에서만 검증 가능, Linux 패키지 룩 확인, 나무 WPO/LOD 값 변경이
+  실측 fps 곡선대로 움직이는지 확인.
+
 ---
 
 ## 다음에 예정된 것 (이 시점 기준)
@@ -208,7 +287,16 @@
   분기 제거. 2·3차 전투지 추격 스플라인 추가(코드 준비됨, 레벨 작업만).
 - 자체방호축 카메라 버그 2건 **2-PC 실환경 검증**(코드 수정은 완료, 빌드/실측만 남음 —
   `rcws/2026-08-31_selfdefense_camera_shake_bugs.md` §3의 절차).
+- Graphics 탭 **패키지 실측** — VSync는 에디터에서 구조적으로 안 먹으니 패키지에서만 확인 가능,
+  반사 SSR 통일 + Lumen 튜닝 공통화로 바뀐 **Linux 룩 확인**.
 - `guide/` 문서 내용 실제 최신화(2단계, 시스템별로 별도 세션 — 아직 착수 전).
 - 언리얼 에셋/코드 정리(레거시 BP, 폴더 구조) — 별도 세션 착수 예정, 아직 시작 전.
 - LIG 후속 질문 3건 + 회신 2건 발송 대기(`protocol/lig_questions_0816.md`).
 - 레벨 디자인/UGV 자율주행 지속.
+- UGV 서스펜션 후속(우선순위 순): `SuspensionDampingRatio 0.7 → 0.45~0.5`, 휠 클래스 3분할
+  (앞/중/뒤 — `RollbarScaling`을 살리고 축별 스프링 분리를 가능하게 함), `WheelLoadRatio 0.5 →
+  0.3`. `vehicle/ugv/2026-09-10_ugv_0901_suspension_tuning.md` §6.
+- **UGV 자율주행 튜닝 오버레이**(`UUGVDriveTuningWidget` + `FUGVPursuitTelemetry`) — 코드는
+  작성됐으나 **빌드/실동작 미확인**. 콘솔 `UGV.Tuning 1`로 띄우는 구조이고 WBP 없이도
+  동작한다. "부딪히지 않는 선에서 최대 속도"를 잡기 위한 것(거버너 개입 시점, 전방 여유거리,
+  브레이크 횟수 표시).

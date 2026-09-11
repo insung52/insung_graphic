@@ -71,6 +71,24 @@ void DoCameraLook(const FInputActionValue& Value)
 > 감도는 폰 쪽 `GimbalLookRateDegPerSec`(60). 짐벌 본 회전 구현은
 > `vehicle/drone/drone_flight_dev_guide.md` 12절 참고 — 본 회전을 컴포넌트 공간 **절대값**으로
 > 넘겨야 한다는 함정이 있다.
+>
+> **[2026-09-10 갱신] 자체방호축에서 드론 짐벌 조작은 이제 이 `ECameraControlTarget` 경로만으로
+> 결정되지 않는다.** 전시 조작 모델이 "기본 전자동 + 명시적 개입"으로 바뀌면서 별도 토글
+> (`ESelfDefenseManualTarget`)이 생겼고, 드론은 **비행/짐벌을 따로** 넘겨받는다:
+>
+> - `UAV`(전체 수동) — 메인 스틱은 **비행**, 짐벌은 4방향 버튼. 이 모드에선 `DoCameraLook`이
+>   일부러 막힌다(스틱이 비행 담당이므로).
+> - `UAVGimbal`(짐벌만 수동) — 메인 스틱과 4방향 버튼 **둘 다 짐벌**. 기체는 자율비행 계속.
+> - 자동(`None`) — 짐벌은 자동 정찰/교전 프레이밍이 소유. 스틱 입력은 드롭된다.
+>
+> 그리고 `ApplyUAVGimbalPanTiltInput`의 "정찰 단계가 Idle일 때만 통과" 가드는 **수동으로
+> 넘겨받았으면 단계와 무관하게 통과**하도록 완화됐다 — 자동 쪽이 짐벌을 안 건드리니 다툴
+> 상대가 없고, 안 그러면 교전 중에 입력이 통째로 버려진다.
+>
+> 극성 함정도 하나 있다: 같은 물리 축을 비행과 카메라 두 용도로 나눠 쓰는데 원하는 극성이
+> 반대라, `BP_TestPlayerController → Input|Drone`에 전용 반전 노브가 둘 있다
+> (`bInvertDroneManualCyclicPitch` / `bInvertDroneGimbalOnlyTilt`). **IMC에 Negate를
+> 추가·제거하면 둘 다 같이 뒤집어야 한다.** 상세는 드론 가이드 17절.
 
 바인딩은 `Atitan_examplePlayerController::SetupInputComponent`에서 하고(possess
 여부 무관하게 항상 활성 — UGV 수동조작과 같은 이유, 11.3절 참고), `Triggered`

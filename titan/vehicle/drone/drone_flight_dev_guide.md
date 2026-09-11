@@ -1,6 +1,6 @@
 # 드론(UAV) 비행 시스템 레퍼런스
 
-2026-09-05 / 완료 / `ADronePawn`이 구 `AUAVPawn`/`BP_UAV`를 대체 — 로터별 물리 비행 + 자율비행 + 교전 관측 이동 + 짐벌 + 사운드 + 바람 + 탐지단계 + 시나리오 + 리플리케이션 전부 구현·실동작 확인됨.
+2026-09-10 / 완료 / `ADronePawn`이 구 `AUAVPawn`/`BP_UAV`를 대체 — 로터별 물리 비행 + 자율비행 + 교전 관측 이동 + 수동 조종(비행/짐벌 분리) + 짐벌 + 사운드 + 바람 + 탐지단계 + 시나리오 + 리플리케이션 전부 구현·실동작 확인됨.
 
 > **이 문서는 "드론이 지금 어떻게 동작하는가"를 다루는 에버그린 레퍼런스다**(`CLAUDE.md`
 > guide/ 갱신 규칙 참고 — 드론 시스템 동작이 바뀌면 여기를 같이 고칠 것). 시간순 작업 기록은
@@ -1165,7 +1165,135 @@ Warning: [Drone] 경로 '...' 어디에서도 대상 N개 전원 프레이밍 + 
 
 ---
 
-## 17. 작업 이력
+## 17. 수동 조종 (자체방호축)
+
+전시 조작 모델은 **기본 전자동 + 명시적 개입**이다. 사용자가 체크박스를 눌러야 그 대상 하나가
+수동으로 넘어온다 — "스틱을 건드리면 수동" 같은 암묵 전환은 넣지 않는다(조작 실수 한 번에
+시네마틱이 깨지므로).
+
+이 절은 **빙의 없이 PlayerController가 라우팅하는 경로**를 다룬다. `L_DroneTest`에서 드론을
+직접 빙의해 IMC로 조종하는 워크플로(6절)와는 별개이며, 둘 다 살아 있다.
+
+### 17.1 두 축으로 분리 (2026-09-10)
+
+비행과 짐벌은 **따로 넘겨받을 수 있다.** 자율비행은 그대로 두고 카메라만 사람이 돌려보는
+조합이 전시에서 가장 많이 쓰인다.
+
+```cpp
+enum class EDroneManualControlMode { None, GimbalOnly, Full };
+```
+
+| | 자율비행 | 교전 관측 이동 | 짐벌 자동 조준 | 비행 스틱 | 짐벌 입력 |
+|---|---|---|---|---|---|
+| `None` | ● | ● | ● | ✕ | ✕ |
+| `GimbalOnly` | ● | ● | ✕ | ✕ | ● |
+| `Full` | ✕ | ✕ | ✕ | ● | ● |
+
+효과를 거는 쪽에서는 **두 질문으로 나눠서** 본다 — `IsFlightManuallyControlled()`(자율비행을
+놓았나) / `IsGimbalManuallyControlled()`(자동 조준이 짐벌을 안 잡나). 모드 하나로 뭉뚱그려
+판정하면 "짐벌만 수동"이 비행까지 멈춘다.
+
+⚠ **`UpdateGimbalWideEngagementView` 안에는 비행 몫(관측 지점 선정)이 같이 들어 있다.**
+짐벌이 수동이라고 그 함수를 통째로 건너뛰면 카메라만 넘겨받았는데 기체가 제자리에 굳는다.
+함수 중간에서 갈라, 비행 몫은 항상 돌고 짐벌 조준부터 `return`한다.
+
+컨트롤러 쪽 토글은 `ESelfDefenseManualTarget { None, TruckRCWS, UAV, UAVGimbal }` — **상호배타가
+enum이라 공짜**다. 상태는 PlayerController 한 곳에만 있으므로 두 모니터 창이 어긋날 수 없다.
+
+| 조작 | 위치 |
+|---|---|
+| 드론 전체 수동 | `WBP_SelfDefenseMonitor1` → `UAVManualControlCheckBox` |
+| **드론 짐벌만 수동** | 〃 → `UAVGimbalManualControlCheckBox` |
+| 트럭 RCWS 수동 | `WBP_SelfDefenseMonitor2` → `TruckManualControlCheckBox` |
+| 콘솔 | `SetSelfDefenseManual None|TruckRCWS|UAV|UAVGimbal` |
+
+### 17.2 입력 배선
+
+```
+전체 수동(UAV)      메인 스틱 → DroneCyclicAction → 비행
+                    짐벌 4방향 버튼 → 짐벌
+                    (DoCameraLook은 막힘 — 스틱이 비행 담당이므로)
+
+짐벌만(UAVGimbal)   메인 스틱 → DroneCyclicAction → **짐벌로 우회**
+                    짐벌 4방향 버튼 → 짐벌
+                    (비행 입력은 SendDroneManualFlightInput이 버림)
+```
+
+⚠ **짐벌 4방향 버튼이 `DroneManualMappingContext` 안에 있다.** 그래서 짐벌만 수동일 때도 그
+IMC를 올려야 한다 — 안 올리면 액션 자체가 발화하지 않아 "버튼을 켰는데 아무 반응 없음"이 된다
+(상태 기계 로그는 멀쩡해 보여서 헤매기 쉽다). 같이 올라오는 비행 액션은
+`SendDroneManualFlightInput`이 `!= UAV`면 버리므로 기체는 안 움직인다.
+
+그런데 그 IMC를 올리면 우선순위상 메인 스틱을 `DroneCyclicAction`이 가져가 `DoCameraLook`이
+막힌다. 그대로 두면 스틱이 통째로 무반응이라, `SendDroneManualFlightInput`에서 그 스틱을 짐벌
+pan/tilt로 직접 돌린다.
+
+### 17.3 부호 사슬 (극성 함정)
+
+**같은 물리 축을 비행과 카메라 두 용도로 나눠 쓰는데 원하는 극성이 반대다.** BP_Drone의
+`bInvertPitchAxis`로는 못 푼다 — 빙의 경로와 라우팅 경로에 **공통으로** 걸리는데 두 경로가 쓰는
+IMC의 `Axis_1` 극성이 다르다(`IMC_DroneTest`에는 Negate가 있고 `DroneManualMappingContext`에는
+없다). 그래서 라우팅 경로 전용 노브를 둘 뒀다(`BP_TestPlayerController → Input|Drone`).
+
+Extreme 3D Pro `Axis_1`은 **앞으로 밀면 -1**, IMC Negate 없음 기준:
+
+```
+비행 : raw(-1) × bInvertDroneManualCyclicPitch(true=-1) × bInvertPitchAxis(true=-1) = Pitch -1
+       → 기수 내림 = 앞으로 기울기                                              ✔
+짐벌 : raw(-1) × bInvertDroneGimbalOnlyTilt(false=+1) = -1
+       → GimbalPitchDeg 감소 = 아래를 봄                                        ✔
+```
+
+> ⚠ **IMC에 Negate를 추가/제거하면 두 노브를 같이 뒤집어야 한다.** 한쪽만 맞추면 다른 쪽이
+> 반대가 된다(실제로 겪음). IMC 쪽에 Negate를 넣고 두 노브를 다 끄는 게 더 깔끔하다 —
+> 그러면 양쪽 IMC 극성이 같아진다.
+
+### 17.4 자동으로 되돌아갈 때
+
+**⚠ `BeginPathFollowingById`를 그냥 부르면 안 된다.** 수동 진입 때 `Autopilot->Disengage()`로
+`State`가 `Idle`이 되어 있어서 "지상에서 새로 시작"으로 판정되고, **이륙 단계**로 들어가
+스플라인 첫 포인트(=출발 위치)를 목표로 잡는다. 게다가 이륙 속도 상한은 거기까지의 거리를
+`TakeoffDurationSeconds`로 나눠 역산하므로 800m 떨어져 있으면 **576km/h**가 된다.
+
+`bInFlightReroute`를 "자율비행 중이었나"로 판정한 게 원인이다 — 알아야 하는 건 **"지금 공중에
+떠 있나"** 인데 수동 조종이 그 둘을 갈라놓는다.
+
+전용 진입점 `ResumeAfterManualControl(PathId, bResumeObserving)`을 쓴다:
+
+- 이륙 단계를 건너뛰고 현재 위치를 경로에 투영해 **가장 가까운 지점부터** 이어받는다
+- `bResumeObserving`이면 경로 추종이 아니라 **교전 관측**으로 복귀한다. 안 그러면 관측 중에
+  수동으로 넘겼다 놓았을 때 경로 끝(낙하산 자리)까지 주행해 교전을 두고 반대쪽으로 날아간다
+- 그 판정에 쓸 `IsObserving()` 스냅샷은 **`Disengage()` 전에** 잡아야 한다(그 뒤엔 Idle이라
+  알 수 없다)
+
+```
+[Drone] 수동 조종에서 복귀 — 경로 'uavpath2' 진행 640m 지점에서 교전 관측 재개 (이륙 단계 생략).
+```
+
+### 17.5 짐벌 기본 자세 복귀
+
+사용자가 돌려놓은 카메라는 자동으로 넘어가도 그 자리에 굳는다(아무도 안 잡는 구간에서).
+`BP_Drone → Gimbal|Home`이 기본 자세로 천천히 되돌린다.
+
+| 프로퍼티 | 기본값 |
+|---|---|
+| `bAutoReturnGimbalToHome` | true |
+| `GimbalHomeYawDeg` | 0 (짐벌 각도가 기체 상대값이라 0 = 진행 방향) |
+| `GimbalHomePitchDeg` | -15 (온보드 카메라와 동일) |
+| `GimbalHomeReturnRateDegPerSec` | 20 |
+
+**정찰 단계가 `Idle`일 때만 돈다** — 자율비행 중이고 아무도 짐벌을 안 잡는 구간이 거기 하나뿐이다.
+낙하산 관찰이나 교전 프레이밍 중에는 각 단계가 알아서 조준하므로 복귀가 끼어들면 서로 다툰다.
+
+> **스켈레탈 메시의 `CamPitch` 본을 돌려 기본값을 바꾸는 건 이 문제를 안 푼다.**
+> `GimbalYawDeg`/`GimbalPitchDeg`는 바인드 포즈로부터의 **누적 오프셋**이라, 본을 돌리면 "0이
+> 어디냐"만 바뀌고 사용자가 돌려놓은 값은 그대로 남는다(= 복귀가 안 된다). 게다가
+> `Min/MaxGimbalPitchDegrees`·`GimbalScanPitchDegrees`·`GimbalReconMaxPitchDegrees`가 전부
+> rest 기준이라 같이 어긋난다. 기본 각도는 메시가 아니라 이 로직의 파라미터다.
+
+---
+
+## 18. 작업 이력
 
 | 날짜 | 내용 |
 |---|---|
@@ -1184,3 +1312,5 @@ Warning: [Drone] 경로 '...' 어디에서도 대상 N개 전원 프레이밍 + 
 | 2026-09-03 | **교전 관측 이동 신규**(16절) — 스플라인 위 관측 지점 자동 선정. 프레이밍을 TargetDetection에서 분리(13.1-1절) |
 | 2026-09-04 | 유도 루프 구조 결함 3연쇄 해결 — 적분 와인드업 → 축별 안티와인드업 → 속도 피드포워드(16.4절). 겉보기 크기 필터가 탐지를 무력화하던 버그(13.1절) |
 | 2026-09-05 | 기수/카메라 분리(16.5절), 도주 중인 적 트래킹 제외, 3차 전환 상태 게이트. **실동작 확인 완료** |
+| 2026-09-10 | **수동 조종을 비행/짐벌 두 축으로 분리**(17절) — "카메라만 수동" 모드 신설. 짐벌 기본 자세 복귀(17.5절) |
+| 2026-09-10 | 수동 해제 시 출발 위치로 576km/h 역주행하던 버그 + 교전 관측 상태 유실 버그(17.4절). **실동작 확인 완료** |

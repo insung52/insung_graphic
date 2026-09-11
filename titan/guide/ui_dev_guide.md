@@ -491,7 +491,7 @@ Details 패널에서 그대로 지정 가능)와 큰눈금/작은눈금 두께(`
 | 위젯 이름 | 타입 | 설정/비고 |
 |---|---|---|
 | `MinimapImage` | Image | |
-| `MinimapTruckMarker` | VehicleMarkerWidget | `MarkerColor` 자유 지정(예: 주황) |
+| `MinimapTruckMarker` | VehicleMarkerWidget | `MarkerColor` 자유 지정(예: 주황). **회전은 `GetActorRotation().Yaw`를 보정 없이 그대로 쓴다(2026-09-10 확정)** — BP_TitanTruck은 액터 로컬 +X가 실제 시각적 정면이고(메시 에셋의 정면이 로컬 +Y라 `BodyMesh`만 상대 Yaw 270으로 돌려 +X에 맞춰둔 구조, `RCWSMount`/`FrontCineCamera`는 상대 Yaw 0 & 카메라가 +X 310에 위치), 여기에 ±90 오프셋을 넣으면 마커만 돌아간다. 2026-08-02~09-10 사이에는 BP가 반대 구조여서 `TruckMeshForwardOffsetDeg=-90` 보정이 들어가 있었고, BP 재구성 후 그 보정이 중복이 되어 마커가 반시계 90도 돌아가는 버그가 됐음 → 제거. 상세는 [ui/2026-09-10_minimap_truck_marker_heading_offset.md](../ui/2026-09-10_minimap_truck_marker_heading_offset.md) |
 | `MinimapUGVMarker` | VehicleMarkerWidget | `MarkerColor` 자유 지정(예: 파랑). **버그 수정(2026-07-11)**: UGV 메시가 -X를 정면으로 두고 제작되어 있어서(`UGVMovementComponent.cpp`가 같은 이유로 `GetForwardVector()`를 4곳에서 negate함) `GetActorRotation().Yaw`를 그대로 쓰면 마커가 반대 방향을 향했음 — `(-GetActorForwardVector()).Rotation().Yaw`로 수정 |
 | `MinimapUAVMarker` | VehicleMarkerWidget | `MarkerColor` 자유 지정(예: 초록) |
 | `MinimapTruckFOVCone` | RadialAreaWidget | `FillColor`=반투명. **`SpanDegrees` 실시간 연동(2026-07-11)**: 이전엔 WBP에 넣어둔 고정값(트럭 RCWS `CameraFOV` 기본 40)만 썼는데, 줌을 넣으면 실제 FOV가 `CameraFOV/ZoomLevel`로 좁아지므로 매 갱신마다 `URCWSComponent::GetCurrentFOVDegrees()`(신규, `SightCamera->FOVAngle`을 그대로 읽음)로 갱신하도록 변경 — WBP에서 더 이상 `SpanDegrees`를 수동 설정할 필요 없음(코드가 매번 덮어씀) |

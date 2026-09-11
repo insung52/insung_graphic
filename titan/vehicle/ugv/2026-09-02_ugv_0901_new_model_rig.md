@@ -322,9 +322,10 @@ FinalLateralForce = FMath::Abs(SlipAngle) * CorneringStiffness;   // 하중 스�
 | `MaxBrakeTorque` | 50 | **400** | 실주행 확정(계산상 등가는 281) |
 | `MaxHandBrakeTorque` | 100 | **600** | 실주행 확정 |
 | `CorneringStiffness` | 1000 | **2670** | × 16/6 |
-| `SpringRate` / `SpringPreload` | 350 / 180 | **900 / 450** | × 16/6 |
-| `SuspensionMaxRaise` / `MaxDrop` | 10 / 5 | **12 / 12** | 차륜은 트래블이 김 |
+| `SpringRate` / `SpringPreload` | 350 / 180 | **900 / 450** | × 16/6 — ⚠ **09-10에 900 → 200** |
+| `SuspensionMaxRaise` / `MaxDrop` | 10 / 5 | **12 / 12** | 차륜은 트래블이 김 — ⚠ **09-10에 MaxRaise 12 → 16** |
 | `SuspensionDampingRatio` | 0.7 | 0.7 | 유지 |
+| `SuspensionSmoothing` | 0 | 0 | ⚠ **09-10에 0 → 5**(비주얼 전용) |
 | `FrictionForceMultiplier` | 10 | **10 유지** | 총 마찰 불변 — 올리면 과보정 |
 | `bAffectedBySteering` | false | false | 스키드 스티어 |
 | `WheelMass` | 80 | 80 | 유지 |
@@ -341,6 +342,14 @@ FinalLateralForce = FMath::Abs(SlipAngle) * CorneringStiffness;   // 하중 스�
 > **스케일 규칙 요약** — 반지름을 바꾸면 `MaxBrakeTorque`·`MaxHandBrakeTorque`,
 > 휠 개수를 바꾸면 `CorneringStiffness`·`SpringRate`·`SpringPreload`,
 > **둘 다 곱해야 하는 것이 제동 토크**. `FrictionForceMultiplier`는 어느 쪽도 아니다.
+
+> ⚠ **2026-09-10 서스펜션 재튜닝됨** — 위 스케일 규칙은 "구형과 물리적으로 등가"를 맞춘
+> 것이지 승차감을 본 게 아니다. 레벨의 작은 바위에 콜리전을 켠 뒤 승차감 기준으로 다시 잡아서
+> `SpringRate 900 → 200`, `SuspensionMaxRaise 12 → 16`, `SuspensionSmoothing 0 → 5`가 됐다.
+> 같은 작업에서 **`SpringPreload`와 `RollbarScaling`이 UE 5.8에서 동작하지 않는 죽은 값**임도
+> 확인됐다(위 표의 `SpringPreload` 180 → 450 환산은 무해하지만 효과 0). 서스펜션 값을 만질
+> 일이 있으면 **`2026-09-10_ugv_0901_suspension_tuning.md`를 먼저 볼 것** — Chaos가 서스펜션을
+> 힘이 아니라 PBD 컨스트레인트로 푼다는 구조가 거기 정리돼 있다.
 
 ---
 

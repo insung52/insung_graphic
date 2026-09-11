@@ -45,6 +45,13 @@ A/B 테스트는 **PIE 월드 오브젝트**(`/Game/UEDPIE_0_New_kadex_0811.New_
 
 ### SplineForest PCG 액터 5개 / ISM·HISM 17개 / 총 58,400 인스턴스
 
+> ⚠️ **이 인벤토리는 조사 시점(2026-08) 스냅샷이고 지금은 더 늘었다.** 2026-09-10 에디터 전수
+> 확인 결과 **plant 액터가 2개 → 8개**로 늘어 소유 액터 10개 / ISM·HISM 46개, 여기에 이 표에
+> 없던 `TreeCollisionProxyBuilder`의 프록시 ISM 4개를 합쳐 **총 50개 / 94,936 인스턴스**다.
+> 또 plant 액터에는 고사리 3종 외에 **작은 바위 2종**(`SM_Pine_Rock_Small_01/03`)도 같은 PCG로
+> 뿌려져 있다. **개수를 검증 기준으로 쓰지 말 것** — 숲을 더 뿌리면 또 바뀐다.
+> 실측 근거: `ui/2026-09-10_graphics_settings_implementation.md` §8-1.
+
 | 액터 | 인스턴스 | 범위 | PCG 그래프 |
 |---|---|---|---|
 | `BP_SplineForest_tree_C_1` | **38,589** (자작 12,851 + 자작A 12,929 + 소나무 12,809) | **1.65km × 0.9km** | `PCG_SplineForest_tree2` |
