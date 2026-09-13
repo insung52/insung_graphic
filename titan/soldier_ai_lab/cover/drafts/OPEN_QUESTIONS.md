@@ -3,7 +3,7 @@
 2026-09-09 / 결정 대기 / `PLAN.md`를 쓰면서 **내가 결정할 수 없는 것**만 모았다. 기본안과 그렇게 판단한 근거를 붙였다.
 
 > ID는 `OPEN_ITEMS.md`의 `Q` 접두 현재 최대(Q11) 다음부터 할당했다.
-> **측정하면 알 수 있는 것은 여기 없다** — 그건 `PLAN.md` 11절의 `C-60`~`C-69`다.
+> **측정하면 알 수 있는 것은 여기 없다** — 그건 `PLAN.md` 11절의 `C-62`~`C-71`다.
 
 ---
 
@@ -11,13 +11,13 @@
 
 | # | 질문 | 왜 급한가 |
 |---|---|---|
-| **Q12** | GameplayInteractions 플러그인을 쓸 것인가 | 설계 13절이 "안 쓴다"고 했는데 현재 방침(GASP 승계)은 사실상 쓰는 쪽이다. **P0-3 코드의 절반이 이 답에 달려 있다** |
-| **Q13** | `Exposure`를 곱셈 인자로 나눌 것인가 | **실측 결과 인지 쪽 `Exposure`에 엄폐 항이 없다.** 합의 없이 각자 채우면 **엄폐가 두 번 곱해져 조용히 틀린다** |
-| **Q14** | Prone을 범위에 넣을 것인가 | **인지 쪽은 이미 `ExposureProne`을 넣었고 엄폐 쪽은 뺐다.** 두 문서가 다른 전제 위에 있다 |
+| **Q34** | GameplayInteractions 플러그인을 쓸 것인가 | 설계 13절이 "안 쓴다"고 했는데 현재 방침(GASP 승계)은 사실상 쓰는 쪽이다. **P0-3 코드의 절반이 이 답에 달려 있다** |
+| **Q35** | `Exposure`를 곱셈 인자로 나눌 것인가 | **실측 결과 인지 쪽 `Exposure`에 엄폐 항이 없다.** 합의 없이 각자 채우면 **엄폐가 두 번 곱해져 조용히 틀린다** |
+| **Q36** | Prone을 범위에 넣을 것인가 | **인지 쪽은 이미 `ExposureProne`을 넣었고 엄폐 쪽은 뺐다.** 두 문서가 다른 전제 위에 있다 |
 
 ---
 
-## Q12 — GameplayInteractions 플러그인을 쓸 것인가 ★
+## Q34 — GameplayInteractions 플러그인을 쓸 것인가 ★
 
 **충돌하는 두 문서:**
 
@@ -25,7 +25,7 @@
 |---|---|
 | 설계 13절 (채택하지 않은 것) | *"**GameplayInteractions 플러그인** — Experimental. Smart Object 자체는 정식이므로 **서브시스템 API를 직접 쓴다**"* |
 | 설계 10.3절 | *"StateTree와 네이티브 통합된다(GameplayInteractions는 Experimental이므로, 우리는 SmartObject 서브시스템 API를 직접 쓰고 **StateTree 태스크는 자체 작성**한다)"* |
-| `CURRENT_STATE.md` 4절 ⑤ / `upper_layer_plan.md` 13.2절 | *"GASP의 `FindSmartObject → ClaimSlot → UseSmartObject` 흐름을 **그대로 쓰고 탐색만 EQS로 교체**"* |
+| `CURRENT_STATE.md` 4절 ⑤ / `ai/2026-09-02_upper_layer_plan.md` 13.2절 | *"GASP의 `FindSmartObject → ClaimSlot → UseSmartObject` 흐름을 **그대로 쓰고 탐색만 EQS로 교체**"* |
 | `.uproject` 플러그인 감사 (2026-09-03) | `GameplayInteractions` **활성화돼 있다.** `NavCorridor`·`ContextualAnimation`을 끌어온 것도 이 플러그인이다 |
 
 **내가 확인한 사실 [A]**:
@@ -44,7 +44,7 @@
 | 선택지 | 결과 |
 |---|---|
 | **A. 쓴다 (권고)** | P0-3에서 만들 것이 `STT_QueryCoverSlot` 하나로 줄어든다. 진입점 계산(`FindSlotEntranceLocation`)·슬롯 엔트런스 어노테이션을 공짜로 얻는다. **대가**: Experimental API 변경 위험, 5.9 업그레이드 시 재작업 가능 |
-| B. 안 쓴다 | 예약·사용·진입점 태스크를 전부 자체 작성. 설계 13절과 일치. **대가**: `upper_layer_plan.md` 14.3절의 "중첩 상태로 예약 누수가 구조적으로 해결된다"는 관찰이 **우리가 그 구조를 직접 재현했을 때만** 성립하게 된다 |
+| B. 안 쓴다 | 예약·사용·진입점 태스크를 전부 자체 작성. 설계 13절과 일치. **대가**: `ai/2026-09-02_upper_layer_plan.md` 14.3절의 "중첩 상태로 예약 누수가 구조적으로 해결된다"는 관찰이 **우리가 그 구조를 직접 재현했을 때만** 성립하게 된다 |
 | C. 절충 | 엔진 태스크를 쓰되 **얇은 래퍼**로 감싸 교체 지점을 한 곳에 모은다 | 
 
 **기본안: A(쓴다). 단 R6을 먼저 확인할 것** — "쓴다/안 쓴다"를 정하기 전에 **그 태스크들이
@@ -56,12 +56,12 @@
 
 ---
 
-## Q13 — `Exposure`를 **곱셈 인자로 합의**할 것인가 ★
+## Q35 — `Exposure`를 **곱셈 인자로 합의**할 것인가 ★
 
-> **2026-09-09 갱신**: 같은 날 작성된 `drafts/soldier_ai/`를 실제로 읽고 대조했다.
+> **2026-09-09 갱신**: 같은 날 작성된 `ai/drafts/`를 실제로 읽고 대조했다.
 > 이 질문은 "누가 소유하는가"가 아니라 **"엄폐를 두 번 곱하지 않으려면 어떻게 나눌 것인가"** 였다.
 
-**실측한 사실 [A]** — `drafts/soldier_ai/Source/SoldierAIConfig.h:189-212`:
+**실측한 사실 [A]** — `ai/drafts/Source/SoldierAIConfig.h:189-212`:
 
 ```
 인지의 Exposure ← ExposureStanding/Crouched/Prone
@@ -77,7 +77,7 @@
 | 입력 | 자기 상태 | 슬롯 facing + 위협 배치 |
 | 슬롯 없이도 계산되나 | 된다 | 안 된다 |
 
-> ⚠ `upper_layer_plan.md` 5.4절의 *"같은 숫자를 두 시스템이 공유한다 — 이 설계의 경제성"* 은
+> ⚠ `ai/2026-09-02_upper_layer_plan.md` 5.4절의 *"같은 숫자를 두 시스템이 공유한다 — 이 설계의 경제성"* 은
 > **정확히는 틀렸다.** 공유되는 것은 숫자가 아니라 **곱셈 인자 하나**다.
 > 이 구분이 없으면 두 팀이 각자 "엄폐를 반영한 Exposure"를 만들어 **엄폐가 두 번 곱해진다.**
 
@@ -103,10 +103,10 @@ PerceivedExposure = 인지의 Exposure × (1 - CurrentCoverQuality)
 
 ---
 
-## Q14 — Prone(엎드림)을 범위에 넣을 것인가
+## Q36 — Prone(엎드림)을 범위에 넣을 것인가
 
 > ⚠ **2026-09-09: 두 문서가 이미 어긋나 있다.**
-> `drafts/soldier_ai/Source/SoldierAIConfig.h:196`에 **`ExposureProne = 0.35`가 있다** — 인지 쪽은
+> `ai/drafts/Source/SoldierAIConfig.h:196`에 **`ExposureProne = 0.35`가 있다** — 인지 쪽은
 > Prone이 있다는 전제로 썼다. 반면 `PLAN.md` 8.2절 A7은 **애니메이션이 0개**라는 이유로 범위 밖을
 > 권고했다. **한 번에 결정해야 하는 항목이다.**
 
@@ -130,7 +130,7 @@ PerceivedExposure = 인지의 Exposure × (1 - CurrentCoverQuality)
 
 ---
 
-## Q15 — 엄폐 lean을 **애디티브**로 갈 것인가
+## Q37 — 엄폐 lean을 **애디티브**로 갈 것인가
 
 `PLAN.md` 8.3절의 판단이다. **이 프로젝트가 "상하체 분리"를 실패로 못박았기 때문에**(설계 5.5.1절)
 사용자 확인이 필요하다.
@@ -145,26 +145,26 @@ PerceivedExposure = 인지의 Exposure × (1 - CurrentCoverQuality)
 | B. 풀바디 lean 포즈 | 자세(2) × 좌우(2) = **4개** + 전환 |
 | C. 풀바디 + 전환 클립 | **8~12개** |
 
-**기본안: A. 단 [C-68]로 실측 판정한다** — lean 25°/45°에서 총구가 몸을 뚫는지, 견착 포즈가
+**기본안: A. 단 [C-70]로 실측 판정한다** — lean 25°/45°에서 총구가 몸을 뚫는지, 견착 포즈가
 무너지는지. `CLAUDE.md` 3.1절의 규칙(확인하지 않은 것을 세밀하게 쓰지 않는다)에 따라
 **A를 "권고"로만 두고 확정하지 않았다.**
 
 ---
 
-## Q16 — 설계 문서 정정 3건을 반영할 것인가
+## Q38 — 설계 문서 정정 3건을 반영할 것인가
 
 `PLAN.md`를 쓰면서 **설계 문서가 사실과 다르거나 오독을 부르는 곳**을 셋 찾았다.
 `CLAUDE.md` 3.3절 규칙(본문을 고치지 말고 문서 끝에 정정 절을 추가)에 따라 처리하려면 승인이 필요하다.
 
 | # | 위치 | 문제 | 제안 |
 |---|---|---|---|
-| **(가)** | 설계 **10.4절** | *"Generator: 커스텀 Generator — Smart Object 서브시스템 조회"* → **불필요하다.** 엔진에 `UEnvQueryGenerator_SmartObjects`가 있고 `bOnlyClaimable=true`가 예약된 슬롯을 애초에 뺀다 [A, 엔진 소스] | 정정 절 추가. `upper_layer_plan.md` 13.2절도 함께 |
+| **(가)** | 설계 **10.4절** | *"Generator: 커스텀 Generator — Smart Object 서브시스템 조회"* → **불필요하다.** 엔진에 `UEnvQueryGenerator_SmartObjects`가 있고 `bOnlyClaimable=true`가 예약된 슬롯을 애초에 뺀다 [A, 엔진 소스] | 정정 절 추가. `ai/2026-09-02_upper_layer_plan.md` 13.2절도 함께 |
 | **(나)** | 설계 **3.6절 vs 12.2절** | EQS가 3.6절엔 **3ms**, 12.2절엔 **0.7ms**로 적혀 있다. 둘은 "엔진 상한"과 "설계 목표"로 역할이 다른데 그 구분이 문서에 없다 → **3ms를 예산으로 착각하면 애님 2.5ms가 밀린다** | 12.2절 표에 각주 한 줄 |
-| **(다)** | 설계 **13절** | GameplayInteractions "채택 안 함"이 현재 방침과 어긋날 수 있다 | **Q12 결정 후** 정정 |
+| **(다)** | 설계 **13절** | GameplayInteractions "채택 안 함"이 현재 방침과 어긋날 수 있다 | **Q34 결정 후** 정정 |
 
 ---
 
-## Q17 — P0-3의 범위를 어디까지로 볼 것인가
+## Q39 — P0-3의 범위를 어디까지로 볼 것인가
 
 `CURRENT_STATE.md`는 P0-3을 **1~2일**로 잡았다. `PLAN.md` 10절의 단계 중 어디까지가 그 1~2일인가.
 
@@ -188,11 +188,11 @@ PerceivedExposure = 인지의 Exposure × (1 - CurrentCoverQuality)
 
 ---
 
-## Q18 — 분대 soft-claim의 슬롯 식별자 타입
+## Q40 — 분대 soft-claim의 슬롯 식별자 타입
 
 분대 초안이 **나에게 명시적으로 물어본 것**이다 —
-`drafts/squad/Source/Squad/SquadTypes.h:288`:
-> `/** SmartObject 슬롯 식별자. 실제 타입은 엄폐 담당자의 스키마에 맞춘다 [Q-12 인접] */`
+`squad/drafts/Source/Squad/SquadTypes.h:288`:
+> `/** SmartObject 슬롯 식별자. 실제 타입은 엄폐 담당자의 스키마에 맞춘다 [Q23 인접] */`
 > `FGuid SlotId;`
 
 **답: `FSmartObjectSlotHandle`로 통일한다** (`PLAN.md` 12.3절에 근거 표).
@@ -210,10 +210,10 @@ PerceivedExposure = 인지의 Exposure × (1 - CurrentCoverQuality)
 
 | Q | 결정되면 |
 |---|---|
-| Q12 | `PLAN.md` 6.3절 신규 클래스 목록이 확정된다. 설계 13절 정정 여부가 정해진다 |
-| Q13 | `PerceivedExposure = Exposure × (1 - CurrentCoverQuality)` 한 줄을 인지 쪽에 반영 |
-| Q14 | `ESoldierCoverHeight`에 `Prone` 추가 여부, 베이크 `ProbeHeightsCm` 기본값 |
-| Q15 | 애니메이션 조달 요청서에 A1의 형식(애디티브/풀바디)을 적을 수 있다 |
-| Q16 | 설계 문서에 정정 절 3개 추가 + `OPEN_ITEMS.md` 갱신 |
-| Q17 | P0-3 작업 목록 확정 |
-| Q18 | 분대 `FSlotSoftClaim::SlotId` 타입 교체 (1줄) |
+| Q34 | `PLAN.md` 6.3절 신규 클래스 목록이 확정된다. 설계 13절 정정 여부가 정해진다 |
+| Q35 | `PerceivedExposure = Exposure × (1 - CurrentCoverQuality)` 한 줄을 인지 쪽에 반영 |
+| Q36 | `ESoldierCoverHeight`에 `Prone` 추가 여부, 베이크 `ProbeHeightsCm` 기본값 |
+| Q37 | 애니메이션 조달 요청서에 A1의 형식(애디티브/풀바디)을 적을 수 있다 |
+| Q38 | 설계 문서에 정정 절 3개 추가 + `OPEN_ITEMS.md` 갱신 |
+| Q39 | P0-3 작업 목록 확정 |
+| Q40 | 분대 `FSlotSoftClaim::SlotId` 타입 교체 (1줄) |

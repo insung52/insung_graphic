@@ -36,7 +36,7 @@ RootTransformNew.SetRotation(Rotator.Quaternion());
 
 ## 3. 실측 — `USoldierRootFacingModifier`
 
-추측으로 축을 바꾸지 않고 **먼저 쟀다**(`../CLAUDE.md` P10).
+추측으로 축을 바꾸지 않고 **먼저 쟀다**(`CLAUDE.md` P10).
 `Source/SoldierLabEditor/AnimModifiers/SoldierRootFacingModifier.{h,cpp}`
 
 ```
@@ -86,7 +86,7 @@ RemoveConstantOffset      루트 yaw의 모양은 두고 평균 오프셋만 제
 | 회전 클립 `net yaw 88.8°` | **회전량**뿐. 절대 facing이 아니다 |
 
 **"루트가 바라보는 방향 = 진행 방향인가"는 한 번도 재지 않았다.** 워핑이 정확히 그 값을 기준으로 삼는데도.
-`../CLAUDE.md` 3.1절의 실패 패턴이 다시 나온 것이다 — 확인하지 않은 것을 확정으로 적었다.
+`CLAUDE.md` 3.1절의 실패 패턴이 다시 나온 것이다 — 확인하지 않은 것을 확정으로 적었다.
 
 ## 5. 반입 파이프라인이 바뀐다
 

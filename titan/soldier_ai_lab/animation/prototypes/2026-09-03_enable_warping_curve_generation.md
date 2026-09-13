@@ -2,8 +2,8 @@
 
 2026-09-03 / **성공 (문서 검증 단계)** / GASP가 이미 생성 모디파이어를 갖고 있다. 자체 제작 불필요.
 
-관련 항목: **[C-25]** / 관련 문서: `../animation/2026-09-02_pose_pipeline_spec.md` 11절 ·
-`../assets/2026-09-02_asset_supply_and_collaboration.md` 4b · `../animation/2026-09-02_gasp_abp_analysis.md` 16절
+관련 항목: **[C-25]** / 관련 문서: `animation/2026-09-02_pose_pipeline_spec.md` 11절 ·
+`assets/2026-09-02_asset_supply_and_collaboration.md` 4b · `animation/2026-09-02_gasp_abp_analysis.md` 16절
 
 > **범위 주의**: 이 기록은 **"생성 수단이 존재하는가"** 까지다(에셋 실측·[A]).
 > **"우리가 반입한 Mixamo 클립에서 쓸 만한 커브가 나오는가"** 는 아직 안 봤다 → 6절 [C-26].
@@ -13,7 +13,7 @@
 ## 1. 무엇을 확인하려 했나
 
 `Enable_Warping` 커브가 없으면 Orientation Warping의 `Alpha`가 영원히 0이라 방향 커버가 0이 된다
-(`gasp_abp_analysis.md` 16절). 설계에서는 **"루트 본 `RotationSpeed`를 `UMotionExtractorModifier`로
+(`animation/2026-09-02_gasp_abp_analysis.md` 16절). 설계에서는 **"루트 본 `RotationSpeed`를 `UMotionExtractorModifier`로
 뽑아 임계값 이하를 1로 만드는 방식이 유력"** 이라고만 적어 두고 미검증으로 남겼다.
 
 **판정 기준**: 반입 클립에 `Enable_Warping` 커브를 **자동으로** 붙일 수단이 있는가.
@@ -103,14 +103,14 @@ IK Retarget → UEncodeRootBoneModifier (루트모션 합성) → AM_WarpingAlph
 
 | 문서 | 절 | 어떻게 바뀌나 |
 |---|---|---|
-| `../assets/2026-09-02_asset_supply_and_collaboration.md` | 4b | "루트 `RotationSpeed` 임계값(유력)" → **`AM_WarpingAlpha` 적용**. 단계 순서에 "EncodeRootBone 먼저" 명시 |
-| `../animation/2026-09-02_pose_pipeline_spec.md` | 11절 표 | `Enable_Warping` 생성 열 → `AM_WarpingAlpha` |
-| `../OPEN_ITEMS.md` | C-25 | 해결 |
-| `../CURRENT_STATE.md` | 4절 ① | 체크리스트 항목 교체 |
-| `../CLAUDE.md` | 5절 P8 | 커브 3종 규약에 **적용 순서**를 덧붙일 것 |
+| `assets/2026-09-02_asset_supply_and_collaboration.md` | 4b | "루트 `RotationSpeed` 임계값(유력)" → **`AM_WarpingAlpha` 적용**. 단계 순서에 "EncodeRootBone 먼저" 명시 |
+| `animation/2026-09-02_pose_pipeline_spec.md` | 11절 표 | `Enable_Warping` 생성 열 → `AM_WarpingAlpha` |
+| `OPEN_ITEMS.md` | C-25 | 해결 |
+| `CURRENT_STATE.md` | 4절 ① | 체크리스트 항목 교체 |
+| `CLAUDE.md` | 5절 P8 | 커브 3종 규약에 **적용 순서**를 덧붙일 것 |
 
-- [x] `../OPEN_ITEMS.md`에서 C-25 해결 표시
-- [x] `../CURRENT_STATE.md` 갱신
+- [x] `OPEN_ITEMS.md`에서 C-25 해결 표시
+- [x] `CURRENT_STATE.md` 갱신
 - [ ] `assets/` · `animation/` 원 문서에 정정 절 추가 (다음 세션)
 
 ## 6. 막힌 것 / 다음에 확인할 것
@@ -131,4 +131,4 @@ MCP로 GASP 기존 클립의 `Enable_Warping` 커브 값을 떠서 **정답 모�
 `BlueprintTools.read_graph_dsl`로 `AM_WarpingAlpha`의 `EventGraph`를 읽으면 **빈 문자열**이 온다.
 `list_events`는 `OnApply` 구현됨으로 보고하는데도 그렇다. **애님 모디파이어 그래프 본문은 MCP로
 못 읽는다** — 변수 목록과 CDO 값으로 역추론했다. 그래프 자체는 에디터에서 열어볼 것.
-→ `../CLAUDE.md` 6.1절에 추가함.
+→ `CLAUDE.md` 6.1절에 추가함.

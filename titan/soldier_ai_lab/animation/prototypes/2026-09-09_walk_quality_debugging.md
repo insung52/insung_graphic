@@ -33,7 +33,7 @@ AnimGraph 노드 22개 설정      GASP와 차이 0
 ```
 
 > **MCP로 AnimGraph를 읽을 수 있다는 것**이 이 전부를 가능하게 했다 —
-> `find_nodes` + `get_node_infos` + `get_properties`. `../CLAUDE.md` 6.1절 정정 참고.
+> `find_nodes` + `get_node_infos` + `get_properties`. `CLAUDE.md` 6.1절 정정 참고.
 
 ---
 
@@ -108,7 +108,7 @@ YawFromDirection(d) = Atan2( d.Y, d.X)   ← 내가 진행방향에 쓴 것.  �
 
 > **MCP로 CDO를 바꿔도 배치된 액터가 그 프로퍼티를 오버라이드하고 있으면 안 먹는다.**
 > 그리고 오버라이드 여부는 **레벨을 열어야만** 보인다 — 에셋만 봐서는 알 수 없다.
-> → `../CLAUDE.md` 6.1절에 추가.
+> → `CLAUDE.md` 6.1절에 추가.
 
 ---
 
@@ -214,7 +214,7 @@ GASP:  중첩 챙터가 Speed 2D 로 DB 를 가른다
 그리고 **한 번에 두 개씩 바꿔서** 결과를 해석 못 한 구간이 있었다
 (`WalkSpeeds` + `BlendSpacePlayer_1` 동시 변경).
 
-`../CLAUDE.md` 3.1절의 패턴이 형태를 바꿔 계속 나온다 — **확인하지 않은 것을 확정처럼 다루는 것.**
+`CLAUDE.md` 3.1절의 패턴이 형태를 바꿔 계속 나온다 — **확인하지 않은 것을 확정처럼 다루는 것.**
 
 ---
 

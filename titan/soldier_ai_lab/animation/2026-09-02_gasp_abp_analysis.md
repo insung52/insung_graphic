@@ -2,14 +2,14 @@
 
 2026-09-02 / 완료(스테이트머신 내부 미접근) / GASP의 CMC 캐릭터 애님 파이프라인 전수 분석 — AnimGraph 22노드 위상·평가순서, 캐릭터↔ABP 계약 구조체, 함수 그래프 지도, 궤적 생성 경로, MM 스키마·Chooser 계층, 인과 맵, 우리 층의 삽입 지점, 확장 vs 재구축 판정.
 
-> **폴더 규칙·진행 상황·미해결 항목**: `../CLAUDE.md` · `../CURRENT_STATE.md` · `../OPEN_ITEMS.md`
+> **폴더 규칙·진행 상황·미해결 항목**: `CLAUDE.md` · `CURRENT_STATE.md` · `OPEN_ITEMS.md`
 >
 > 목적: 이 문서는 **"무엇을 건드리면 무엇이 바뀌는가"의 지도**다. 확장을 택하든 재구축을 택하든
 > 100% 재사용된다 — 재구축하면 "무엇을 재현할지"의 명세가 되고, 확장하면 "어디를 건드릴지"의
 > 지도가 된다.
 >
-> 선행 문서: `../design/2026-09-01_architecture.md`(전체 설계),
-> `../assets/2026-09-02_asset_supply_and_collaboration.md`(자산/협업).
+> 선행 문서: `design/2026-09-01_architecture.md`(전체 설계),
+> `assets/2026-09-02_asset_supply_and_collaboration.md`(자산/협업).
 > 후속 문서: `2026-09-02_pose_pipeline_spec.md`(이 분석을 근거로 한 애니메이션 층 명세).
 
 ---
@@ -130,6 +130,9 @@ interpolation  : unplantLinear(200,1), unplantAngular(179,1), separation(1000,1)
   `unplantAngle`(60°)를 넘어야 뗀다. 사용자가 관찰한 "막혀도 발이 절대 안 미끄러진다"의 직접 원인.
 - **골반 보정이 스프링**(stiffness 100 / damping 1)이고 `pelvisHeightMode=AllLegs`. 설계 문서
   5.2절의 "발만 붙이면 다리가 늘어나므로 골반까지 내린다"가 그대로 구현돼 있다.
+  ★ **2026-09-12: 이 한 줄이 stance 축의 삽입 위치를 정했다** — 이 노드가 **골반을 소유**하므로
+  **앞**에 골반 오프셋을 넣으면 스프링이 되돌린다. **뒤의 `LegIK_1`과의 *사이*** 가 정답이다
+  (10절 정정 · `IMPLEMENTED.md` 2.5f-2).
 - **플랜트 설정은 런타임에 교체된다** — 5.2절 `Get_FootPlacementPlantSettings` 참고.
 
 ### 3.2 `PoseSearchHistoryCollector_0` (PoseHistory)
@@ -193,7 +196,7 @@ assignmentExpressions:
 > **`UMotionExtractorModifier`** — 본의 모션을 커브로 굽는 애니메이션 모디파이어.
 > `BoneName=foot_l/foot_r`, `MotionType=TranslationSpeed`, `bNormalize=true`,
 > `bUseCustomCurveName=true` + 커브 이름 지정으로 접지 커브를 생성할 수 있다.
-> (`../assets/2026-09-02_asset_supply_and_collaboration.md` 4절의 루트모션 인코딩 파이프라인에
+> (`assets/2026-09-02_asset_supply_and_collaboration.md` 4절의 루트모션 인코딩 파이프라인에
 > **이 단계를 추가해야 한다** — 아래 [P] 참고)
 >
 > 부수적으로 `UFootstepAnimEventsModifier`는 커브가 아니라 **싱크 마커/노티파이**를 생성한다
@@ -480,6 +483,12 @@ inputState : S_PlayerInputState { wantsToSprint, wantsToWalk, wantsToStrafe,
                                   wantsToAim, wantsToCrouch }        ← 의도(결정)
 movementMode          : E_MovementMode
 stance                : E_Stance                                      ← 이산(Stand/Crouch)
+                                                                        ★ 2026-09-12: 여전히 이산이고,
+                                                                        우리 연속 축이 문턱에서
+                                                                        Crouch()/UnCrouch()로 이것을
+                                                                        몬다 (IMPLEMENTED.md 2.5f-4).
+                                                                        높이의 연속성은 이 값이 아니라
+                                                                        ModifyBone(pelvis)가 만든다
 rotationMode          : E_RotationMode
 gait                  : E_Gait
 movementDirection     : E_MovementDirection
@@ -557,9 +566,9 @@ groundNormal/Location ← CMC.GetCurrentFloor 의 HitResult
 
 | 우리 층 | 삽입 위치 | 방식 | 위험 |
 |---|---|---|---|
-| **무기 자세 앵커** (정조준/허리/맹목/내림) | ② 애디티브 구간, 조준 오프셋 **앞** | 애디티브 추가 | 낮음. 기존 체인 확장 |
+| **무기 자세 앵커** (정조준/허리/맹목/내림) | ② 애디티브 구간, 조준 오프셋 ~~**앞**~~ → **실제로는 바로 *뒤*** | 애디티브 추가 | 낮음. 기존 체인 확장. ★ **2026-09-12 실측**: 맹목사격 3레이어는 `ApplyMeshSpaceAdditive_0`(조준) **뒤**, `SaveCachedPose 'AimedPose'` **앞**에 들어갔다 — 상체 슬롯·몽타주가 이 자세 **위에서** 돌아야 하기 때문이다. 예측은 단계로는 맞았고 **순서만 한 칸 틀렸다** (`IMPLEMENTED.md` 2.5e-3) |
 | **조준 오프셋 (라이플)** | ② `BlendSpacePlayer_1` **교체/확장** | 에셋 교체 + Chooser로 무기별 선택 | 낮음. **GASP가 자리를 이미 만들어놨다** |
-| **자세 높이 축 (Stand↔Crouch 연속)** | ④ IK 구간, `FootPlacement` **앞** | Control Rig (골반 하강 + 다리 적응) | **중간**. MM이 고른 보폭과 어긋날 수 있음(P1 실측) |
+| **자세 높이 축 (Stand↔Crouch 연속)** | ④ IK 구간, ~~`FootPlacement` **앞**~~ → **실제로는 `FootPlacement_0`과 `LegIK_1` *사이*** | ~~Control Rig (골반 하강 + 다리 적응)~~ → **`ModifyBone(pelvis)` 노드 하나** | **중간**. MM이 고른 보폭과 어긋날 수 있음(P1 실측). ★ **2026-09-12 실측**: **앞**에 넣으면 안 된다 — `FootPlacement_0`이 `pelvisBone = pelvis`로 **골반을 스프링으로 소유**한다(3.1절). **뒤의 `LegIK_1`이 이미 심어진 `ik_foot_l/r`로 발을 되돌리므로**, 사이에서 골반만 내리면 **무릎이 저절로 굽는다** — 다리 적응이 공짜다. 단계로는 맞았고 **순서만 한 칸 틀렸다**(위 "무기 자세 앵커" 행과 같은 종류의 오차) → `IMPLEMENTED.md` 2.5f절 · `animation/prototypes/2026-09-12_continuous_stance_axis.md` 4절 |
 | **안정화 IK (목표, gain<1)** | ④ IK 구간 진입 직후 | Control Rig | 중간 |
 | **교란 (호흡·떨림·반동 잔여)** | 안정화 IK **뒤**, 결합 IK **앞** | Control Rig 내부에서 처리 권장(아래) | 낮음 |
 | **결합 IK (왼손↔총, 발↔지면)** | ④ `FootPlacement`/`LegIK`와 같은 구간, 뒤쪽 | Control Rig + 기존 노드 | 낮음 |
@@ -662,7 +671,7 @@ U1·U4는 다음 작업 착수 전에 채우는 것이 좋다. 나머지는 필�
 
 | # | 작업 | 근거 |
 |---|---|---|
-| **W1** | 자산 반입 파이프라인에 **접지 커브 생성 단계 추가**(`UMotionExtractorModifier`) | 3.3b절 [P]. `../assets/2026-09-02_asset_supply_and_collaboration.md` 4절 갱신 필요 |
+| **W1** | 자산 반입 파이프라인에 **접지 커브 생성 단계 추가**(`UMotionExtractorModifier`) | 3.3b절 [P]. `assets/2026-09-02_asset_supply_and_collaboration.md` 4절 갱신 필요 |
 | **W2** | 교란(호흡·떨림)을 **애디티브가 아니라 Control Rig 연산으로** 구현 | 10.1절 공간 문제 |
 | **W3** | `AIController`가 **컨트롤 로테이션으로 조준을 구동**하는 배선 | 8.2절 |
 | **W4** | `TrajectoryGenerationData_Moving/_Idle` **AI용 재튜닝** | 4.2절 |
@@ -939,7 +948,7 @@ MM이 궤적·포즈 비용으로 더 맞는 쪽을 고르므로, **견착 클�
 클립이 선택되고 상체는 조준 오프셋이 덮는다.** 완벽하진 않지만 "아예 데이터가 없어서 미끄러지는"
 것보다 훨씬 낫다.
 
-> 이는 `../assets/2026-09-02_asset_supply_and_collaboration.md` 5절 **A안(요구 수준을 낮추고 연출로
+> 이는 `assets/2026-09-02_asset_supply_and_collaboration.md` 5절 **A안(요구 수준을 낮추고 연출로
 > 흡수)의 구체적 구현 수단**이다. 데이터만으로 표현되고 코드가 필요 없다.
 > 품질은 실측 대상 — **[C-24]**로 등록.
 
@@ -1014,7 +1023,7 @@ IsBlindFiring
 > | **정상상태 루프**(직선 이동) | ✅ **커버함** | **견착 루프는 전방 위주 소수 클립으로 충분** |
 > | **start / stop / pivot / turn** | ❌ **커버 못 함**(직선이 아님) | **데이터가 반드시 필요.** 여기가 진짜 비용 |
 >
-> 이는 `../assets/2026-09-02_asset_supply_and_collaboration.md` 5절이 "남은 진짜 구멍"으로 지목한 것과
+> 이는 `assets/2026-09-02_asset_supply_and_collaboration.md` 5절이 "남은 진짜 구멍"으로 지목한 것과
 > 정확히 일치하며, **이제 그 이유가 기계적으로 설명된다** — 없어서가 아니라 **워핑이 구조적으로
 > 못 메우기 때문**이다.
 

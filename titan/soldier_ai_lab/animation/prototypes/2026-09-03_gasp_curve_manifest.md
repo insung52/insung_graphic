@@ -16,8 +16,8 @@
 
 > **2026-09-03 저녁 갱신**: 8~10절이 이 문서의 결론이다. 3~5절(초기 조사)보다 **8절 이후를 먼저 볼 것.**
 
-관련 항목: **[C-26]/[C-27] 비교 기준 확보** · 신규 **[C-28]** / 관련 문서: `../assets/2026-09-02_...md` 4.2절 ·
-`../animation/2026-09-02_gasp_abp_analysis.md` 3.3b절
+관련 항목: **[C-26]/[C-27] 비교 기준 확보** · 신규 **[C-28]** / 관련 문서: `assets/2026-09-02_...md` 4.2절 ·
+`animation/2026-09-02_gasp_abp_analysis.md` 3.3b절
 
 ---
 
@@ -68,7 +68,7 @@ editor_toolset.toolsets.blueprint.BlueprintTools.get_parent    모디파이어�
 
 ### 3.3 커브는 3종이 아니라 5종이었다 [A]
 
-`../CLAUDE.md` P8과 `../assets/...` 4.2절이 **`contact_l/r` + `Enable_Warping` 3종**만 필수로
+`CLAUDE.md` P8과 `assets/...` 4.2절이 **`contact_l/r` + `Enable_Warping` 3종**만 필수로
 적었는데, 실제 GASP 클립은 **모든 클립이 예외 없이** 아래를 갖고 있다:
 
 ```
@@ -103,7 +103,7 @@ AM_FootSteps_Walk  →  (Footstep Left/Right 노티파이 생성)  →  AM_BakeP
 
 ### 3.5 문서의 `contact_l/r` 생성 계획과 GASP 실물이 다르다 [A]
 
-| | `../assets/...` 4.2절 [4] 계획 | GASP `AM_FootSpeed_L` 실물 |
+| | `assets/...` 4.2절 [4] 계획 | GASP `AM_FootSpeed_L` 실물 |
 |---|---|---|
 | 본 | `foot_l` / `foot_r` | **`ball_l` / `ball_r`** |
 | 정규화 | `bNormalize=true` | **`false`** |
@@ -126,10 +126,10 @@ ABP의 `RemapCurves`(3.3b절 / [U7])가 이 변환을 맡을 가능성이 있다
 
 | 문서 | 어떻게 |
 |---|---|
-| `../CLAUDE.md` P8 | **커브 3종 → 5종**(+싱크마커), 그리고 **Stop 계열은 `Enable_Warping`을 만들지 않는다** |
-| `../assets/...` 4.2절 | [4]단계 파라미터 수정(ball vs foot, normalize), `phase`·`movedata_speed` 단계 추가, 의존 순서 명시 |
-| `../CURRENT_STATE.md` P0-4 | 체크리스트에 `movedata_speed`·`phase` 추가 |
-| `../OPEN_ITEMS.md` | **[C-28]** 신규 |
+| `CLAUDE.md` P8 | **커브 3종 → 5종**(+싱크마커), 그리고 **Stop 계열은 `Enable_Warping`을 만들지 않는다** |
+| `assets/...` 4.2절 | [4]단계 파라미터 수정(ball vs foot, normalize), `phase`·`movedata_speed` 단계 추가, 의존 순서 명시 |
+| `CURRENT_STATE.md` P0-4 | 체크리스트에 `movedata_speed`·`phase` 추가 |
+| `OPEN_ITEMS.md` | **[C-28]** 신규 |
 
 ## 6. 막힌 것 / 다음에 확인할 것
 
@@ -263,7 +263,7 @@ None/Add/Sub/Div/Mul 뿐 — 비교 연산이 없다).
 
 `contact_l/r`은 **모든 클립에 예외 없이 있는 유일한 커브**이고, GASP의 발 배치
 (`FootPlacement` 노드)가 `RemapCurves`를 통해 이걸로 발 심기 타이밍을 결정한다(3.3b절).
-**없으면 발 IK가 조용히 오작동한다**(`../CLAUDE.md` P8).
+**없으면 발 IK가 조용히 오작동한다**(`CLAUDE.md` P8).
 
 그런데 **우리에겐 만들 방법이 없다.**
 

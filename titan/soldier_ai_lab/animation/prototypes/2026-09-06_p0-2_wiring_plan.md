@@ -3,7 +3,7 @@
 2026-09-06 / 조사 완료·착수 전 / MM이 우리 견착 DB를 조회하게 만드는 데 무엇이 필요한지 확정했다.
 
 관련: **[C-44]**(견착 DB에서 급선회) · **[C-24]**(점진적 폴백) · [C-48](회전 노티파이) / 관련 문서:
-`../animation/2026-09-02_gasp_abp_analysis.md` 7·15.2·15.3절 · `2026-09-04_c34_clip_curve_mapping.md`
+`animation/2026-09-02_gasp_abp_analysis.md` 7·15.2·15.3절 · `2026-09-04_c34_clip_curve_mapping.md`
 
 ---
 
@@ -23,7 +23,7 @@ PSD_Soldier_Walk_Test  →  Walking_Anim  하나뿐
 | `Rifle_Aiming_Idle_Anim` | **없음** | **없음** | ❌ |
 
 (모디파이어 인스턴스는 `<경로>.<이름>:AnimationModifiersAssetUserData_0`의
-`animationModifierInstances`로 원격 검수했다 — `../CLAUDE.md` 6.1b절)
+`animationModifierInstances`로 원격 검수했다 — `CLAUDE.md` 6.1b절)
 
 ## 2. ★ 챙터는 ABP 노드에 박혀 있다 [A]
 
@@ -43,7 +43,7 @@ PSD_Soldier_Walk_Test  →  Walking_Anim  하나뿐
   `retarget_node_class`도 **클래스 참조 전용**이라 안 먹는다. → **Details 패널에서 수동 교체**
 - 챙터를 담는 ABP 변수는 없다(변수 76개 전수 확인). **런타임 교체 불가**
 
-→ **ABP를 복제해야 한다.** `../CLAUDE.md` **P1**이 지시하는 방법이기도 하다.
+→ **ABP를 복제해야 한다.** `CLAUDE.md` **P1**이 지시하는 방법이기도 하다.
 
 ### 2.1 조준 축은 이미 ABP 변수로 있다 [A]
 
@@ -62,7 +62,7 @@ ValidDatabases  CurrentSelectedDatabase  CurrentDatabaseTags
 
 ## 3. 배선 방식 — GASP 3단 체인을 복제하지 않는다
 
-`../animation/...` 15.3절이 "무기 자세 축은 2단에 컬럼 추가"라고 판정했지만, 그건 **최종 형태**다.
+`animation/...` 15.3절이 "무기 자세 축은 2단에 컬럼 추가"라고 판정했지만, 그건 **최종 형태**다.
 지금 필요한 것은 **판정용 최소 배선**이고, 챙터가 **복수를 반환한다**는 성질 덕에 훨씬 짧게 끝난다.
 
 ```
@@ -311,7 +311,7 @@ refPoseSeq       = M_Neutral_AO_Stand_X0_Y0        ← 42개 전부 X0_Y0 기준
 
 ~~런타임 `Layered blend per bone`으로 상체를 교체한다~~ → **폐기.**
 
-`../design/2026-09-01_architecture.md` **5.5.1절**이 명시적으로 금지한 방식이다:
+`design/2026-09-01_architecture.md` **5.5.1절**이 명시적으로 금지한 방식이다:
 
 > **안 되는 것 — 로코모션 중에 상반신만 다른 파지자세로 레이어/블렌드 하는 것.**
 > 걷기/뛰기는 발맞춤에 동기화된 전신 움직임이라, 상반신과 하반신을 따로 블렌드하면
@@ -323,12 +323,12 @@ refPoseSeq       = M_Neutral_AO_Stand_X0_Y0        ← 42개 전부 X0_Y0 기준
 상체와 하체가 서로를 모른다는 신호인데, 그것을 애디티브의 결함으로만 읽고
 **금지된 방식으로 가자고 했다.** 애디티브 실험 자체도 같은 함정의 다른 형태였다.
 
-> `../CLAUDE.md` 3.1절의 실패 패턴이 또 나왔다 — **관련 설계 문서를 읽지 않고 제안했다.**
+> `CLAUDE.md` 3.1절의 실패 패턴이 또 나왔다 — **관련 설계 문서를 읽지 않고 제안했다.**
 > 이번 것은 [B]를 [A]로 읽은 게 아니라 **아예 확인하지 않은 것**이라 더 나쁘다.
 
 ### 설계가 허용하는 경로 — A안 / B안
 
-`../assets/2026-09-02_asset_supply_and_collaboration.md` 5절:
+`assets/2026-09-02_asset_supply_and_collaboration.md` 5절:
 
 | 안 | 내용 | 상태 |
 |---|---|---|
@@ -361,7 +361,7 @@ refPoseSeq       = M_Neutral_AO_Stand_X0_Y0        ← 42개 전부 X0_Y0 기준
 
 ## 4d. ★★ A안이 막혔던 두 가지 — 둘 다 데이터가 아니라 배선이었다 (2026-09-08)
 
-MCP로 AnimGraph를 읽을 수 있다는 걸 알게 되면서(`../CLAUDE.md` 6.1절 정정) 실측이 가능해졌다.
+MCP로 AnimGraph를 읽을 수 있다는 걸 알게 되면서(`CLAUDE.md` 6.1절 정정) 실측이 가능해졌다.
 
 ### (1) `ik_foot_*`가 비어 있으면 Orientation Warping이 무력화된다 — [C-46]
 

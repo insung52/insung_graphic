@@ -6,9 +6,9 @@
 > ① **인플레이스 클립을 쓰면 안 된다**(4절의 전제가 틀렸다) → 14절
 > ② `Enable_Warping`은 자체 제작이 아니라 **GASP의 `AM_WarpingAlpha`** 를 쓴다 → 15절
 
-> **폴더 규칙·진행 상황·미해결 항목**: `../CLAUDE.md` · `../CURRENT_STATE.md` · `../OPEN_ITEMS.md`
+> **폴더 규칙·진행 상황·미해결 항목**: `CLAUDE.md` · `CURRENT_STATE.md` · `OPEN_ITEMS.md`
 >
-> 선행 문서: `../design/2026-09-01_architecture.md` (전체 설계). 이 문서는 그 3.8절
+> 선행 문서: `design/2026-09-01_architecture.md` (전체 설계). 이 문서는 그 3.8절
 > "애니메이션 조달 계획"을 **대체·확장**한다 — 설계 자체는 그대로고, **자산을 어디서 어떻게
 > 구할 것인가**와 **누구와 어떻게 일할 것인가**만 다시 짰다.
 
@@ -154,7 +154,7 @@ class UEncodeRootBoneModifier : public UAnimationModifier
 > **★ [4]단계는 2026-09-02 ABP 분석에서 추가된 필수 단계다.** GASP의 발 배치(`FootPlacement`
 > 노드)는 애니메이션의 `contact_l`/`contact_r` 커브를 `RemapCurves`로 변환해서 "발 심기"
 > 타이밍을 결정한다. **이 커브가 없는 클립은 발 IK가 오작동한다.** 외부 클립에는 이 커브가
-> 없으므로 반드시 생성해야 한다. 상세: `../animation/2026-09-02_gasp_abp_analysis.md` 3.3b절.
+> 없으므로 반드시 생성해야 한다. 상세: `animation/2026-09-02_gasp_abp_analysis.md` 3.3b절.
 
 - **애니메이션 모디파이어는 여러 시퀀스에 일괄 적용된다.** 수십 개를 한 번에 처리할 수 있다.
 - **[2]와 [3]이 정확히 디자인팀이 할 수 있는 종류의 작업이다**(제작이 아니라 변환·정리).
@@ -352,7 +352,7 @@ F1·F2 반영으로 우선순위가 바뀌었다.
 
 ## 12. 아키텍처 문서에 반영해야 할 변경점
 
-`../design/2026-09-01_architecture.md`에서 이 문서로 대체되거나 수정이 필요한 부분:
+`design/2026-09-01_architecture.md`에서 이 문서로 대체되거나 수정이 필요한 부분:
 
 | 위치 | 변경 |
 |---|---|
@@ -417,7 +417,7 @@ F1·F2 반영으로 우선순위가 바뀌었다.
 1. 루트모션이 0 → Motion Matching이 "이 클립은 정지 상태"로 판단 → 이동에 절대 선택되지 않음
 2. 루트 회전/이동 오차가 0 → `AM_WarpingAlpha`가 **전 구간 1**을 뱉음 → [C-27]의 바로 그 함정
 
-**한 번의 체크박스 실수가 두 군데서 조용히 터진다.** 그래서 `../CLAUDE.md` P9(커브 육안 검수)이
+**한 번의 체크박스 실수가 두 군데서 조용히 터진다.** 그래서 `CLAUDE.md` P9(커브 육안 검수)이
 필요하다.
 
 ### 14.4 4.3절 "정직한 한계"에 추가
@@ -443,4 +443,4 @@ CDO 실측 기본값: `SamplesPerSecond=30`, `BlendInTime=BlendOutTime=0.25`,
 판정 축도 추정과 달랐다 — `RotationSpeed` 단일 축이 아니라 **루트모션 회전 오차와 이동방향
 각도 오차를 각각** 보고 **둘 다 5° 미만**일 때만 직선으로 본다.
 
-전문: `../prototypes/2026-09-03_enable_warping_curve_generation.md` / **[C-25] 해결**
+전문: `animation/prototypes/2026-09-03_enable_warping_curve_generation.md` / **[C-25] 해결**

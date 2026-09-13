@@ -60,7 +60,7 @@
 | **슬롯 트랜스폼** | SmartObject 슬롯의 월드 트랜스폼. 위치는 **병사의 캡슐 중심이 설 지점(발밑 아님)** | `USmartObjectSubsystem::GetSlotTransform(SlotHandle)` [A] |
 | **`CoverFacing`** | 슬롯 트랜스폼의 **+X축**. **"이 슬롯이 막아주는 방향의 중심"** = 엄폐물이 있는 쪽 | ★ 병사는 이 방향을 바라보고 서며, 그 앞에 엄폐물이 있다 |
 | **`ProtectionHalfAngle`** | `CoverFacing` 기준 ±각도. 이 부채꼴 안의 위협만 막아준다 | Inner(완전 차폐) / Outer(0으로 감쇠) 두 값 |
-| **`CoverHeight`** | `Low`(≈100cm, 웅크려야 가려짐) / `High`(≈180cm, 서서 가려짐) | 설계 10.2절의 40/100/180 3높이 중 40(Prone)은 **범위 밖 권고** — 8.2절 A7 / `OPEN_QUESTIONS.md` **Q14** |
+| **`CoverHeight`** | `Low`(≈100cm, 웅크려야 가려짐) / `High`(≈180cm, 서서 가려짐) | 설계 10.2절의 40/100/180 3높이 중 40(Prone)은 **범위 밖 권고** — 8.2절 A7 / `OPEN_QUESTIONS.md` **Q36** |
 | **사격점(Firing Point)** | 그 슬롯에서 사격 가능한 **총구 위치**의 슬롯 로컬 오프셋 | LeanL / LeanR / OverTop / Blind |
 | **Protection** | `[0,1]`. 특정 위협·특정 자세에 대해 이 슬롯이 막아주는 정도 | 5.2절 공식 |
 | **Exposure** | `1 - Σ(가중 Protection)`. **7.5절 인지의 `Exposure`와 같은 정의여야 한다** | 5.3절 — 인지 담당자와의 계약 |
@@ -95,7 +95,7 @@
 1) 대상 영역 = 레벨의 ASoldierCoverVolume(없으면 NavMesh 경계 전체)
 2) NavMesh 경계 에지 추출
       ARecastNavMesh::GetDebugGeometry(FRecastDebugGeometry&, TileIndex)
-      → FRecastDebugGeometry::NavMeshEdges                        ← [C-61] 접근 가능성 확인 필요
+      → FRecastDebugGeometry::NavMeshEdges                        ← [C-63] 접근 가능성 확인 필요
 3) 에지를 75cm 간격으로 샘플 → 후보점 = 에지에서 **안쪽으로** (캡슐반경 42 + 여유 10)cm
 4) 각 후보점에서 바깥 방향으로 3높이(180 / 100 / 40cm) 트레이스   ← Cover 채널(설계 3.6절)
       전부 미충돌 → 폐기 (엄폐물이 없다)
@@ -121,7 +121,7 @@
 |---|---|
 | UGV·차량 | `UCoverProviderComponent` — 액터에 붙이면 자기 슬롯 정의를 `USmartObjectSubsystem::CreateSmartObject()`로 등록/해제 [A, 엔진 API 확인] |
 | 파괴·변형 | 슬롯 무효화 → `SetSlotEnabled(SlotHandle, false)` [A] + 점유 중인 병사에게 `CoverInvalidated` 이벤트 → L2 재평가 |
-| 이동하는 엄폐물 | 슬롯 트랜스폼 갱신은 서브시스템이 지원하나(`Transform/Location` 설정 가능 [A]), **이동 중 예약을 유지할지는 [C-62]** |
+| 이동하는 엄폐물 | 슬롯 트랜스폼 갱신은 서브시스템이 지원하나(`Transform/Location` 설정 가능 [A]), **이동 중 예약을 유지할지는 [C-64]** |
 
 ---
 
@@ -167,13 +167,13 @@ AngularFactor(threat) :
 HeightFactor(stance) :
     CoverHeight == High  →  Stand 1.0 / Crouch 1.0
     CoverHeight == Low   →  Stand 0.25 / Crouch 1.0      ← Low에서 서 있으면 상체가 노출된다
-                                                            0.25는 [C-63] 튜닝 대상
+                                                            0.25는 [C-65] 튜닝 대상
 
 Protection(threat, stance) = AngularFactor(threat) * HeightFactor(stance)
 ```
 
 - **수평 성분만 쓰는 이유**: 고저차가 있는 위협(옥상)은 각도만으로 판정하면 틀린다.
-  → 고저차 보정은 [C-64]로 남긴다. **지금은 평지 가정임을 명시**하고, 짐 레벨(D3)에
+  → 고저차 보정은 [C-66]로 남긴다. **지금은 평지 가정임을 명시**하고, 짐 레벨(D3)에
   높은 지점을 넣어 실측할 것.
 - **`smoothstep`을 쓰는 이유**: 계단 함수면 위협이 경계를 오갈 때 슬롯 점수가 튀고,
   히스테리시스가 없는 EQS에서 병사가 두 슬롯 사이를 왕복한다.
@@ -186,8 +186,8 @@ Exposure(slot, stance) = 1 - Σ_i ( w_i · Protection(slot, stance, threat_i) ) 
 ```
 
 > ★ **계약**: 이 정의는 설계 7.5절의 `Exposure`(내가 남에게 얼마나 보이는가)와 **같아야 한다.**
-> `upper_layer_plan.md` 5.4절이 "같은 숫자를 두 시스템이 공유한다 — 이 설계의 경제성"이라고
-> 못박은 지점이다. **인지 담당자와 이 공식을 맞추는 것이 통합 시점의 첫 작업이다** → `OPEN_QUESTIONS.md` Q13.
+> `ai/2026-09-02_upper_layer_plan.md` 5.4절이 "같은 숫자를 두 시스템이 공유한다 — 이 설계의 경제성"이라고
+> 못박은 지점이다. **인지 담당자와 이 공식을 맞추는 것이 통합 시점의 첫 작업이다** → `OPEN_QUESTIONS.md` Q35.
 
 `w_i`(신뢰도·위험도)는 **인지 담당 범위**다. 나는 `TArray<FCoverThreatInfo{Location, Weight}>`를
 입력으로 받는 인터페이스만 정의한다(6.2절 컨텍스트).
@@ -246,7 +246,7 @@ EEnvQueryRunMode::RandomBest5Pct    "... 95% .. 100% of max"
 > `MinScore`로 두면 **"가장 안 막아주는 위협" 기준**이 되어 설계 10.4절의 "노출 감점"과 같은
 > 효과가 나온다 — 별도의 `InverseLinear` 설정도, 합산 코드도 필요 없다.
 > ⚠ 대신 **위협별 가중치(신뢰도×위험도)는 컨텍스트로 전달되지 않는다**(컨텍스트는 위치 배열만
-> 준다). 가중이 꼭 필요해지면 테스트가 `ISoldierThreatProvider`를 직접 조회해야 한다 → [C-69].
+> 준다). 가중이 꼭 필요해지면 테스트가 `ISoldierThreatProvider`를 직접 조회해야 한다 → [C-71].
 
 > ★ **#5가 이 표에서 가장 중요한 재사용이다.** `UEnvQueryTest`의 `ReferenceValue` 필드
 > (`EnvQueryTest.h:135-143`)는 *"값이 ReferenceValue에 가까울수록 높은 점수"* 로 정규화한다 [A].
@@ -256,7 +256,7 @@ EEnvQueryRunMode::RandomBest5Pct    "... 95% .. 100% of max"
 > ★ **#0**: 설계 10.4절이 *"커스텀 Generator — Smart Object 서브시스템 조회"* 로 적어둔 것은
 > **불필요하다.** `UEnvQueryGenerator_SmartObjects`가 엔진에 이미 있고, `bOnlyClaimable=true`가
 > **예약된 슬롯을 애초에 후보에서 뺀다** [A, `EnvQueryGenerator_SmartObjects.h:37-39`].
-> `upper_layer_plan.md` 13.2절의 "커스텀 Generator는 C++로 만든다"도 이 발견으로 갱신된다 → **R2 갱신**.
+> `ai/2026-09-02_upper_layer_plan.md` 13.2절의 "커스텀 Generator는 C++로 만든다"도 이 발견으로 갱신된다 → **R2 갱신**.
 
 ### 6.2 질의 변종
 
@@ -269,7 +269,7 @@ EEnvQueryRunMode::RandomBest5Pct    "... 95% .. 100% of max"
 
 > **`FOrderConstraints::Aggression`(0~1)이 #2와 #8의 가중 비율에 직접 매핑된다**(설계 10.4 · 11.2).
 > 질의 에셋을 4벌 두는 대신, `ScoringFactor`를 `FAIDataProviderFloatValue`로 두고 블랙보드에서
-> 주입할 수 있는지는 [C-65].
+> 주입할 수 있는지는 [C-67].
 
 ### 6.3 신규 C++ 클래스 목록
 
@@ -291,7 +291,7 @@ EEnvQueryRunMode::RandomBest5Pct    "... 95% .. 100% of max"
 > **왜 EQS 테스트에서 `USmartObjectSubsystem::ReadSlotData()`를 직접 부르지 않는가**:
 > `ReadSlotData`는 `TFunctionRef` + 락이다 [A, `SmartObjectSubsystem.h:759-767`]. 아이템 40개 ×
 > 테스트 3개 = 120회 락을 매 질의마다 잡게 된다. **등록 시점에 한 번만 읽어 평면 `TMap`으로
-> 캐시**하고, 테스트는 그걸 읽는다 → `USoldierCoverSubsystem`. [B] — 실측은 [C-66].
+> 캐시**하고, 테스트는 그걸 읽는다 → `USoldierCoverSubsystem`. [B] — 실측은 [C-68].
 
 **Build.cs 추가 의존성**: `AIModule`, `NavigationSystem`, `SmartObjectsModule`, `GameplayTags`,
 `StateTreeModule`, `GameplayStateTreeModule`.
@@ -299,7 +299,7 @@ EEnvQueryRunMode::RandomBest5Pct    "... 95% .. 100% of max"
 
 ### 6.4 ★ EQS 질의 **없이** 답해야 하는 값 두 개 — 닭과 달걀
 
-L2 유틸리티(`drafts/soldier_ai/`)가 `TakeCover` Intent를 고르려면 **"쓸 만한 엄폐가 있는가"를
+L2 유틸리티(`ai/drafts/`)가 `TakeCover` Intent를 고르려면 **"쓸 만한 엄폐가 있는가"를
 먼저 알아야 한다.** 그런데 EQS 질의는 `TakeCover`가 선택된 *뒤에* 발행된다(설계 8.4절).
 **질의 결과로 질의 여부를 결정할 수는 없다.**
 
@@ -336,7 +336,7 @@ L2 유틸리티(`drafts/soldier_ai/`)가 `TakeCover` Intent를 고르려면 **"�
 
 ### 7.1 골격 — GASP 중첩 패턴 그대로 [A]
 
-`upper_layer_plan.md` 14.3절의 규칙: **자원은 그것을 보유하는 상태가 부모여야 한다.**
+`ai/2026-09-02_upper_layer_plan.md` 14.3절의 규칙: **자원은 그것을 보유하는 상태가 부모여야 한다.**
 
 ```
 ST_Intent_TakeCover                                    (LinkedAsset, L2가 진입시킴)
@@ -394,7 +394,7 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 | L2가 다른 Intent 선택 | S1 이탈 | **자동** (S2 부모 상태 종료) [A] |
 | 사망 | 상태 트리 이탈 | **자동** [A] — 설계 6.5.3 최대 위험 항목이 구조로 해결 |
 | 슬롯 무효화(파괴) | `CoverInvalidated` 이벤트 → S2 실패 전이 | 자동 |
-| `Reposition` | **한 Intent 안에서** 이탈→이동→진입. 새 슬롯을 먼저 예약한 뒤 옛 슬롯을 놓는다 | 순서 주의 → [C-67] |
+| `Reposition` | **한 Intent 안에서** 이탈→이동→진입. 새 슬롯을 먼저 예약한 뒤 옛 슬롯을 놓는다 | 순서 주의 → [C-69] |
 
 ### 7.4 ★ 엄폐 퇴출 전용 애니메이션을 만들지 않는다 [B]
 
@@ -445,10 +445,10 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 | **A1** | `Cover_Lean_L` / `Cover_Lean_R` **(애디티브 2개)** | 높은 엄폐에서 옆으로 몸을 내밀어 조준 | **상체 additive 기울임으로 임시 대체 가능** — 8.3절 | ★★ |
 | **A2** | `Cover_Hunker_Low` / `Cover_Hunker_High` (2) | 피제압 시 완전 은폐(총 내리고 웅크림). **연출상 가장 눈에 띄는 상태** | `Crouch_Idle` + 조준 억제 | ★★ |
 | **A3** | `Cover_OverTop_Fire` 정지 포즈 (1) | 낮은 엄폐에서 일어서 넘겨쏘기 | `Idle_ADS` + 자세 높이 보간 | ★ |
-| **A4** | `Cover_Blind_OverTop` / `_SideL` / `_SideR` (3) | 맹목사격(고개 안 내밀고 총만) | Control Rig IK로 총만 올림 → 품질 하한이 [C-8] | ☆ |
+| **A4** | `Cover_Blind_OverTop` / `_SideL` / `_SideR` (3) | 맹목사격(고개 안 내밀고 총만) | ~~Control Rig IK로 총만 올림 → 품질 하한이 [C-8]~~ → ★ **2026-09-12: 이미 존재한다.** `MM_Rifle_BlindFire_L/R/U` 저작 포즈 3장 + 연속 마스크 애디티브(`BlindFireH`/`BlindFireV`)가 **구현돼 동작 중**이다. **IK 경로는 기각됐다** — 팔 IK는 척추를 돌리지 못한다. [C-8] 해결 → `IMPLEMENTED.md` 2.5e절 | ☆ → **대체됨** |
 | **A5** | `Cover_Peek_In` / `_Out` 전환 (2~4) | lean 진입/복귀의 전신 전환 | 포즈 보간(A1이 additive면 자연히 해결) | ☆ |
 | **A6** | `Cover_Enter_Front/L/R` (3) | 엄폐물에 정렬해 붙는 동작 | **Motion Warping + 기존 stop 클립** — 5.5.5절이 이 경로를 이미 지정 | ☆ |
-| **A7** | `Prone_*` 전체 세트 (~15) | 엎드림 엄폐 | — | **범위 밖 권고** → `OPEN_QUESTIONS.md` **Q14** (인지 초안은 이미 Prone을 전제한다 — 12.4절) |
+| **A7** | `Prone_*` 전체 세트 (~15) | 엎드림 엄폐 | — | **범위 밖 권고** → `OPEN_QUESTIONS.md` **Q36** (인지 초안은 이미 Prone을 전제한다 — 12.4절) |
 
 **★★ 4개(A1×2 + A2×2)가 최소 집합이다.** 이것만 있으면 엄폐가 "동작하는 것처럼" 보인다.
 
@@ -467,7 +467,7 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 블렌드와 달리 포즈를 무너뜨리지 않는다"* 라고 이미 쓴 그 자리에 lean이 들어간다.
 
 **규칙: lean은 정지 상태에서만 켠다.** 이동 중 lean 요청은 무시하고, 슬롯에 도착한 뒤 켠다.
-→ 클립 요구가 **전신 세트가 아니라 애디티브 2개**로 줄어든다. **[C-68]로 실측 판정.**
+→ 클립 요구가 **전신 세트가 아니라 애디티브 2개**로 줄어든다. **[C-70]로 실측 판정.**
 
 ### 8.4 조달 경로
 
@@ -477,7 +477,7 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 | Mixamo | "cover crouch", "cover peek" 계열 존재 (추정) | P0-4 파이프라인이 검증돼 있어 반입 비용은 낮다 |
 | 자체 제작 | A2 hunker 2개는 **정지 포즈**라 난이도가 낮다(3.4절 "정지 포즈는 루트모션도 접지 커브도 필요 없다") | 디자인팀 요청 후보 |
 
-**반입 시 커브 세트**: 정지 포즈이므로 `prototypes/2026-09-04_c34_clip_curve_mapping.md` 4절의
+**반입 시 커브 세트**: 정지 포즈이므로 `animation/prototypes/2026-09-04_c34_clip_curve_mapping.md` 4절의
 **"정지 클립" 행**을 따른다 — `enable_warping` **만들지 말 것**(P8d).
 
 ---
@@ -493,9 +493,9 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 
 > ⚠ **둘은 모순이 아니라 역할이 다르다.** 3ms는 "폭주해도 여기서 끊긴다"이고 0.7ms가 설계 목표다.
 > **3ms를 예산으로 착각하면 12.2절의 나머지 항목(애님 2.5ms)이 밀린다.**
-> 문서에 이 구분이 없어 오독 위험이 있다 → 설계 문서 정정 제안(`OPEN_QUESTIONS.md` Q16).
+> 문서에 이 구분이 없어 오독 위험이 있다 → 설계 문서 정정 제안(`OPEN_QUESTIONS.md` Q38).
 
-### 9.2 질의 하나의 비용 산정 [B] → 판정 [C-66]
+### 9.2 질의 하나의 비용 산정 [B] → 판정 [C-68]
 
 | 항목 | 값 | 근거 |
 |---|---|---|
@@ -504,7 +504,7 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 | #2 차폐 필터(Protection ≥ 0.5) 통과 | ~10 | 위협이 한 방향이면 절반 이상 탈락 |
 | #7 경로 존재 필터 통과 | ~8 | |
 | **#8 트레이스 도달** | **~8회** | 아이템당 1 트레이스 상한 |
-| 목표 질의 비용 | **≤ 0.5 ms** | **[C-66] 판정 기준** |
+| 목표 질의 비용 | **≤ 0.5 ms** | **[C-68] 판정 기준** |
 
 ### 9.3 빈도 — 여기가 진짜 설계 지점
 
@@ -551,7 +551,7 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 
 ### 9.6 관찰 가능성 — 축을 구현하기 전에 넣는다 (P7)
 
-`upper_layer_plan.md` 10절이 *"엄폐: EQS 후보 슬롯의 점수 히트맵"* 을 이미 요구한다. 추가로:
+`ai/2026-09-02_upper_layer_plan.md` 10절이 *"엄폐: EQS 후보 슬롯의 점수 히트맵"* 을 이미 요구한다. 추가로:
 
 | 표시 | 왜 |
 |---|---|
@@ -584,16 +584,16 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 
 | # | 항목 | 판정 기준 | 시점 |
 |---|---|---|---|
-| **C-60** | 슬롯 정의를 **에셋 1개로 재사용**할지 슬롯마다 만들지 | `USmartObjectDefinition` 하나에 슬롯 N개를 두는 구조 vs 슬롯 1개짜리 정의를 N번 인스턴스화. 후자가 베이크에 맞지만 메모리·등록 비용 미측정 | P0-3 |
-| **C-61** | `ARecastNavMesh::GetDebugGeometry`로 **NavMesh 경계 에지를 에디터 툴에서 읽을 수 있는가** | 못 읽으면 베이크 3.2절 2단계를 "볼륨 내 스태틱 메시 바운드 스윕"으로 대체 | P1 |
-| **C-62** | **이동하는 엄폐물**의 슬롯 예약 유지 정책 | UGV가 움직이는 동안 예약을 유지하는가, 매번 끊는가. 유지하면 병사가 끌려가야 한다 | P1~P3 |
-| **C-63** | `HeightFactor(Low, Stand) = 0.25` 가 맞는가 | 낮은 엄폐 뒤에 서 있을 때 실제 피탄 면적 비율. 사격선 트레이스로 실측 | P1 |
-| **C-64** | **고저차 있는 위협**에서 수평 각도 판정이 틀리는 정도 | 옥상의 적에 대해 Protection이 과대평가되는가. 짐 레벨(D3)에 고지대 필수 | P1 |
-| **C-65** | EQS `ScoringFactor`를 **블랙보드에서 주입**할 수 있는가 | 되면 `Aggression`으로 질의 1개를 재사용, 안 되면 질의 에셋 4벌 | P1 |
-| **C-66** | **질의 1회 비용 ≤ 0.5ms** 인가 | EQS 프로파일러. 초과하면 #8 트레이스 상한을 0으로(기하 판정만) | P0-3 |
-| **C-67** | `Reposition`에서 **새 슬롯 예약 → 옛 슬롯 해제** 순서가 안전한가 | 한 병사가 슬롯 2개를 잠깐 점유한다. 슬롯이 희소하면 교착 가능 | P1 |
-| **C-68** | **엄폐 lean을 애디티브로 만들면 견착 포즈가 무너지는가** | 8.3절 판단의 본 판정. lean 25°/45°에서 총구가 몸을 뚫는지 | P1 |
-| **C-69** | 위협별 **가중치(신뢰도×위험도)를 EQS에 전달**할 필요가 실제로 있는가 | 컨텍스트는 위치 배열만 준다. `MinScore` 집계(최악 위협 기준)로 충분한지, 아니면 테스트가 `ISoldierThreatProvider`를 직접 조회해야 하는지 | P1 |
+| **C-62** | 슬롯 정의를 **에셋 1개로 재사용**할지 슬롯마다 만들지 | `USmartObjectDefinition` 하나에 슬롯 N개를 두는 구조 vs 슬롯 1개짜리 정의를 N번 인스턴스화. 후자가 베이크에 맞지만 메모리·등록 비용 미측정 | P0-3 |
+| **C-63** | `ARecastNavMesh::GetDebugGeometry`로 **NavMesh 경계 에지를 에디터 툴에서 읽을 수 있는가** | 못 읽으면 베이크 3.2절 2단계를 "볼륨 내 스태틱 메시 바운드 스윕"으로 대체 | P1 |
+| **C-64** | **이동하는 엄폐물**의 슬롯 예약 유지 정책 | UGV가 움직이는 동안 예약을 유지하는가, 매번 끊는가. 유지하면 병사가 끌려가야 한다 | P1~P3 |
+| **C-65** | `HeightFactor(Low, Stand) = 0.25` 가 맞는가 | 낮은 엄폐 뒤에 서 있을 때 실제 피탄 면적 비율. 사격선 트레이스로 실측 | P1 |
+| **C-66** | **고저차 있는 위협**에서 수평 각도 판정이 틀리는 정도 | 옥상의 적에 대해 Protection이 과대평가되는가. 짐 레벨(D3)에 고지대 필수 | P1 |
+| **C-67** | EQS `ScoringFactor`를 **블랙보드에서 주입**할 수 있는가 | 되면 `Aggression`으로 질의 1개를 재사용, 안 되면 질의 에셋 4벌 | P1 |
+| **C-68** | **질의 1회 비용 ≤ 0.5ms** 인가 | EQS 프로파일러. 초과하면 #8 트레이스 상한을 0으로(기하 판정만) | P0-3 |
+| **C-69** | `Reposition`에서 **새 슬롯 예약 → 옛 슬롯 해제** 순서가 안전한가 | 한 병사가 슬롯 2개를 잠깐 점유한다. 슬롯이 희소하면 교착 가능 | P1 |
+| **C-70** | **엄폐 lean을 애디티브로 만들면 견착 포즈가 무너지는가** | 8.3절 판단의 본 판정. lean 25°/45°에서 총구가 몸을 뚫는지 | P1 |
+| **C-71** | 위협별 **가중치(신뢰도×위험도)를 EQS에 전달**할 필요가 실제로 있는가 | 컨텍스트는 위치 배열만 준다. `MinScore` 집계(최악 위협 기준)로 충분한지, 아니면 테스트가 `ISoldierThreatProvider`를 직접 조회해야 하는지 | P1 |
 | **D10** | 엄폐 슬롯의 **GameplayTag 체계** | `SO.Cover.Low` / `.High` / `.Firing` / `.Overwatch`. 질의 필터가 이걸 쓴다 | P0-3 |
 | **D11** | **엄폐 중 아군 사격선** 처리 | 설계 9.5의 `FireLaneAllyMarginCm` 이식이 엄폐 슬롯 평가에도 들어가야 하는가 | P2 |
 | **R6** | `STT_FindSmartObject`/`ClaimSlot`/`UseSmartObject`가 **어느 모듈 제공인가** | `Content/Blueprints/AI/StateTree/TasksAndConditions/`에 **없다**(실측 — BP 6개뿐). 엔진 `GameplayInteractions`/`SmartObjects` 제공일 가능성이 높다 → 설계 13절 "GameplayInteractions는 Experimental이라 안 쓴다"와 충돌 | **P0-3 착수 즉시** |
@@ -603,12 +603,12 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 
 ## 12. 다른 담당 문서와의 접점 — **실측 대조 (2026-09-09)**
 
-같은 날 `drafts/soldier_ai/`(인지·판단)와 `drafts/squad/`(분대)가 함께 작성됐다.
+같은 날 `ai/drafts/`(인지·판단)와 `squad/drafts/`(분대)가 함께 작성됐다.
 **추측이 아니라 그 문서의 실제 심볼과 대조한 결과다** [A].
 
 ### 12.1 인지·판단 쪽이 **나에게 채워 달라고 남긴 자리**
 
-`drafts/soldier_ai/Source/SoldierAITypes.h:478-480` —
+`ai/drafts/Source/SoldierAITypes.h:478-480` —
 > `// Supplied by the cover / EQS layer (not owned by this module)`
 > `SoldierScoringInputs::BestCoverSlotScore` · `SoldierScoringInputs::CoverSlotAvailable`
 
@@ -624,7 +624,7 @@ ST_Intent_TakeCover                                    (LinkedAsset, L2가 진�
 
 ### 12.2 ★ `Exposure`는 **두 개의 다른 숫자다** — Q13의 답이 실측으로 확정됐다
 
-`drafts/soldier_ai/Source/SoldierAIConfig.h:189-212`의 실제 구성:
+`ai/drafts/Source/SoldierAIConfig.h:189-212`의 실제 구성:
 
 ```
 Exposure ← ExposureStanding/Crouched/Prone × ExposureStationary/Walking/Running × ExposureFiring
@@ -640,17 +640,17 @@ PerceivedExposure = 인지의 Exposure × (1 - CurrentCoverQuality)
 ```
 `CurrentCoverQuality`는 12.1절대로 내가 채운다. **인지 쪽은 곱하기 한 번만 추가하면 된다.**
 
-> ⚠ `upper_layer_plan.md` 5.4절의 *"같은 숫자를 두 시스템이 공유한다"* 는 **정확히는 틀렸다.**
+> ⚠ `ai/2026-09-02_upper_layer_plan.md` 5.4절의 *"같은 숫자를 두 시스템이 공유한다"* 는 **정확히는 틀렸다.**
 > 공유되는 것은 숫자가 아니라 **곱셈 인자 하나**다. 이 구분이 없으면 두 팀이 각자
-> "엄폐를 반영한 Exposure"를 만들어 **엄폐가 두 번 곱해진다.** → `OPEN_QUESTIONS.md` Q13
+> "엄폐를 반영한 Exposure"를 만들어 **엄폐가 두 번 곱해진다.** → `OPEN_QUESTIONS.md` Q35
 
 ### 12.3 분대 쪽이 나에게 물어본 것 — 슬롯 식별자 타입
 
-`drafts/squad/Source/Squad/SquadTypes.h:284-290`:
+`squad/drafts/Source/Squad/SquadTypes.h:284-290`:
 ```cpp
 struct FSlotSoftClaim
 {
-    /** SmartObject 슬롯 식별자. 실제 타입은 엄폐 담당자의 스키마에 맞춘다 [Q-12 인접] */
+    /** SmartObject 슬롯 식별자. 실제 타입은 엄폐 담당자의 스키마에 맞춘다 [Q23 인접] */
     FGuid SlotId;
     ...
     float ExpiresAtSeconds;
@@ -678,7 +678,7 @@ struct FSlotSoftClaim
 
 인지 쪽에 **`ExposureProne = 0.35`가 이미 있다**(`SoldierAIConfig.h:196`).
 반면 `PLAN.md`는 8.2절 A7에서 Prone을 범위 밖으로 권고했다 — **애니메이션이 0개**이기 때문이다.
-**두 문서가 서로 다른 전제 위에 있다** → `OPEN_QUESTIONS.md` **Q14**에서 한 번에 결정할 것.
+**두 문서가 서로 다른 전제 위에 있다** → `OPEN_QUESTIONS.md` **Q36**에서 한 번에 결정할 것.
 
 ### 12.5 여전히 내 범위가 **아닌** 것
 

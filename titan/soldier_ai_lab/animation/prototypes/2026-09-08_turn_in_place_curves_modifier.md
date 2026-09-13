@@ -55,7 +55,7 @@ if (FFloatProperty* Property = FindFProperty<FFloatProperty>(State->GetClass(), 
 
 **루트모션이 포즈에 들어가야 한다.** `bIncorporateRootMotionIntoPose = true`(= `bIgnoreRootLock`).
 빠뜨리면 루트가 고정돼 **yaw 프로파일이 평평하게 나온다** — `FootContactCurveModifier`에서
-겪은 것과 같은 함정이다(`../CLAUDE.md` P9 계열).
+겪은 것과 같은 함정이다(`CLAUDE.md` P9 계열).
 
 ## 3. 검증
 

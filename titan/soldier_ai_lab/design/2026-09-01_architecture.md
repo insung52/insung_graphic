@@ -2,7 +2,7 @@
 
 2026-09-01 / 설계 확정·프로젝트 생성 대기 / 병사 개개인이 환경·적·아군을 실시간으로 판단해 엄폐/사격/기동하고 분대로 협동하는 시스템의 전체 설계 — UE5.8 네이티브 스택(Motion Matching + StateTree + Smart Objects + EQS) 기반, 스켈레톤을 UE5 Mannequin 규격으로 전면 교체, 애니메이션은 **풀바디 베이스 + 절차적 워핑**(상하체 레이어 분리 폐기), 상위 시나리오는 고수준 "명령"만 내리는 구조.
 
-> **폴더 규칙·진행 상황·미해결 항목**: `../CLAUDE.md` · `../CURRENT_STATE.md` · `../OPEN_ITEMS.md`
+> **폴더 규칙·진행 상황·미해결 항목**: `CLAUDE.md` · `CURRENT_STATE.md` · `OPEN_ITEMS.md`
 >
 > **개정 이력**
 > - 2026-09-01 초안 — 8개 요구항목 전체 설계
@@ -23,12 +23,12 @@
 > 나중에 `titan_example`로 이식할 것을 전제로 설계했다(엔진 버전 UE5.8 동일).
 >
 > **후속 문서 (전부 2026-09-02, 착수 전 같이 볼 것)**
-> - `../assets/2026-09-02_asset_supply_and_collaboration.md` — 자산 조달(3.8절 대체) + 디자인팀 협업/공유 시점
-> - `../animation/2026-09-02_gasp_abp_analysis.md` — **GASP 애님BP 전수 분석.** 노드 위상·설정값·인과 맵·
+> - `assets/2026-09-02_asset_supply_and_collaboration.md` — 자산 조달(3.8절 대체) + 디자인팀 협업/공유 시점
+> - `animation/2026-09-02_gasp_abp_analysis.md` — **GASP 애님BP 전수 분석.** 노드 위상·설정값·인과 맵·
 >   삽입 지점·확장 판정. "무엇을 건드리면 무엇이 바뀌는가"의 지도
-> - `../animation/2026-09-02_pose_pipeline_spec.md` — **애니메이션 층(L4) 명세.** 축별 정의·합성 순서·
+> - `animation/2026-09-02_pose_pipeline_spec.md` — **애니메이션 층(L4) 명세.** 축별 정의·합성 순서·
 >   권한 규칙·`FSoldierPoseIntent` 계약·필요 앵커 산정. **5·6절을 대체·심화**
-> - `../ai/2026-09-02_upper_layer_plan.md` — 상위 층(L0~L3) 구조 계획·계층 간 계약·구현 순서
+> - `ai/2026-09-02_upper_layer_plan.md` — 상위 층(L0~L3) 구조 계획·계층 간 계약·구현 순서
 >
 > 선행/관련 문서:
 > - `../../ai_combat/ally_ai_combat_system_status.md` — 현행 아군 AI(`UAllyFormationComponent`)
@@ -149,7 +149,7 @@
 | **AnimationWarping** (= Pose Warping 노드군) | 정식 (Stride/Orientation/Slope + Root Motion Delta). ⚠ 단 공식 문서가 **Slope Warping은 "개발 중이니 프로젝트를 여기 의존하지 말 것"**, Stride Warping도 "아직 다듬는 중"으로 표기 | **Orientation Warping이 이 설계의 핵심 부품**(5.5.2절) — 조준방향/이동방향 분리, 8방향 클립 조합 폭발 방지 | ✅ 핵심 |
 | **PhysicsControl / ControlRigPhysics** | 5.7에서 별도 플러그인으로 분리. Control Rig Physics는 5.8에서 **Beta** 승격(+ Control Rig Dynamics로 5배 성능 개선) | 피격 반응, 장구류 물리 | ⏸ 2차 |
 | **Chooser** | 정식 | 상황별 MM 데이터베이스 스와핑(서있기/앉기/부상/무기별) | ✅ |
-| **AnimationModifierLibrary** | 정식. `UEncodeRootBoneModifier`(가중 본으로부터 루트 위치/회전 인코딩), `UCopyBonesModifier`, `UZeroOutRootBoneModifier`, `UMotionExtractorModifier` 등 보유 | **인플레이스 무료 클립을 루트모션 클립으로 변환** — 조달 전략의 핵심 도구(`../assets/2026-09-02_asset_supply_and_collaboration.md` 4절) | ✅ **핵심** |
+| **AnimationModifierLibrary** | 정식. `UEncodeRootBoneModifier`(가중 본으로부터 루트 위치/회전 인코딩), `UCopyBonesModifier`, `UZeroOutRootBoneModifier`, `UMotionExtractorModifier` 등 보유 | **인플레이스 무료 클립을 루트모션 클립으로 변환** — 조달 전략의 핵심 도구(`assets/2026-09-02_asset_supply_and_collaboration.md` 4절) | ✅ **핵심** |
 | **FullBodyIK** | 정식 | Control Rig 안의 풀바디 IK 솔버 | ✅ |
 | **ControlRig / IKRig** | 정식 | 발 배치, 손 IK, 상체 조준 보정 | ✅ 핵심 |
 | **SmartObjects** | 정식 (Experimental 플래그 없음) — **예약(reservation) 시스템 내장** | 엄폐 슬롯, 상호작용 지점 | ✅ 핵심 |
@@ -413,7 +413,7 @@ USoldierBrainComponent   ← 아군·적군 공용. 진영별 파생 클래스�
 
 ### 3.8 애니메이션 조달 계획 — GASP가 못 채우는 부분
 
-> ⚠️ **2026-09-02: 이 절은 `../assets/2026-09-02_asset_supply_and_collaboration.md` 3~6절로 대체되었다.**
+> ⚠️ **2026-09-02: 이 절은 `assets/2026-09-02_asset_supply_and_collaboration.md` 3~6절로 대체되었다.**
 > 아래 표의 **카테고리 구분은 여전히 유효**하지만, **조달처는 무효**다. 새로 확인된 제약:
 > ① 디자인팀은 애니메이션을 0부터 제작할 수 없다(리깅·리타깃·수정만 가능)
 > ② 유료 에셋을 사지 않기로 했다
@@ -578,9 +578,13 @@ struct FSoldierReplicatedState
 {
     FGameplayTag  CurrentIntent;      // L2 결과. 애니메이션 상태 선택의 최상위 힌트
     uint8         Stance;             // Standing / Crouch / Prone
+                                      // ★ 2026-09-12: 몸 쪽은 **연속 축**(0..1)으로 구현됐다
+                                      //   (IMPLEMENTED.md 2.5f). 복제를 이산으로 둘지
+                                      //   압축 float로 둘지 재검토 대상
     uint8         WeaponState;        // Lowered / Aiming / Firing / Reloading
     FVector_NetQuantize  AimTarget;   // 조준점(월드). 상체 정렬·Look-At의 입력
     uint8         LeanState;          // None / Left / Right
+                                      // ★ 2026-09-12: 린도 연속 축이다 (위와 같은 재검토 대상)
     uint8         HealthState;        // Healthy / Injured / Downed / Dead  (6.5절)
     // 이동 자체는 CharacterMovementComponent의 기존 복제를 그대로 사용
 };
@@ -1621,7 +1625,7 @@ struct FOrderStatusReport
 
 #### P0-4. 루트모션 인코딩 파이프라인이 도는가 (조달 전략의 전제)
 
-`../assets/2026-09-02_asset_supply_and_collaboration.md` 4절의 파이프라인을 Mixamo 클립 **1개**로
+`assets/2026-09-02_asset_supply_and_collaboration.md` 4절의 파이프라인을 Mixamo 클립 **1개**로
 끝까지 돌려본다. 이게 안 되면 무료 조달 가능 범위가 GASP/Lyra로 확 좁아진다.
 
 - [ ] Mixamo에서 라이플 견착 walk 클립 1개 다운로드(인플레이스)
@@ -1696,9 +1700,9 @@ Lowered로 분리, GASP의 `CHT_PoseSearchDatabases` 패턴 확장) → 캐릭�
 |---|---|---|---|
 | Q4 | 이 프로젝트도 Perforce에 넣나, 로컬/Git인가 | 확인 필요(titan_example은 P4) | 프로젝트 생성 직후 |
 | Q5 | P1의 순서 — 로코모션 품질 먼저인가, AI 판단 먼저인가 | 로코모션 먼저(P0-1이 최대 리스크) | P0 완료 시 |
-| ~~Q7~~ | ~~디자인팀 애니메이션 요청 스펙 변경 공지~~ | **✅ 2026-09-02 결정 완료** — `../assets/2026-09-02_asset_supply_and_collaboration.md` 7절: **P0 검증(1주 타임박스)을 혼자 끝낸 뒤 비교 영상과 함께 공유**한다. 지금은 공유하지 않는다 | — |
+| ~~Q7~~ | ~~디자인팀 애니메이션 요청 스펙 변경 공지~~ | **✅ 2026-09-02 결정 완료** — `assets/2026-09-02_asset_supply_and_collaboration.md` 7절: **P0 검증(1주 타임박스)을 혼자 끝낸 뒤 비교 영상과 함께 공유**한다. 지금은 공유하지 않는다 | — |
 | **Q8** | **캐릭터 메시를 어떻게 할 것인가** — 기존 병사 메시를 Manny 스켈레톤에 리스킨할지, Fab에서 신규 구매할지, MetaHuman으로 갈지 | 기존 메시 리스킨(외형 연속성 + titan_example 대체 용이) | **P1 후반** — P0는 GASP 기본 캐릭터로 진행하므로 지금 결정 불필요 |
-| ~~Q9~~ | ~~라이플 애니메이션 조달 — 유료 팩 구매 여부~~ | **✅ 2026-09-02 결정 완료** — **유료 배제.** 조달 전략은 `../assets/2026-09-02_asset_supply_and_collaboration.md` 3~6절로 대체 | — |
+| ~~Q9~~ | ~~라이플 애니메이션 조달 — 유료 팩 구매 여부~~ | **✅ 2026-09-02 결정 완료** — **유료 배제.** 조달 전략은 `assets/2026-09-02_asset_supply_and_collaboration.md` 3~6절로 대체 | — |
 | **Q10** | **견착 전환 동작(start/stop/pivot/turn)을 어떻게 채울 것인가** — 무료 소스에 사실상 없는 유일한 카테고리. A안(요구 수준을 낮추고 연출로 흡수) / B안(GASP 전환 동작을 오프라인으로 견착 변환) / C안(이 부분만 유료 재협의) | **A안 우선, B안 실험** | P0-2 결과 확인 후 |
 
 ### 15.3 착수 단계에서 채울 항목 (설계 백로그)

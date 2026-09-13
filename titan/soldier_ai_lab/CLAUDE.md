@@ -1,6 +1,6 @@
 # soldier_ai_lab — 세션 공통 규칙
 
-**이 폴더에서 작업하는 모든 세션은 이 문서를 먼저 읽는다.** 상위 `../CLAUDE.md`의 규칙을
+**이 폴더에서 작업하는 모든 세션은 이 문서를 먼저 읽는다.** 상위 titan 루트의 `../CLAUDE.md`(= `titan/CLAUDE.md`) 규칙을
 따르되, 이 프로젝트 고유의 규칙을 아래에 추가한다(2026-09-03 도입).
 
 ---
@@ -21,12 +21,16 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 
 | 상황 | 읽을 것 |
 |---|---|
-| **처음 오는 세션** | `README.md` → `CURRENT_STATE.md` → 작업할 영역의 폴더 문서 |
+| **처음 오는 세션** | `README.md` → **`IMPLEMENTED.md`** → `CURRENT_STATE.md` → 작업할 영역의 폴더 문서 |
+| **지금 무엇이 존재하나** (에셋·배선·튜닝값) | **`IMPLEMENTED.md`** — 코드/에셋을 건드리기 전에 반드시 |
 | 지금 뭘 해야 하나 | `CURRENT_STATE.md` |
 | 미해결 항목이 뭐가 있나 | `OPEN_ITEMS.md` |
 | 전체 설계가 궁금 | `design/2026-09-01_architecture.md` |
-| 애니메이션 작업 | `animation/` 두 문서 **둘 다** |
-| AI/분대 작업 | `ai/2026-09-02_upper_layer_plan.md` |
+| 애니메이션 작업 | `animation/` 명세 두 문서 **둘 다** + `animation/prototypes/` 에서 해당 주제 |
+| AI 작업 | **`ai/2026-09-13_perception_stack.md`** → **`ai/2026-09-13_engagement_and_cover.md`** → `ai/2026-09-13_ai_bridge_and_scene.md`. 계획 문서는 `ai/2026-09-02_upper_layer_plan.md`, **`ai/drafts/` 는 여전히 미반영이다** |
+| 분대 작업 | `squad/drafts/` |
+| 엄폐 작업 | `cover/drafts/` |
+| 무기·투사체 작업 | `weapons/2026-09-12_projectile_port.md` → `IMPLEMENTED.md` 3.1절 |
 | 에셋/리깅/디자인팀 | `assets/2026-09-02_asset_supply_and_collaboration.md` |
 
 ---
@@ -35,14 +39,26 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 
 | 폴더 | 담는 것 |
 |---|---|
-| **(최상위)** | 메타 문서만 — `README` / `CURRENT_STATE` / `OPEN_ITEMS` / `CLAUDE`. **내용 문서를 최상위에 두지 말 것** |
+| **(최상위)** | 메타 문서만 — `README` / `IMPLEMENTED` / `CURRENT_STATE` / `OPEN_ITEMS` / `CLAUDE`. **내용 문서를 최상위에 두지 말 것** |
 | `design/` | 전체 시스템 설계 — 층 구조, 계층 간 계약, 성능/스케일, 채택·미채택 결정 |
 | `animation/` | **L4 모션** — 포즈 파이프라인 명세, GASP ABP 분석, 리그/커브/워핑 |
-| `ai/` | **L2 판단 · L3 실행** — 인지, 유틸리티, StateTree |
-| `squad/` | **L0 명령 · L1 분대** — 분대 조율, 사기, 토큰, 명령 스키마 *(내용이 생기면 `ai/`에서 분리)* |
+| `ai/` | **L2 판단 · L3 실행** — 인지, 교전, 엄폐, AI↔몸 배선. *(2026-09-13 이후 엄폐도 여기 있다 — `cover/` 의 EQS/SmartObject 초안과 다른 구현이다)* |
+| `squad/` | **L0 명령 · L1 분대** — 분대 조율, 사기, 토큰, 명령 스키마 |
+| `cover/` | **엄폐** — 엄폐 공간 표현, EQS 스코어링, Smart Object 예약 |
+| `weapons/` | **무기 · 투사체** — 탄도, 명중 반응(이펙트·데칼·도탄), 무기 액터 배선, 총알 휘파람 *(2026-09-12 신설)* |
 | `assets/` | 자산 조달, 스켈레톤/리깅, 디자인팀 협업 |
-| `prototypes/` | P0/P1 실험 기록 — 무엇을 시도했고 결과가 무엇이었나. **`prototypes/TEMPLATE.md`를 복사해서 쓸 것**(이 파일만 날짜 규칙 예외) |
-| `tools/` | MCP 스크립트, 애니메이션 모디파이어, 베이크 툴 *(생기면 신설)* |
+| `tools/` | MCP 스크립트, 베이크 툴 *(생기면 신설)* |
+
+### 2.1 각 주제 폴더 안의 공통 하위 폴더
+
+주제 폴더는 **명세 문서를 직하에 두고**, 아래 둘을 필요할 때만 만든다.
+
+| 하위 폴더 | 담는 것 |
+|---|---|
+| `<주제>/prototypes/` | 그 주제의 실험 기록 — 무엇을 시도했고 결과가 무엇이었나. **`animation/prototypes/TEMPLATE.md`를 복사해서 쓸 것**(이 파일만 날짜 규칙 예외) |
+| `<주제>/drafts/` | **아직 프로젝트에 들어가지 않은** 계획·코드 초안. 통합되면 상위로 올리고 이 폴더를 비운다 |
+
+**초안이라고 표시되지 않은 것은 구현된 것으로 읽힌다.** 헷갈릴 여지를 남기지 말 것
 
 **맞는 폴더가 없으면 신설하고 이 표에 추가한다.** 스테이징 폴더는 두지 않는다.
 
@@ -50,11 +66,25 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 
 ## 3. 문서 작성 규칙
 
-상위 `../CLAUDE.md`와 동일:
+상위 titan 루트의 `../CLAUDE.md`와 동일:
 
 1. 파일명 `YYYY-MM-DD_짧은-주제.md`
 2. 문서 맨 위 1줄 헤더: `날짜 / 상태 / 한줄요약`
 3. 폴더는 위 2절 표에서 고른다
+
+### 3.0 ★ 문서 간 참조는 `soldier_ai_lab/` 기준 경로로 쓴다 (2026-09-11)
+
+깊이에 안 휘둘리는 규칙이 필요하다.
+
+```
+⛔  ../CLAUDE.md            ← 파일을 옮기면 전부 깨진다
+✅  CLAUDE.md
+✅  animation/prototypes/2026-09-09_lyra_rifle_migration.md
+```
+
+- **같은 폴더의 형제 파일**은 파일명만 써도 된다
+- **titan 본체의 문서**(`ai_combat/` 등)만 `../`를 쓴다. 그때는 titan 루트 기준임을 밝혀 쓴다
+- 2026-09-11 재구성에서 기존 참조 약 90건을 이 형식으로 일괄 전환했다
 
 ### 3.1 ★ 신뢰도 표기 — 이 프로젝트 고유 규칙
 
@@ -117,11 +147,11 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 | P5 | **모든 L0~L3 Tick 진입점에 `HasAuthority()` 게이트** | `titan_example`은 리슨서버 멀티플레이 |
 | P6 | **튜닝 대상은 전부 데이터**(DataAsset/DataTable). 코드에 상수를 박지 않는다 | |
 | P7 | **디버그 표시는 1급 시민.** 축을 구현하기 전에 HUD 골격부터 | 값이 안 보이면 튜닝이 불가능 |
-| P8 | ~~커브 3종 필수~~ ~~5종~~ ~~전 클립 공통은 `contact_l/r` 뿐~~ → **커브는 클립 종류별 세트다. 확정 매핑표를 보고 건다** | **`prototypes/2026-09-04_c34_clip_curve_mapping.md` 4절** ← 유일한 기준. [C-34] 해결 |
+| P8 | ~~커브 3종 필수~~ ~~5종~~ ~~전 클립 공통은 `contact_l/r` 뿐~~ → **커브는 클립 종류별 세트다. 확정 매핑표를 보고 건다** | **`animation/prototypes/2026-09-04_c34_clip_curve_mapping.md` 4절** ← 유일한 기준. [C-34] 해결 |
 | P8c | **Epic의 출하 데이터를 복제하려 하지 말 것 — 일관돼 있지 않다.** 같은 "걸으며 90° 회전"이 커브 3종/4종/6종으로 갈린다. 티어를 따라가는 것도 답이 아니다(Neutral이 더 들쭉날쭉). **소비하는 쪽(PSD 스키마·ABP)이 뭘 읽는지로 규칙을 정해 균일하게 적용한다** | 996클립 전수 실측. 위 문서 3절 |
 | P8e | **PSS 스키마가 읽는 커브는 `Phase` 하나뿐이고, 그것도 `PSS_Relaxed_Loops`(루프 전용) 단 하나다.** 나머지 스키마는 전부 Trajectory + Group(Position/Velocity/Heading)만 본다. **우리가 쓰는 `PSS_Default`는 커브를 안 읽는다** | 커브의 주 소비자는 PSD가 아니라 **ABP**다. 위 문서 3.2절 |
 | P8d | **애매하면 커브를 뺀다.** 누락 = 그 기능 OFF(`Get Curve Value`가 0을 반환). 잘못 넣으면 기능이 **켜진다** — 정지 클립에 `enable_warping`이 들어가면 발이 미끄러진다. **단 `contact_l/r`만은 예외 없이 만든다**(없으면 발 IK가 조용히 오작동) | 위 문서 3.2절 |
-| P8b | **`contact_l/r`은 이진 사각파다.** 엔진 기본 모디파이어로는 못 만든다 → **`UFootContactCurveModifier`**(자작, `Source/SoldierLabEditor/`)를 쓴다 | `MotionExtractor`는 연속값, `FootstepAnimEvents`는 걸음당 1개. `prototypes/2026-09-04_foot_contact_curve_modifier.md` |
+| P8b | **`contact_l/r`은 이진 사각파다.** 엔진 기본 모디파이어로는 못 만든다 → **`UFootContactCurveModifier`**(자작, `Source/SoldierLabEditor/`)를 쓴다 | `MotionExtractor`는 연속값, `FootstepAnimEvents`는 걸음당 1개. `animation/prototypes/2026-09-04_foot_contact_curve_modifier.md` |
 | P10 | **임계값·판정 기준을 다룰 땐 조정 전에 계측부터 넣는다** | 접지 임계를 추측으로 세 번 고치다 `UE_LOG`로 분포를 찍자 원인(발 높이 좌우 비대칭)이 즉시 드러났다. 로그는 MCP `LogsToolset.GetLogEntries`로 읽힌다 |
 | P11 | **모디파이어 CDO를 바꿔도 이미 애님에 추가된 인스턴스에는 반영되지 않는다** | 추가 시점에 값이 복사된다. 고치려면 Details에서 직접 바꾸거나 **Remove → 재Add**. 2026-09-04에 이걸로 두 번 헛돌았다 |
 | P12 | **모디파이어 목록 순서 = "Apply All"의 실행 순서.** 개별 Apply는 무관하지만 목록은 맞춰 둔다 | `EncodeRootBone`이 contact·MoveData·Warping보다 먼저, `FootSteps`가 `BakePhase`보다 먼저. 틀린 채로 Apply All을 누르면 **조용히 망가진다** |
@@ -144,7 +174,47 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 | P19 | **PSD를 복제할 때 `normalizationSet`도 같이 딸려온다 — 우리 DB는 그 세트의 멤버가 아니다** | 정규화 세트는 **등록된 DB들의 통계**로 특징 척도를 정해 비용을 비교 가능하게 만든다. Epic 것을 가리키면 GASP 25개 DB의 척도로 우리 클립을 재게 된다. **우리 DB만 담은 PSN을 따로 만들 것** (2026-09-09 `PSN_Rifle_All`) |
 | P13 | **새 `UCLASS`는 Live Coding으로 안 들어간다.** 에디터를 닫고 빌드해야 한다 | `Unable to build while Live Coding is active`. 단 **UHT는 먼저 돌므로 에디터를 안 닫아도 리플렉션 문법 오류는 잡힌다**(`Build.bat`가 `N generated files written`까지 진행) |
 | P14 | **자작 모디파이어에서 루트모션을 읽을 땐 `bIncorporateRootMotionIntoPose = true`** (= `bIgnoreRootLock`) | 빠뜨리면 루트가 고정돼 **접지 속도가 전부 이동속도만큼 뜨고, yaw 프로파일은 평평하게 나온다.** 2026-09-04와 09-08에 같은 함정을 두 번 만났다 |
-| P9 | **모디파이어 적용 순서: `EncodeRootBone` → `AM_WarpingAlpha`.** 그리고 생성된 커브를 **눈으로 확인**한다 | `AM_WarpingAlpha`는 루트모션을 읽어 판정한다. 루트모션이 없으면 **에러 없이 전 구간 1**이 나온다. `prototypes/2026-09-03_enable_warping_curve_generation.md` 3.4절 |
+| P9 | **모디파이어 적용 순서: `EncodeRootBone` → `AM_WarpingAlpha`.** 그리고 생성된 커브를 **눈으로 확인**한다 | `AM_WarpingAlpha`는 루트모션을 읽어 판정한다. 루트모션이 없으면 **에러 없이 전 구간 1**이 나온다. `animation/prototypes/2026-09-03_enable_warping_curve_generation.md` 3.4절 |
+| P32 | **회전 보정은 반드시 *성분별*로 넣는다** | `CombineRotators`(회전 합성)는 덧셈이 아니며 **두 프레임이 가까울 때만 근사적으로 같다.** 프레임이 벌어지면 축이 섞이고 부호가 뒤집혀 되먹임이 **양성**이 된다. 2026-09-11 총구 보정에서 정면은 오차 0.009°로 수렴했는데 월드 −X를 보면 떨고 뒤집혔다. **증상이 월드 축에 고정된 원뿔 형태**(캐릭터가 아니라 월드 +X 기준 약 150°)로 나타나면 **월드 공간 합성을 의심할 것.** 성분별 덧셈이 필요하면 `Delta(Rotator)`를 쓴다 — `Delta(A, Delta(B, C)) == (A−B)+C`. `animation/prototypes/2026-09-11_muzzle_aim_alignment.md` 4·5.4절 |
+| P33 | **블루프린트 팔레트에 산술 연산자 노드(+ − × ÷)가 없다** | `find_node_types`가 나열하지 않고 `create_node`도 어떤 이름으로도 거부한다(`Math\|Float\|float+float`, `Add`, `Add_DoubleDouble`, `+` 전부 실패). 대체 수단: **`Delta(Rotator)`**(성분별 뺄셈) · **`Lerp`**(A와 B 사이 보간 = 스케일) · `CombineRotators`(합성, **P32** 주의) · `Clamp` · `Max` · `MapRange*`. 산술이 꼭 필요하면 **설계를 이 노드들로 표현 가능한 형태로 바꾸는 편이** `write_graph_dsl`(6.1f 참고, **무손실이 아니다**)보다 안전하다. ★ **정밀화 (2026-09-12)**: 산술 노드는 **그래프 안에 존재하고 읽히기도 한다** — 없는 것은 팔레트가 아니라 **생성 경로**다(`create_node`가 *"does not exist"*로 거부). 그러니 "읽었으니 만들 수 있다"고 넘겨짚지 말 것. 실제로 통하는 대체 조합: **`Math\|Float\|Max(Float)`**(비교 없이 비대칭 램프를 만드는 데 쓴다 — `animation/prototypes/2026-09-12_body_yaw_rate_and_aim_antiwindup.md` 4.1절) · `Math\|Float\|SelectFloat` · `Math\|Float\|MapRangeClamped` · `Math\|Boolean\|NOTBoolean` |
+| P34 | **계측 출력에는 라벨을 붙인다** | `PrintString`의 `Key`는 **중복 제거용이고 화면에 찍히지 않는다** — 값만 여러 줄 나오면 어느 게 뭔지 알 수 없다. `BuildString(<Type>)`의 **`Prefix`**를 쓸 것. 그리고 **여러 액터가 같은 `Key`를 쓰면 마지막에 틱한 액터의 값만 보인다** — 플레이어 값을 보려면 `IsLocallyControlled`로 게이트해야 한다. 2026-09-11에 둘 다 겪었고, 라벨이 없어서 **사용자가 보고한 숫자가 오차인지 보정값인지 판별할 수 없었다.** 라벨을 붙이자 "게이트가 한 번도 발동하지 않는다"가 PIE 1회로 드러났다 |
+| P35 | **제어기의 게이트는 *입력*으로 건다. 그리고 게이트만으로는 부족하다 — 게인이 곧 학습 시간상수다** | 총구 보정 루프에서 게이트를 **세 번** 잘못 걸었다. ① `\|Delta(control, actorRotation).Yaw\| ≤ 90`(도달 가능성) — 조준 중엔 몸이 카메라를 따라 돌아 이 값이 **구조적으로 늘 작아** 한 번도 발동하지 않았다. ② `max(\|ERR.Pitch\|, \|ERR.Yaw\|)` + 히스테리시스(15/30 → 20/25) — **자기 잠금**. 누적값이 틀어지면 오차가 커지고, 큰 오차가 게이트를 닫고, 닫힌 게이트가 누적값 교정을 막는다. 사용자는 마우스를 흔들어 오차가 우연히 임계 아래로 떨어지기를 기다리는 것 말고는 빠져나올 방법이 없었다. **제어기의 게이트를 제어기 자신의 출력(오차)으로 건 것**이 잘못이다 → 최종형은 **카메라 각속도**(순수 입력) `≤ 2.0°/프레임`. ③ 속도 게이트 + **게인 0.25** — 마우스가 멈추는 순간 게이트는 열리지만 **몸은 아직 정착 중**(`OffsetRootBone.rotationHalfLife 0.1` → 약 0.3초)이라 적분기가 그 추적 지연을 4프레임 만에 삼키고 **오버슛**했다(회전 관성처럼 보이지만 적분 오버슛이다). **답은 게이트를 하나 더 다는 것이 아니라 게인 재해석**이었다 — **게인 0.05 ≈ 20프레임 ≈ 0.33초**, 학습 대상이 정착하는 시간에 맞춘 값. **학습 시간상수를 정착 시간보다 느리게 잡으면 과도구간은 학습되지 않는다.** `animation/prototypes/2026-09-11_muzzle_aim_alignment.md` 9·10절 |
+| P36 | **증상마다 패치를 덧대지 말고 근본 원인으로 돌아간다. 패치 두 개째가 신호다** | 2026-09-11에 **두 번** 같은 함정에 빠졌고 두 번 다 사용자가 "이해 없이 덧대고 있다"고 지적했으며 두 번 다 근본으로 돌아간 것이 실제 해결이었다. ① `CombineRotators` 발산에 **클램프 → 도달 가능성 게이트 → 히스테리시스** 세 겹을 덧댔다. 진짜 원인은 **월드 공간 회전 합성**이었고 성분별 `Delta of Delta`로 바꾸자 세 패치가 전부 불필요해졌다(P32). ② 오버슛에 게이트를 계속 다시 설계했다. 진짜 원인은 **게인이 시간상수라는 것**이었고 0.05로 낮추자 끝났다(P35). ③ 급선회 뒤집힘을 "캡슐 회전이 느리다"로 보고 회전 속도를 뒤졌으나 **접지 시 `RotationRate = (0,−1,0)` = 즉시 스냅**이라 애초에 느리지 않았다 — 원인은 `OffsetRootBone.maxRotationError = −1`(상한 없음)이었다. *(2026-09-12 후일담: 그 뒤 **의도적으로** 유한 각속도를 넣었다 — 뒤집힘 대책이 아니라 "총을 내려야 빨리 돈다"에 물리적 근거를 주려는 것이다. **증상 때문에 건드리는 것과 설계로 정하는 것은 다르다.**) **판정법: 패치를 넣기 전에 "이 패치가 없으면 왜 틀리는가"를 한 문장으로 말할 수 있는지 본다.** 못 하면 그건 패치가 아니라 추측이다. 그리고 **덧댄 패치는 원인을 찾은 뒤 반드시 걷어낸다** — 안 걷으면 죽은 노드가 계측 표시를 계속 구동해 다음 사람을 속인다(`animation/prototypes/2026-09-11_muzzle_aim_alignment.md` 11절의 `GATE` 표시) |
+| P37 | **제어기의 게이트는 *액추에이터가 결합돼 있는가*로 건다. 그 대리 신호로도, 제어기 자신의 오차로도 걸지 않는다** | 포즈를 고르는 것이 함수 `F`(여기서는 `Enable_AO`)라면 **적분기는 `F` 자체로 게이트해야 한다.** 다른 어떤 신호를 골라도 — 의도(우클릭) · 캡슐 오차(`BodyErr`) · 메시 지연 — **어딘가에서 반드시 `F`와 어긋나고, 어긋나는 창이 정확히 와인드업이 일어나는 창이다.** 2026-09-12에 세 번 틀렸다. 결정적 증거는 계측 한 장이었다 — **`BodyErr 0.000 / WpnLow 0.000 / AimGain 0.050` 인데 `AimErr P 73 Y 99`**, 즉 게이트가 "이상 없음"이라고 말하는 동안 무기는 등 뒤에 있었다. ⚠ **P35("게이트는 입력으로")와 충돌하지 않는다** — 금지되는 것은 *제어기 자신의 오차*로 거는 것(자기 잠금)이고, *액추에이터의 결합 여부*로 거는 것은 **포화 인지형 안티 와인드업의 표준형**이다. 결합 여부가 제어 출력에 부분적으로 의존해도 마찬가지다 ("`Enable_AO` 안에 `AimCorrection`이 들어 있으니 자기 참조"라며 기각했던 판단이 **틀렸다**). `animation/prototypes/2026-09-12_body_yaw_rate_and_aim_antiwindup.md` 10·11절 |
+| P38 | **의도에 건 게이트는 액추에이터의 수송 지연만큼 늦춘다. 그리고 제어 권한의 회복은 액추에이터의 회복보다 *반드시 느려야* 한다** | 게이트를 `bOrientRotationToMovement`(우클릭)에 걸었더니 **명령에는 즉시 열리는데 포즈는 `BlendListByBool_0`의 0.375초 블렌드를 거쳐** 올라왔다. 그 창에서 게인이 이미 최대라 `0.05 × 20° × 22프레임 ≈ 22°` — **±25 클램프 코앞, 사실상 포화 그대로**였다. 최종형은 **게인 회복 0.5초 > 포즈 블렌드 0.375초**로 잡아 포즈가 먼저 서고 게인이 나중에 붙게 했다. **"언제 여는가"만 정하고 "얼마나 천천히 여는가"를 안 정하면 게이트는 반쪽이다**(P35의 게인 = 시간상수와 같은 계열) |
+| P39 | **측정 가능한 서명이 있으면 감상 대신 그 값을 본다. 그리고 극단값으로 시험한다** | 2026-09-12에 `SetRotationRate` 쓰기가 부모 컴포넌트에 덮어써져 **여러 라운드 동안 아무 효과가 없었는데**, "문제없어보임"이라는 사용자 확인을 ✅로 접수하고 넘어갔다. **육안으로는 판별이 불가능했다** — 회전 속도를 바꿔도 애니메이션은 자기 속도로 계속 돈다("몸이 느리게 도는 것 같기도"는 참·거짓 어느 쪽으로도 못 쓴다). 판별 신호는 숫자에 있었다: **`BodyErr == 0.000`(정확히 0)이 `RotationRate.Yaw = −1`(즉시 회전)의 서명**이고, 0이 아닌 값이 곧 유한 각속도가 먹고 있다는 증거다. **변경에 수치 서명이 있으면 그것을 화면에 올리고, 값을 극단으로 몰아(P29) 시험한다 — "괜찮아 보이나요"라고 묻지 않는다** (P10·P16·P29·P34와 같은 계열) |
+| P40 | **포화하는 적분기는 클램프에 *두 번째 안정 평형점*을 갖는다 — 오차가 보정 권한을 넘는 순간 빠져나올 수 없다** | `AimCorr P 25.000 / Y 25.000`(±25 클램프) 에 `AimErr P 73.265 / Y 99.063`. **99° 오차를 25° 권한으로는 못 줄이므로 적분값이 클램프에 붙은 채 정지**하고, 시간이 지나도 풀리지 않는다 — 사용자가 마우스를 움직여 상태를 흔들어야만 빠져나왔다. **클램프는 안티 와인드업이지만 동시에 권한 상한이다.** 설계할 때 **"이 클램프로 고칠 수 없는 오차 크기가 존재하는가, 그 상태에 어떻게 들어갈 수 있는가"** 를 묻고, 답이 있으면 **탈출 경로(리셋 조건)를 따로 둔다.** 실제 사례 → **[C-76]** |
+| P41 | **도구·에셋을 추천하기 전에 *실제 능력*을 확인한다. 이름과 위치는 근거가 아니다** | 2026-09-12에 `CR_UEFN_Mannequin_FullBodyIK`를 포즈 저작용으로 권했다 — 이름에 `FullBodyIK`가 있고 `Characters/UEFN_Mannequin/Rigs/` 아래 **유일한 리그**라서다. 실제 컨트롤은 **`hand_l_target`·`hand_r_target` 단 두 개**, 런타임 손 IK 이펙터 리그였다. **`list_variables` / 컨트롤 목록 한 번이면 막을 수 있었던 장시간 우회다.** 같은 세션에서 블라인드 파이어를 **순수 팔 IK로** 권한 것도 같은 유형이었다 — 팔 IK 체인은 `upperarm→lowerarm→hand` 세 마디라 **척추를 돌릴 수 없다**(표준 바이페드 리그의 설계이지 결함이 아니다). `animation/prototypes/2026-09-12_blind_fire_axis.md` 2·4.1절 |
+| P42 | **UI 필터가 기대한 것을 숨기면, "없다"고 결론짓기 전에 *그 필터가 무엇을 비교하는지* 묻는다** | 컨트롤 리그 선택창의 **`Filter Asset By Skeleton`은 본 호환성이 아니라 스켈레톤 *에셋 동일성*** 을 본다. `SK_UEFN_Mannequin`과 UE5 마네킹은 **본 계층이 동일한 다른 에셋**이라, 우리 메시를 완벽히 구동하는 `CR_Mannequin_Body`가 목록에서 통째로 사라졌다. **필터를 끄면 나온다.** 계층 동일성의 증거는 Anim Outliner에 있다 — `ik_foot_root` · `ik_hand_root` · **`ik_hand_gun`**(Epic 마네킹 고유). → 6.3절 |
+| P43 | **프로젝트 고유 설정은 웹 검색보다 *에셋을 직접 읽는* 것이 빠르다** | `CR_Mannequin_Body`가 다리 컨트롤에만 반응한 원인은 리그의 **불리언 변수 `R/L Arm IK Mode`·`Spine IK Mode`·`Neck IK Mode`**(다리만 기본 IK, 나머지는 기본 FK)였다. **표적 웹 검색 여러 번이 아무것도 주지 않았고**, `BlueprintTools.list_variables('/Game/Characters/UE5_Mannequins/Rigs/CR_Mannequin_Body')` **한 줄**이 즉시 답을 줬다 — **컨트롤 리그 에셋은 블루프린트로 열린다.** 웹에는 "이 리그의 변수 이름"이 있을 이유가 없다. → 6.3절 |
+| P44 | **과도현상은 과도구간을 계측해야 보인다. 정착 상태 값을 읽고 전환 중 거동을 추론하지 말 것** | 2026-09-12 연속 stance 축에서 문턱의 팝 하나를 **네 번 다르게 진단**했고, **틀린 셋이 전부 같은 오류**였다 — ① 에셋 참조 0건(정착 상태의 **관계**)으로 "전환 클립은 안 돈다"까지는 맞혔으나 거기서 원인 추론을 멈췄고 ② 기립/웅크림 **정착값 두 벌**(`ActorZ 88.284/62.284`)을 비교해 "엔진이 상쇄한다"를 얻었지만 **그 사이 프레임은 안 봤으며** ③ **프로퍼티 설정값**(`bCrouchMaintainsBaseLocation`)으로 전환 중 캡슐 거동을 추론했다(설정을 고쳐도 증상은 그대로였다). **증상은 과도구간에만 존재하므로 정착값은 원리적으로 증거가 될 수 없다.** 답은 과도구간을 화면에 올리자 한 번에 나왔다 — `PelvWZ`·`PelvTgt`·`PelvOff`·`ActorZ`·`CapHH`·`MeshZ`·`CrouchMB` 행 + **콘솔 `slomo 0.1`**(1프레임 스파이크를 눈으로 읽을 수 있게 늘린다). **`slomo 0.1`을 기본 도구로 쓸 것.** P10·P34·P39의 연장 — 저 셋이 "무엇을 재는가"라면 이것은 **"언제를 재는가"** 다. `animation/prototypes/2026-09-12_continuous_stance_axis.md` 8절 |
+| P45 | **앞서 통한 패턴을 겉만 닮은 문제에 반사적으로 재적용하지 말 것. "저기서 통한 *이유*가 여기서도 성립하는가"를 한 문장으로 말할 수 있어야 한다** | 같은 세션에서 어시스턴트가 **"즉시 전환 + 지연되는 액추에이터 → 램프로 맞춘다"** 를 들고 나왔고, 근거로 **총 내리기**(`WeaponLowerRate`)와 **조준 게인 회복**(P38)을 들었다. 그다음 **"아니다, 둘 다 즉시여야 상쇄된다"** 로 스스로 뒤집었다. **둘 다 틀렸다.** 두 선례의 액추에이터는 **단조로운 1차 지연**이라 직선 램프로 맞출 수 있었지만, 여기서는 **DeadBlending의 인어셜라이즈 곡선**이라 **어떤 직선으로도 상쇄되지 않는다**(모양이 다르면 잔차가 남는다). 정답은 셋째 범주였다 — 상쇄를 포기하고 **매 프레임 실측해 역산**하니 블렌드의 모양을 알 필요가 없어졌다. **유추는 결론이 아니라 가설이다.** P36("패치 두 개째가 신호다")의 자매 항목 — 저쪽이 *증상마다 덧대는 것*이라면 이쪽은 *성공담을 옮겨 붙이는 것*이다 |
+| P46 | **연속량에 붙은 이산 라벨은 연속량과 *반드시* 함께 바뀌어야 한다. 라벨은 소비자에게 "예측"으로 쓰인다** | 웅크릴 때 `MaxWalkSpeed`를 582 → 291로 묶었는데 **`Gait`는 Run에 남아 있었다** — `GetDesiredGait`가 **입력 크기와 `CanSprint`로** Gait를 정하고 **실제 속도를 보지 않기** 때문이다. 그러자 MM의 **예측 궤적이 582 기준으로** 만들어졌고, 어떤 Jog Loop도 맞지 않아 **`Jog_Stop`이 매 걸음 재선택**되며 떨었다. **뒷대각선 속도 불일치(P30·P31)와 서명이 정확히 같다** — 라벨/속도 불일치는 미끄러짐이 아니라 **Stop 클립 반복**으로 나온다. 해결은 `Stance ≥ 문턱`일 때 **`Gait`를 Walk로 클램프**(부모의 `SetGait`를 덮어씀)하는 것. **새 규칙이 아니라 일관성이다** — 제약을 거는 쪽이 라벨까지 책임진다. `animation/prototypes/2026-09-12_continuous_stance_axis.md` 5.2절 |
+| P47 | **하나의 증상에 원인이 하나라고 가정하지 말 것. 보고된 원인을 고쳐도 안 낫는 것이 정상적인 경우다** | `BP_AR4Rifle`이 컴파일되지 않았고 보고된 원인은 `SpawnActor` 노드의 **클래스 핀이 `None`** 이었다. 그것도 맞았지만 **별개로** `LaunchFrom` 노드가 **스테일 상태로 `BP_AR4Rifle`에 바인드**돼 있었다(마이그레이션이 함수의 선언 클래스를 엉뚱한 곳으로 남겼다). **핀만 고쳐서는 낫지 않는다** — 노드를 **지우고 `declaring_class = /Script/SoldierLab.SoldierProjectile`로 다시 만들어 핀 8개를 재연결**해야 했다. **하나를 고친 뒤 "그대로면 남은 게 있다"로 읽을 것.** `weapons/2026-09-12_projectile_port.md` 6.4 ① |
+| P48 | **"치운다"는 조작은 가장 좁은 범위로 한다. 그리고 부품을 *별도 액터*로 분리하면 "자기 자신"의 경계가 바뀐다** | 구 GASP 무기를 `SetActorHiddenInGame(true)`로 숨기자 **새 라이플이 쓰던 `MuzzlePoint`까지 같이 숨어** 총구 섬광이 안 나왔다 → 컴포넌트 단위 `SetVisibility(false, propagate = false)`. 같은 뿌리의 두 번째 증상: 라이플이 **별도 액터**라 투사체의 무시 목록에 없어 **발사 즉시 자기 총열에 명중**했다 → `SetActorEnableCollision(Rifle, false)`. **메시 컴포넌트였다면 가시성도 충돌 무시도 공짜였다** — 액터로 쪼개는 순간 그 둘이 명시 작업이 된다. `weapons/2026-09-12_projectile_port.md` 6.4 ②③ |
+| P49 | **조건이 거절할 수 있는 동작은, 조건 *앞*에서 부작용을 내지 않는다. 연출은 "하려 했다"가 아니라 "했다"에 건다** | `IA_Fire`가 `Shoot()`를 부르기 **전에** `PlayAnimMontage(AM_MM_Rifle_Fire)`를 **무조건** 재생했다. 재장전 중에는 `Shoot()`이 `CanShoot? = false`로 거절하므로 **총알은 안 나가는데 몽타주만 재생**되고, 같은 슬롯의 **재장전 몽타주를 밀어냈다.** 해결은 막는 조건을 하나 더 다는 것이 아니라 **위치를 옮기는 것**이었다 — `IA_Fire`는 `Shoot()`만 부르고, 사격 몽타주는 **탄이 실제로 스폰·발사된 뒤에만 방송되는 `OnWeaponFired` 디스패처**로 옮겼다. 그러자 **막을 조건 자체가 필요 없어졌다.** 이 프로젝트의 상시 규칙("해법은 타이머·래치가 아니라 인과에서 나와야 한다")이 적용된 자리이고, P36의 자매 항목이다 |
+| P50 | **메시를 갈아끼우면 그 메시의 `AnimInstance`를 겨냥한 호출이 전부 None이 된다** | `Accessed None trying to read (real) property CallFunc_GetAnimInstance_ReturnValue_1`, Node: `Montage_Play`. `Montage_Play` **2개**가 **무기 메시의** `AnimInstance`를 겨냥했는데(`AM_Weap_Rifle_Fire` / `AM_Weap_Rifle_Reload`), GASP의 `SK_Rifle`이 달고 있던 `ABP_Weap_Rifle`과 달리 **교체한 `SK_AR4_X`에는 애님 블루프린트가 없다** → `GetAnimInstance`가 **항상 None**. **`GetAnimInstance` None 에러가 나오면 "그 사이 메시를 바꿨는가"가 원인 목록의 첫 줄이다.** 저 몽타주들은 **이제 없는 스켈레톤을 겨냥하므로** 노드와 피더를 지웠다 — 되살리려면 새 메시용 무기 ABP를 만들어야 한다 |
+| P51 | **노드를 exec 체인 사이에서 옮겼으면 입력 링크와 출력 링크를 *둘 다* 되읽어 확인한다** | P49의 이동 중에 **옛 체인의 `then → Shoot()` 링크가 그대로 살아 있었다.** 그대로 뒀다면 `OnWeaponFired → 몽타주 → Shoot() → 발사 → OnWeaponFired → ...` **무한 재귀**였다. 편집 후 **핀 연결을 되읽어** 잡았다. **새로 이은 쪽만 보면 옮기기 전 체인의 잔재가 고리를 만든다** — 이동은 "잇기"가 아니라 "떼고 잇기"다 |
+| P52 | **예고와 경고는 *확인한 뒤에* 한다. 가정에서 나온 경고는 받는 쪽의 순서와 설계를 왜곡한다** | 투사체 이식 전에 **"두 프로젝트의 콜리전 채널 인덱스가 충돌할 것"** 이라고 경고했다. 실제로 열어 보니 **`titan_example`은 커스텀 채널을 하나도 쓰지 않는다** — 충돌은 애초에 없었고, 우리 `Cover`/`Sight`는 GASP가 갖고 있던 채널 1~3 뒤에 그냥 이어 붙으면 됐다. **파일을 한 번 여는 것이 경고 한 줄보다 싸다.** 3.2절("추정과 사실을 섞지 않는다")의 실패 사례이고, P41("이름과 위치는 근거가 아니다")과 같은 계열이다 — 저쪽이 *추천*이라면 이쪽은 *경고*다 |
+| P53 | **⚠⚠ `ObjectTools.set_properties` 는 이 환경에서 *쓰기를 못 한다*. 읽기만 된다** | 2026-09-13에 **컴포넌트 템플릿 · 배치 인스턴스의 컴포넌트 · CDO** 전부에 대해, **float·FName·enum 을 가리지 않고** `false` 를 반환했다. 값이 안 들어갔는데 에러도 없다. **기본값을 바꿔야 하면 (가) 사용자가 에디터에서 직접 넣거나 (나) 그래프 편집으로 우회한다** — `GM_SoldierObserver` 가 `DefaultPawnClass` 대신 **`GetDefaultPawnClassForController` 오버라이드**를 쓰는 이유가 이것이다. `ai/2026-09-13_ai_bridge_and_scene.md` 7.1절 |
+| P54 | **`find_node_types` 는 `context_pins` 없이는 아무것도 주지 않는다** | 빈 결과를 **도구가 불안정한 것으로 오독했다.** 맞는 타입의 **출력 핀**을 넘기는 것이 컨텍스트 노드를 꺼내는 방법이다. "안 나온다"는 **없다는 뜻이 아니라 안 물어봤다는 뜻**이다 |
+| P55 | **발견되는 노드가 전부 생성되는 것은 아니다. 그리고 exec 입력 핀은 연결을 여러 개 받는다** | `CallFunction\|Shoot` 과 **다른 블루프린트의 변수 게터**는 `find_node_types` 에 나오지만 `create_node` 가 못 만든다. 우회는 **기존 호출 노드를 두 호출자가 공유**하는 것 — exec 입력은 다중 연결을 받으므로 새로 만들 필요가 없다. 그리고 **만들 수 없다는 사실이 설계를 바꾼다**: 라이플의 탄약을 캐릭터가 읽을 수 없으니 **무기가 밀어 넣는다** |
+| P56 | **`get_node_type_pins` 는 트랜지언트 노드를 만들고 호출이 끝나면 부순다 — 반환된 참조를 재사용하지 말 것** | 재사용은 **조용히 실패하고 끊긴 가지를 남긴다.** 증상은 엉뚱한 곳에서 터지는 컴파일 ICE (`SetVariableOnPersistentFrame - No property found. Delta Seconds`) — **에러 메시지가 가리키는 곳에 원인이 없다** |
+| P57 | **`UCLASS()` 매크로와 클래스 선언 사이에 아무것도 끼우지 말 것** | UHT가 매크로를 **끼어든 쪽에** 적용한다 → `Found ';' when expecting '{'`. 주석 블록을 옮기다 만난다 |
+| P58 | **같은 이름의 함수가 두 클래스에 있으면 `declaring_class` 로 못박는다** | `Pawn\|GetControlRotation` 은 **APawn 에도 AController 에도** 있다. `create_node` 는 Controller 쪽을 고르고 블루프린트는 `This blueprint (self) is not a Controller` 로 죽는다. P47과 같은 계열 — **보고된 이름이 곧 대상은 아니다** |
+| P59 | **⚠ 툴 에러를 파이썬에서 `except` 로 잡아도 스크립트는 프레임워크 레벨에서 중단되고 반환값이 버려진다. 이미 수행된 부작용은 보이지 않게 남는다** | 2026-09-13에 이것으로 **컴포넌트 5개가 한 벌 더 생겼다.** 화면에는 "실패"만 보였다. **다단계 스크립트가 중간에 실패하면, 재시도 전에 *무엇이 이미 들어갔는지*부터 읽는다** |
+| P60 | **블루프린트 변수의 카테고리를 바꾸면 노드 type_id 경로가 바뀐다** | `Variables\|SoldierLab\|AIBridge\|Get...` 이지 `Variables\|Default\|Get...` 이 아니다. 정리하려고 카테고리를 붙인 순간 **기존 스크립트의 type_id 가 전부 무효**가 된다 |
+| P61 | **`write_graph_dsl` 은 ABP 세터 노드가 든 그래프를 다시 쓰지 못한다 — 다만 쓰기 전에 검증하므로 그래프는 안 망가진다** | 읽기 전용 형태(`\|SetBF_AlphaL`)로 왕복이 안 된다. 6.1f("`read_graph_dsl` 은 무손실이 아니다")의 **구체적 실패 지점**이고, **검증이 쓰기보다 먼저 돈다**는 것이 이 도구에서 확인된 안전판이다 |
+| P62 | **신선도(확신)와 해상도(불확실 반경)를 하나의 confidence 로 합치지 말 것** | 총성은 **적이 있다는 데는 거의 확실하고 어디인지는 거의 쓸모없다.** 흘끗 봄은 정반대다. 이 둘은 모델링하는 소스에서 **반대 방향으로 움직이므로** 합치면 서로를 지운다. 그리고 소비자는 매번 **둘 중 하나**를 쓴다 — 교전은 반경을 무기와 비교하고, 믿음 게이트는 확신을 본다. `ai/2026-09-13_perception_stack.md` 2.1절 |
+| P63 | **관측은 관측된 그대로 절대 시각과 함께 저장하고, 감쇠는 전부 *질의 함수*에 둔다** | 기록을 매 틱 갱신하지 않으면 **늦게 도착한 무전 보고가 받는 쪽에서 자동으로 제 나이만큼 낡은 채로** 들어온다 — 특별 처리 0줄. 그리고 "시야를 잃었다" 이벤트가 **필요 없어진다**(갱신이 끊긴 기록은 스스로 늙는다). 이 프로젝트 상시 규칙 "해법은 타이머·래치가 아니라 인과에서 나온다"의 사례. 위 문서 2.2·5.1절 |
+| P64 | **불확실한 값은 라벨이 아니라 *값으로* 흩뜨린다** | 총성 기록이 **진짜 사수 위치**를 담고 라벨만 "불확실"이었을 때, **원의 중심을 조준하는 자는 정확히 맞았고 반경은 장식**이었다. 지터를 넣고 나서야 반복 관측의 **1/√n 수렴**도 성립했다 — 흩어지지 않은 표본은 아무리 평균 내도 같은 점이다. 위 문서 4절 |
+| **P65** | **여러 추정의 융합은 역분산 가중(= 칼만 갱신)으로 쓴다. 그러면 우선순위 규칙이 사라진다** | "목격이 총성을 이긴다" · "최근 것을 쓴다" 를 **한 줄도 쓰지 않았는데** 둘 다 성립한다 — 정확한 관측은 가중치가 `(R_큰/R_작은)²` 배고, **낡음이 곧 더 큰 반경**이기 때문이다. 확신은 `1−(1−a)(1−b)` 로 독립 증거처럼 합친다. ⚠ **최소 반경 바닥이 필수** — 상관된 관측을 반복 융합하면 **어떤 센서도 만들지 않은 정밀도를 날조한다.** 위 문서 3절 |
+| **P66** | **게이트는 *시스템이 이미 생산하는 두 양의 비교*로 쓴다. 튜닝된 문턱이 남으면 아직 질문이 틀린 것이다** | "맞출 수 있나"로 물으면 **3° 산포에서 40m 표적은 2%** 라 어떤 문턱도 뜻이 없다. "**내 앎이 내 무기보다 나쁜가**"(불확실 반경 vs 탄착 반경)로 바꾸니 **양변이 전부 기존 물리량**이고 문턱이 사라졌다. `ai/2026-09-13_engagement_and_cover.md` 2절 |
+| **P67** | **비율로 쓴 게이트에는 절대 게이트를 짝지어야 한다** | 앎↔무기 비교는 **비율**이라, **무기가 절망적인 병사도 자기 앎이 더 절망적인 한 계속 자격을 얻는다** — 40m를 전력질주하며 탄창을 비우는 거동이 정확히 그것이다. 절대 게이트(`√(반경²+탄착²) ≤ 제압반경`)가 그 자리를 막고, 그 하나로 **정지 95m / 걷기 57m / 조깅 32m / 질주 24m** 가 떨어진다. 위 문서 4절 |
+| **P68** | **술어는 *긍정 열거*로 쓴다. `!= X` 로 쓰면 열거형에 값이 늘 때 조용히 뒤집힌다** | `WantsToFire()` 를 `FireIntent != Hold` 로 써 두었더니 **`Masked`(아군이 사선에 있음)를 추가한 순간 병사들이 자기 편을 관통해 쐈다** — 그 함수는 한 글자도 안 고쳤는데. 게다가 재장전 판단이 `!WantsToFire()` 를 쓰고 있어 오염이 두 곳으로 퍼졌다. 위 문서 6절 |
+| P69 | **예산으로 도는 루프는 반복 횟수로도 막는다 — *0 비용 반복*이 가능하면 예산은 절대 안 줄어든다** | 엄폐 후보 루프에서 **네브메시 투영에 실패한 후보는 트레이스를 한 발도 안 쓴다.** 링 전체가 오프메시인 자리에 선 병사는 **그 자리에서 영원히 돈다.** 출하 전에 잡았다. 위 문서 7.5절 |
+| P70 | **디버그 오버레이의 한 채널은 한 가지만 뜻한다** | 시야는 "막히지 않음"을, 인지는 "아직 믿는 중"을 **둘 다 초록**으로 그렸다 — 각각은 읽혔고 **같이 켜면 못 읽었다.** 규약: **채도 있는 색 = 앎**(색상은 출처), **회색 = 센서 활동**(쓴 트레이스 — 세계에 대한 사실이 아니므로 물러난다), **크기 = 해상도**, **굵기 = 신선도.** 뒤의 둘은 **절대 색으로 표현하지 않는다.** P7의 확장. `ai/2026-09-13_perception_stack.md` 8절 |
+| P71 | **AI가 구동하는 축은 플레이어가 쓰는 것과 *같은 레이트 상수*를 쓴다** | 별도의 "AI용 속도"를 두는 순간 **AI의 몸은 플레이어의 몸이 아니고**, 플레이어로 검증한 모든 것이 AI에 대해 다시 미검증이 된다. **AI가 사람보다 축을 빠르게 움직일 수 없어야 한다.** ⚠ 짝이 되는 함정: `RampAxisTo` 에는 **클램프가 없다** — 플레이어 경로는 키 스텝이 클램프를 품고 있어서 몰랐다. AI 목표값은 `MapRangeClamped` 로 클램프한다. `ai/2026-09-13_ai_bridge_and_scene.md` 1절 |
 
 ---
 
@@ -210,6 +280,170 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
   프로퍼티라 읽기·쓰기 둘 다 된다.** → **열은 자동화, 행 결과는 수동**이 원칙이다.
   일반화: **에디터 전용 프로퍼티는 MCP에 노출되지 않는다** — 못 읽으면 헤더에서 `WITH_EDITORONLY_DATA`를 의심할 것
 - StateTree의 `get_node_description` (구조는 읽히나 설명은 실패)
+- ⚠⚠ **`AssetTools`에 에셋 *생성* 함수가 없다** (2026-09-12). 있는 것은 duplicate / move / delete /
+  create_folder / save / find 뿐이다. **새 에셋이 필요하면 같은 클래스의 기존 에셋을 복제하고
+  프로퍼티를 고친다.** `IA_BlindFireH/V/Reset` 세 개를 `IA_Lean` 복제로 만들었다
+  (덤: 트리거를 비워 둔 에셋을 복제하면 그 정리까지 따라온다)
+- ⚠⚠ **Input Mapping Context의 `mappings`** — `ObjectTools.get_properties('/Game/Input/IMC_Sandbox')`가
+  **매핑이 실제로 있는데도 `{"mappings":[]}`** 를 반환한다. 이 배열이 API로 직렬화되지 않는다
+  → **키 매핑은 에디터 수작업이다** (2026-09-12)
+- **`editor_toolset.toolsets.skeletalmesh.SkeletalMeshTools`가 이 빌드에 등록돼 있지 않다** —
+  본 목록을 이 경로로 얻을 수 없다. **Anim Outliner** 나 **컨트롤 리그의 계층**에서 읽을 것 (2026-09-12)
+- ★ 반대로 **컨트롤 리그 에셋은 블루프린트로 열린다** — `BlueprintTools.list_variables` ·
+  `list_graphs`가 그대로 동작한다. 리그의 IK/FK 모드 변수를 이걸로 찾았다 (**P43**, 6.3절)
+- `execute_tool_script` 안에서 **`unreal` 파이썬 모듈은 차단**돼 있다. 허용 import는
+  `re · time · math · datetime · copy · json` — **`collections`는 불가** (6.1b 재확인)
+- ⚠⚠ **`ObjectTools.set_properties`는 비트필드(`uint8:1`) 프로퍼티를 쓰지 못한다** (2026-09-12).
+  `bCrouchMaintainsBaseLocation`이 실패했다. → **블루프린트의 세터 노드를 쓴다**
+  (`Class|CharacterMovementComponent|SetCrouchMaintainsBaseLocation`).
+  **덤으로 변경이 그래프에 남아 다음 사람 눈에 보인다** — CDO를 몰래 고치는 것보다 낫다
+- ⚠⚠ **`PoseSearchDatabase`의 멤버는 `get_properties`로 안 읽힌다** (2026-09-12).
+  `animationAssets`(기존 항목)뿐 아니라 **`notifyRecencyTimeOut`도 실패**한다.
+  → **`AssetTools.get_dependencies(<PSD>)`** 가 그 DB가 참조하는 애니메이션을 준다.
+  반대로 **`get_referencers(<클립>)`** 는 어느 DB가 그 클립을 쓰는지 준다 —
+  `MM_Rifle_Crouch_Entry/Exit`가 **참조 0건(= 미사용 보관물)** 임을 이걸로 증명했다
+- **`CameraRigAsset`의 내부는 안 읽힌다** (`rootNode` 실패, 2026-09-12).
+  카메라 리그는 **에디터에서 손으로 볼 것**
+
+### 6.1e ⚠ PIE 실행 중에는 MCP의 에셋 경로 호출이 전부 실패한다 (2026-09-11)
+
+```
+PIE 중:
+  find_assets        정상            ← 에셋이 존재한다고 나온다
+  read_graph_dsl     정상
+  exists             false           ❌
+  is_dirty           "Asset does not exist"   ❌
+  save_assets        "Asset does not exist"   ❌
+  duplicate          false                    ❌
+```
+
+**"존재하지 않는다"는 메시지가 에셋 손상처럼 보이지만 PIE가 켜져 있을 뿐이다.**
+2026-09-11에 이걸로 데이터가 깨진 줄 알고 조사에 시간을 썼다.
+**쓰기 작업 전에는 PIE를 끈다.** 증상이 보이면 먼저 PIE를 의심할 것.
+
+> **보완 (2026-09-12)**: PIE 중에도 **`write_graph_dsl` · `create_node` · `compile_blueprint` ·
+> `ObjectTools.set_properties`는 전부 성공한다.** 실패하는 것은 **경로로 에셋을 찾는 호출**
+> (`exists` · `save_assets` · `duplicate`)뿐이다.
+> **→ 수정은 들어가지만 디스크에는 안 남는다. PIE를 끈 뒤 반드시 저장할 것.**
+> 이 성질 덕에 PIE를 켠 채 배선을 고쳐 가며 튜닝하는 것이 가능하다.
+
+> ⚠⚠ **보완 (2026-09-12, 반대 방향)**: **PIE 중 런타임 로그 스팸이 툴 *에러*로 올라와
+> `execute_tool_script` 호출을 통째로 중단시킨다.** `Accessed None trying to read
+> CallFunc_GetController_ReturnValue`가 매 프레임 찍히는 상태에서 **읽기 전용 그래프 조사조차
+> 전부 실패**했다(6.1b의 "한 번이라도 실패하면 배치 전체가 실패"의 연장).
+> **→ 그래프 작업 전에는 PIE를 끈다.** 위의 "PIE 중에도 쓰기는 된다"는 **로그가 조용할 때의 이야기**다.
+
+### 6.1f ⚠ `read_graph_dsl`은 무손실이 아니다 — DSL 왕복으로 그래프를 고치지 말 것 (2026-09-11)
+
+`Get_MMInterruptMode`에서 실측한 두 가지 문제:
+
+**(1) 항이 누락된다.** 그래프에 `Stance != Stance_LastFrame` 항이 실제로 연결돼 있는데
+DSL 출력에는 없었다. `EnumInequality` 노드가 4개인데 DSL엔 3개만 나왔다.
+**DSL만 읽고 로직을 판단하면 틀린다.**
+
+**(2) 읽기와 쓰기의 노드 이름이 다르다.**
+
+```
+read_graph_dsl  이 뱉는 것      (|GetMovementMode_LastFrame)
+write_graph_dsl 이 받는 것      Variables|States|GetMovementModeLastFrame
+create_node     가 받는 것      Variables|States|GetRotationModeLastFrame   (밑줄 없음)
+```
+
+읽은 DSL을 **그대로 다시 써도 실패한다**(`|GetMovementMode_LastFrame does not exist`).
+
+**→ 로직은 `find_nodes` + `get_node_infos`로 배선을 직접 추적해서 판단하고,
+수정은 `create_node` + `connect_pins` + `add_node_pin`으로 한다.**
+생성용 `type_id`는 `find_node_types(type_id_filter=...)`로 찾는다 — `get_node_infos`가
+보고하는 `type_id`(`|GetX`)는 **생성에 쓸 수 없다.**
+
+> 💡 원본 DSL을 그대로 되쓰는 **왕복 테스트**를 먼저 하면 이 함정이 즉시 드러난다.
+> 2026-09-11에 그 덕에 함수를 날리지 않았다.
+
+#### 6.1f-1 추가 실측 (2026-09-12)
+
+- **`write_graph_dsl`의 파라미터 이름은 `code`다**(`script` 아님)
+- ⚠⚠ **`Parent:` 호출 노드가 있는 그래프는 DSL 왕복이 구조적으로 불가능하다.**
+  리더는 `|Parent:BeginPlay`를 뱉고 라이터는 *"does not exist"* 로 거부하며,
+  **쓰기는 어서션으로 중단되어 그래프는 바뀌지 않는다**(다행히 파괴적이지는 않다).
+  → **`BeginPlay`/`Tick`이 있는 EventGraph는 절대 DSL로 다시 쓰지 않는다.**
+  `create_node` + `connect_pins` + `break_pins`로 고친다. **자기 완결형 함수 그래프는 왕복된다**
+- ⚠⚠ **DSL 라이터는 `bind`를 공유하지 않고 사용처마다 *인라인*한다.**
+  바인딩한 식이 **exec 노드**(예: 변수 Set)면 **두 벌이 생겨 매 프레임 두 번 실행된다.**
+  DSL은 **exec 문이 정확히 한 번만 등장**하게 짜고, 재사용은 **순수 게터만** 할 것
+- ⚠ **DSL 리더는 분기 구조를 왜곡한다.** `Update_Logic`의 실제 배선은
+  `Branch.then → Update_MovementDirection → Update_TargetRotation` / `else` 비어 있음인데,
+  DSL은 **양 갈래에 하나씩** 놓인 if/else로 그렸다. **분기 위상은 `get_node_infos`로 확인한다**
+- **`find_node_types`는 멤버 이름에서 밑줄을 지운다** — 변수 `YawRate_Up`은
+  `Variables|Default|GetYawRateUp`, ABP 함수 `Enable_AO`는 `AimOffset|EnableAO`로 잡힌다.
+  **리더는 여전히 밑줄형(`|GetYawRate_Down`)을 찍고 그 이름으로는 생성이 안 된다**(위 (2)의 연장)
+- `get_node_type_pins`는 **실제로 프로브 노드를 만들어** 동작한다 — 생성 불가 타입에서는 에러가
+  난다. 프로브는 남지 않는다
+- `remove_variable`의 파라미터는 **`name`**, `set_variable_instance_editable`은 **`variable_name`**
+- ⚠ **한 `execute_tool_script`에서 그래프를 많이 훑으면 배치가 통째로 죽는다**(6.1b의 연장).
+  `K2Node_Composite`(컴포지트 서브그래프)는 **`try/except`로도 못 잡는 `TypeError`** 를 내고,
+  `RInterpTo`가 만드는 **데이터 흐름 순환**도 `try/except`를 빠져나가는 에러를 낸다.
+  → **최상위 그래프만 거르고**(`:` 뒤 이름에 `.`이 없는 것) **묶음으로 잘라서** 돌릴 것
+- ⚠ **자기 클래스의 함수를 부르는 노드를 만들 때 `create_node`가 *같은 이름의 다른 클래스* 함수에
+  붙을 수 있다.** 증상은 컴파일 에러 *"This blueprint (self) is not a `<다른클래스>`, therefore
+  'Target' must have a connection."* → **`declaring_class`를 명시**해서 해결.
+  `SoldierCharacter_ABP`의 부모가 `/Script/Engine.AnimInstance`(GASP ABP가 아니다)라 잘 걸린다
+- **`AddTickPrerequisiteComponent` / `AddTickPrerequisiteActor`의 타깃은 DSL만 봐선 모른다.**
+  `get_node_infos`로 확정: **`Components|` · `Actor|` · `SoldierLab|` 계열은 *첫* 오브젝트 핀이
+  타깃(self)**, **`Class|...` 계열은 타깃이 *마지막***이다
+
+#### 6.1f-2 추가 실측 (2026-09-12, 블라인드 파이어 축)
+
+- ⚠ **`create_node`는 함수 이름이 *처음 매치되는 클래스*에 붙는다.** 같은 이름의 함수가 다른
+  클래스에도 있으면 컴파일 에러 *"This blueprint (self) is not a `<OtherClass>`_C, therefore
+  ' Target ' must have a connection."* 가 난다 → **`declaring_class`를 넘겨 지정**한다
+  (예: ABP 자신의 `_C` 클래스로 `AimOffset|EnableAO`). 6.1f-1의 같은 항목과 동일한 함정이다
+- ⚠⚠ **`find_node_types`의 밑줄 제거가 *검증*까지 망가뜨린다.** 변수 `BF_AlphaL`은
+  `Variables|Default|GetBFAlphaL` · `Class|SoldierCharacterABP|SetBFAlphaL`로 잡히는데
+  **DSL 리더는 밑줄형(`|SetBF_AlphaL`)을 찍는다.** 그래서 **DSL 되읽기를 문자열 카운트로
+  검증하면 거짓 음성이 난다** — 배선은 멀쩡한데 "안 들어갔다"고 판정하게 된다.
+  **검증은 `get_node_infos`로 노드 *타입*을 세라**
+- **애님 노드 타입 ID에는 에셋이 박힌다**:
+  `Animation|Sequences|Evaluate'MM_Rifle_BlindFire_L'`(Sequence Evaluator, 시간 지정) ·
+  `Animation|Sequences|Play'...'`(Sequence Player). **정지 포즈는 Evaluate + `ExplicitTime = 0`**
+
+#### 6.1f-3 추가 실측 (2026-09-12, 연속 stance 축)
+
+- ★ **DSL의 `(if cond A B (else C D))` 형태는 왕복된다** — `Utilities|FlowControl|Branch`로
+  기록되고 **한 갈래에 여러 문장**을 넣을 수 있다. **열거형 리터럴(`"NewEnumerator0"`)도
+  값으로 받는다.** 6.1f의 "DSL을 믿지 말라"는 **읽기**에 대한 경고이고, 이 형태는 **쓰기**가 된다
+- ⚠ **`Components|SkeletalMesh|GetSocketLocation`은 DSL에서 타깃 바인딩에 실패한다**
+  (*"Could not connect pin Mesh to self"*). → **`Transformation|GetSocketTransform <컴포넌트>
+  "<소켓>"`** 을 쓰고 `(.z (.location ...))`로 높이를 뽑는다
+- ⚠ **명시적 `self` 인자를 받는 노드와 거부하는 노드가 갈린다.**
+  `Transformation|GetActorRotation self` ✅ / `Pawn|IsLocallyControlled self` ❌
+  (*"Could not connect pin self to self"*). **Pawn 계열이 거부하면 인자를 생략한다**
+- ⚠⚠ **`GetControlRotation`은 `APawn`과 `AController` **양쪽에** 있다.** DSL 라이터가
+  Controller 쪽에 붙여 *"This blueprint (self) is not a Controller, therefore ' Target ' must
+  have a connection."* 로 블루프린트를 깨뜨렸다. **DSL은 `declaring_class`를 못 넘기므로**
+  `create_node` + **`declaring_class = /Script/Engine.Pawn`** 으로 만들어야 한다.
+  6.1f-1·6.1f-2의 같은 함정이 **세 번째**다 — **이름이 겹치는 엔진 함수는 DSL로 쓰지 말 것**
+
+### 6.1h ⚠⚠ 부모 함수 오버라이드는 이 API로 만들 수 없다 (2026-09-12)
+
+```
+add_function_graph("UpdateRotation_PreCMC")   ❌ "inherited event-shape function;
+                                                  it must be placed as an event node"
+add_event("UpdateRotation_PreCMC")            ⚠ 오버라이드는 만들어진다 — 그런데
+                                                 **빈 오버라이드는 부모 구현을 통째로 억제**한다
+Parent: <함수> 호출 노드 생성                  ❌ 방법이 없다 (에디터 "Add call to parent function")
+```
+
+**즉 부모 로직을 유지한 채 덧붙이는 오버라이드를 만들 수 없다.** 2026-09-12에
+`SandboxCharacter_CMC.UpdateRotation_PreCMC`를 이 경로로 고치려다 **회전 설정이 통째로
+멈추는** 것을 보고 오버라이드를 즉시 삭제했다.
+
+> **대안: 부모가 쓴 뒤에 덮어쓰고, 틱 순서를 명시적으로 고정한다.**
+> ```
+> self.AddTickPrerequisiteComponent( GetComponentByClass(AC_PreCMCTick) )
+> CharacterMovement.AddTickPrerequisiteActor( self )
+> ```
+> **순서를 고정하지 않으면 쓰기가 조용히 무시된다** — 그리고 그 무시는 **육안으로 안 보인다**(P39).
+> `animation/prototypes/2026-09-12_body_yaw_rate_and_aim_antiwindup.md` 3.1·5절
 
 ### 6.1b MCP 요령 — 잘 되는데 경로가 까다로운 것
 
@@ -272,6 +506,32 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 > `LogFileHelpers: Saving Package: <에셋>` 시각과 크래시 시각을 비교하면 무엇이 디스크에
 > 남았는지 알 수 있다. 위 사고에서는 크래시 56초 전에 저장이 끝나 **사용자 작업이 보존**됐다
 
+### 6.1g ⚠ Chooser 행은 **에디터가 저장해야** 존재한다 (2026-09-11)
+
+행 개수는 에디터 전용 `ResultsStructs`가 정하고, 로드 시 `SetNumRows(ResultsStructs.Num())`가
+**모든 열의 `rowValues`를 그 수로 잘라낸다**(`IChooserColumn.h:138-141`).
+
+```
+1. 사용자가 Add Row      → 화면엔 17행, 하지만 미저장
+2. 저장 없이 탭을 닫음    → 행이 사라짐 (ResultsStructs 는 16행)
+3. MCP로 17개 값 주입     → 메모리에선 17개로 확인됨 ✅  ← 여기서 속는다
+4. 저장 → 성공
+5. 다음 로드             → SetNumRows(16) 이 17번째를 조용히 잘라냄
+```
+
+**결과**: 조준 안 할 때 통과하는 idle 행이 0개가 되어, 검색 대상 DB가 회전 하나만 남고
+제자리회전 클립 둘 사이를 0.5초마다 오갔다. 2026-09-11에 이걸 **비용 편향 문제로 오판해
+세 번 헛발질**했다.
+
+**규칙**
+- 행 추가를 부탁할 때는 반드시 **"Ctrl+S로 저장하고 닫으세요"** 까지 말한다
+- 주입 직후가 아니라 **다시 읽어서** 행 수를 확인한다. 주입 직후 값은 아직 안 잘렸다
+- 새 행의 필터 셀이 에디터에서 **비활성으로 보이면 열 배열이 짧다는 신호**다
+
+> ★ **진단 순서**: MM이 이상하면 클립 이름보다 **`Databases to search:` 를 먼저 본다.**
+> `a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1`. 후보 목록이 틀렸는데 비용을 만지면
+> 영원히 못 고친다. 이번에 그 한 줄이 처음부터 답이었다.
+
 ### 6.1c ★ 배열 프로퍼티 쓰기 규칙 (2026-09-09 확립)
 
 `set_properties`로 `TArray`를 쓸 때 세 가지 제약이 있다. 챙터 열을 만들며 전부 밟았다:
@@ -332,12 +592,97 @@ a.AnimNode.OrientationWarping.Debug 1              빨강=목표방향 파랑=�
 a.AnimNode.OrientationWarping.Enable 0             오리엔테이션 워핑
 a.AnimNode.FootPlacement.Enable 0                  발 배치 전체
 a.AnimNode.FootPlacement.Enable.Lock 0             발 고정만
+
+시간 ─ 과도구간을 읽을 수 있게 늘린다  ★ (2026-09-12 추가)
+slomo 0.1                                          1프레임 스파이크를 디버그 HUD에서 눈으로 읽는다
+slomo 1                                            원복
 ```
+
+> ★ **`slomo 0.1`이 없으면 계측 행이 있어도 못 읽는다.** 2026-09-12 stance 축의 문턱 팝은
+> **`PelvWZ`가 한두 프레임 동안 ±50 튀는 것**이 전부여서 정속에서는 보이지 않았다.
+> **과도현상을 의심하면 계측 행을 추가한 *다음* 시간을 늘린다** → **P44**.
 
 `DebugDrawInfoVerbose`가 특히 결정적이다. **Loop가 아니라 Start/Stop/Pivot이 매 걸음
 재선택되고 있으면 그것은 곧 이동 속도 불일치다** (P30·P31). 소스는
 `AnimNode_MotionMatching.cpp:121-139` · `AnimNode_OrientationWarping.cpp:20-32` ·
 `AnimNode_FootPlacement.cpp:20-24`.
+
+---
+
+### 6.3 ★ 포즈 저작 — 컨트롤 리그로 정지 포즈를 만드는 법 (2026-09-12 확립)
+
+**저작 포즈가 필요한 기능**(블라인드 파이어 · 앞으로 나올 엄폐 자세 등)은 전부 이 경로를 쓴다.
+막다른 길을 넷 지나고 확정된 것이므로 **순서를 바꾸지 말 것.**
+
+#### 6.3.1 되는 경로
+
+```
+1. BP_SoldierCharacter 를 레벨에 배치한다
+   ★ 무기가 에디터에서 렌더링되므로 포즈를 잡는 동안 **총구 방향이 보인다**
+
+2. Level Sequence → [+ Add] 로 그 액터를 추가
+   → 액터 바인딩의 [+] → COMPONENTS → **CharacterMesh0**      ← 스켈레탈 메시 트랙
+
+3. CharacterMesh0 트랙 [+] → Animation → MM_Rifle_Idle_ADS     ← 베이스 포즈
+
+4. [+] → Animation → Control Rig
+   → ★ **Filter Asset By Skeleton 을 끈다** (6.3.2 넷째 항목 · P42)
+   → CR_Mannequin_Body
+
+5. ★ 리그 변수 **R Arm IK Mode / L Arm IK Mode 를 켠다** (6.3.3)
+
+6. 포즈는 **몸통부터**
+      body_ctrl + spine_01~05_ctrl    몸통 회전 (자세의 본체)
+      hand_r_ik_ctrl                  총구 방향
+      arm_r_pv_ik_ctrl                팔꿈치
+      hand_l_ik_ctrl                  왼손
+
+7. 스켈레탈 메시 바인딩 우클릭 → **Bake Animation Sequence**
+```
+
+#### 6.3.2 ⚠⚠ 막다른 길 4종 — 각각 왜 막히는가
+
+| 막다른 길 | 왜 |
+|---|---|
+| **`CR_UEFN_Mannequin_FullBodyIK`를 쓰려는 것** | **포즈용 리그가 아니다.** 컨트롤이 `hand_l_target`·`hand_r_target` **두 개뿐**인 런타임 손 IK 이펙터 리그다. 두 타깃이 원점에 있는 것은 죽은 소켓이어서가 아니라 **에디터에서 구동하는 것이 없어서**다 → **P41** |
+| **`Bake To Control Rig`를 찾는 것** | **이 빌드에 없다.** 애니메이션 *섹션* 우클릭(Properties/Edit/Order/Active/Locked/Group/Delete/Key This Section/Motion Blending Options/Show Skeleton)에도, 애니메이션 *트랙* 우클릭에도 없다. **→ 풀 컨트롤 리그는 자기 기본 포즈에서 출발할 수밖에 없다** |
+| **에셋 목록에서 FK 리그를 찾는 것** | **내장 FK Control Rig은 에셋이 아니다.** `Control Rig` 선택창에서 **검색창 *위*에 헤더처럼 보이는 `FK Control Rig` 글자 자체가 클릭 가능한 항목**이고, 누르면 본별 FK 리그가 자동 생성된다. `Layered` 체크는 **레이어링 지원 리그만** 남긴다(그래서 `CR_UEFN_Mannequin_FullBodyIK`가 빠진다). FK 리그는 포즈는 되지만 **IK가 없다** |
+| **`Filter Asset By Skeleton`이 켜진 채 찾는 것** | 이 필터는 **본 호환성이 아니라 스켈레톤 *에셋 동일성*** 을 본다. `SK_UEFN_Mannequin`과 UE5 마네킹은 **본 계층이 같은 다른 에셋**이라 `CR_Mannequin_Body`가 숨는다. 계층 동일성의 증거: Anim Outliner의 `calf_twist_01_r` · `thigh_twist_01_r` · `ik_foot_root` · `ik_foot_l/r` · `ik_hand_root` · **`ik_hand_gun`** · `ik_hand_l/r` — **`ik_hand_gun`은 Epic 마네킹 고유**다. **→ 필터를 끈다** → **P42** |
+
+#### 6.3.3 ★★★ `CR_Mannequin_Body`는 팔다리별로 IK/FK를 **변수**로 고른다
+
+리그를 붙여도 **다리·발만 반응하고 팔·손·머리는 무반응**인 것이 정상 초기 상태다.
+
+```
+L Arm IK Mode      R Arm IK Mode          ← 기본 FK
+L Leg IK Mode      R Leg IK Mode          ← 기본 IK
+Spine IK Mode      Neck IK Mode           ← 기본 FK
+```
+
+**다리만 기본이 IK다. 비대칭의 전부가 이 한 줄로 설명된다.**
+
+- 이것들은 **컨트롤이 아니라 리그 *변수*** 라 **Anim Outliner에는 절대 안 나온다**
+- 보이는 곳: ① 시퀀서에서 **Control Rig 트랙을 펼치면 채널**로 ② 트랙 선택 시 **Details 패널**
+- **찾은 방법**: `BlueprintTools.list_variables('/Game/Characters/UE5_Mannequins/Rigs/CR_Mannequin_Body')`.
+  **표적 웹 검색 여러 번이 아무것도 주지 않았다** → **P43**
+
+> ⚠ **기각한 가설**: "컨트롤 리그 값은 키를 안 찍으면 0으로 되돌아간다"(`S` 키 / Auto Key)는
+> **실재하는 동작이고 공식 문서에도 있지만** 이 증상의 원인이 아니었다.
+> **판별자: 키잉이 원인이면 다리도 실패했어야 한다. 다리는 됐다.**
+> **비대칭은 그 자체로 전역 원인(키잉·저장·컴파일)을 기각하는 판별기다** (P16·P39와 같은 계열).
+
+#### 6.3.4 ★ 저작 **시작 포즈는 정확성에 영향이 없다**
+
+메시 스페이스 애디티브는 `(저작 포즈 − 기준 포즈)`다. 기준 위에 다시 얹으면 저작 포즈가
+**정확히** 복원되고, 로코모션 포즈 위에 얹으면 **같은 델타**가 더해진다.
+
+**즉 A-포즈에서 저작해도 결과는 같다.** 조준 아이들에서 출발하는 이득은 **작업량뿐**이다.
+6.3.2의 `Bake To Control Rig` 부재가 문제가 되지 않는 이유가 이것이다.
+
+> **없는 기능을 우회하기 전에, 우회해도 결과가 같은지부터 증명한다.**
+
+> 전문 · 저작한 세 포즈의 애디티브 설정과 애님그래프 배선 →
+> `animation/prototypes/2026-09-12_blind_fire_axis.md` · `IMPLEMENTED.md` 2.5e절
 
 ---
 

@@ -11,7 +11,7 @@
 
 ## 🔴 지금 답이 필요한 것 (S0 착수 전)
 
-### Q-13 · 분대 표준 규모는 몇 명인가
+### Q24 · 분대 표준 규모는 몇 명인가
 
 | | |
 |---|---|
@@ -20,7 +20,7 @@
 | **내 권고** | **(b) 5명.** 설계 14절 P2 검수 기준이 **"5명 vs 5명"** 이라 검수와 구현이 같은 수를 쓴다. 3+2 비대칭은 오히려 "누가 먼저 뛰나"를 자연스럽게 만든다 |
 | **영향 없는 것** | 코드 구조. 전부 데이터(`FSquadDefinition`)라 값만 바꾸면 된다 |
 
-### Q-14 · 45명을 어떻게 분대로 나누는가
+### Q25 · 45명을 어떻게 분대로 나누는가
 
 | | |
 |---|---|
@@ -29,7 +29,7 @@
 | **내 권고** | 아군 6분대 + 적 3분대 = **9분대**. 분대 없는 병사도 지원한다(`FSTE_SquadContext`가 `bHasSquad=false`를 정상 처리) |
 | **주의** | 분대를 잘게 쪼갤수록 분대 수가 늘어 **총 분대 틱 비용이 선형으로 오른다.** 15명을 5개 소조로 하면 총 11분대가 되고 예산이 22% 빡빡해진다 |
 
-### Q-17 · 분대 편제를 어디에 저작하는가 (= D11)
+### Q28 · 분대 편제를 어디에 저작하는가 (= D11)
 
 | | |
 |---|---|
@@ -41,7 +41,7 @@
 
 ## 🔴 다른 담당자와 합의가 필요한 것
 
-### Q-12 · 인지 담당자와 `ISoldierThreatMemorySink` 계약
+### Q23 · 인지 담당자와 `ISoldierThreatMemorySink` 계약
 
 **내가 요구하는 것**(`PLAN.md` 5.3절 · `SquadTypes.h`):
 
@@ -66,7 +66,7 @@ ISoldierThreatMemorySink::ReceiveSharedThreat(const FSharedThreat& Report)
 - **추가하지 않는다면**: `bSharedBySquad` 플래그만으로 이분법 처리(공유면 무조건 조준 금지).
   단순하지만 "가까이서 방금 알려준 것"과 "멀리서 10초 전에 알려준 것"이 같아진다.
 
-### Q-18 · 엄폐 담당자와 슬롯 식별자 타입
+### Q29 · 엄폐 담당자와 슬롯 식별자 타입
 
 `FSlotSoftClaim::SlotId`를 `FGuid`로 잡았다. 엄폐 담당자가 SmartObject 슬롯을
 `FSmartObjectSlotHandle` / `FSmartObjectClaimHandle` 로 다룬다면 **그 타입으로 맞춰야 한다.**
@@ -85,7 +85,7 @@ USquadComponent::GetSlotContentionMultiplier(MemberIndex, SlotId) -> float
 
 ## 🟡 해당 단계에서 답이 필요한 것
 
-### Q-15 · 편제 역할 6종이 맞는가
+### Q26 · 편제 역할 6종이 맞는가
 
 초안: `Rifleman / Leader / AutomaticRifleman / Grenadier / Marksman / Medic`
 
@@ -104,7 +104,7 @@ USquadComponent::GetSlotContentionMultiplier(MemberIndex, SlotId) -> float
 나머지 3종은 enum 에 자리만 남기고 데이터를 만들지 않는다. 지금 6종을 다 만들면
 **차이가 없는 역할이 6개 생기고, 그게 있다는 이유로 나중에 유지보수 대상이 된다.**
 
-### Q-19 · `Suppress` 명령이 별도 플랜이어야 하는가
+### Q30 · `Suppress` 명령이 별도 플랜이어야 하는가
 
 초안은 `Suppress` = `BaseOfFire` + **제압 토큰 상한만 올린 것**으로 처리했다(`PLAN.md` 3.3절).
 
@@ -114,7 +114,7 @@ USquadComponent::GetSlotContentionMultiplier(MemberIndex, SlotId) -> float
 
 **권고**: 지금은 토큰 설정 차이로 두고, P2 관찰 후 재검토. 결정을 미룰 수 있는 항목이다.
 
-### Q-20 · 사기가 **개인**에게 얼마나 새어나가야 하는가
+### Q31 · 사기가 **개인**에게 얼마나 새어나가야 하는가
 
 설계 9.4절: "임계 이하 → 플랜이 `Withdraw`로, **개인의 `Retreat` 축도 함께 상승**".
 
@@ -131,7 +131,7 @@ USquadComponent::GetSlotContentionMultiplier(MemberIndex, SlotId) -> float
 **권고**: **(b)로 시작.** 설계가 (a)를 적었지만, 개인 유틸리티 축은 아직 튜닝 전이라
 [C-14]와 얽혀 이중 튜닝이 된다. (c)는 P2 이후 여유가 있으면.
 
-### Q-21 · 분대장 사망 시 사기 페널티 (= D12)
+### Q32 · 분대장 사망 시 사기 페널티 (= D12)
 
 승계는 구현했으나 **페널티를 줄지 안 줄지**를 정하지 않았다. 설계 9.4절 공식에는
 `+ 분대장 생존 × w5`가 있어 **이미 보너스가 사라지는 형태로 반영**된다(w5=0.15).
@@ -144,7 +144,7 @@ USquadComponent::GetSlotContentionMultiplier(MemberIndex, SlotId) -> float
 
 ## 🟢 방향만 정해두면 되는 것
 
-### Q-16 · 분대 로직을 StateTree 로 갈 여지를 남길 것인가
+### Q27 · 분대 로직을 StateTree 로 갈 여지를 남길 것인가
 
 초안은 **분대에 StateTree 를 쓰지 않는다**(`PLAN.md` 8.1절). 근거 3개와 재검토 조건을
 함께 적어두었다.
@@ -165,7 +165,7 @@ USquadComponent::GetSlotContentionMultiplier(MemberIndex, SlotId) -> float
 **권고**: P2 에서는 하지 않는다. 대신 **생존자 2명 이하 분대는 `Regroup`/`Withdraw` 로 강제**해서
 "소멸한 분대가 어색하게 공격하는" 장면만 막는다. 합병은 P3 이후 재검토.
 
-### Q-22 · `EOrderRecipientType::Individual` 의 의미 (= 설계 D7)
+### Q33 · `EOrderRecipientType::Individual` 의 의미 (= 설계 D7)
 
 내 범위에 걸린다: **개인 직접 명령이 L1을 우회하는가?**
 

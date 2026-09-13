@@ -7,7 +7,7 @@
 
 ## ✅ [C-63] UE5.8 StateTree 노드 API — **초안이 맞다**
 
-`drafts/squad/Source/Squad/SquadStateTreeNodes.h`가 5.3~5.5 계열 API를 가정하고
+`squad/drafts/Source/Squad/SquadStateTreeNodes.h`가 5.3~5.5 계열 API를 가정하고
 "엔진 대조 필요"로 표시했던 항목이다. 대조 결과 **전부 유효하다** [A].
 
 ### 베이스 클래스 (전부 존재)

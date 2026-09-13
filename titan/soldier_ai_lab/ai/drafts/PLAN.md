@@ -41,7 +41,7 @@
 | "왜 그랬는지"는 층의 필수 출력 | `upper_layer_plan` **2.3** |
 | 자원 보유 상태를 **부모**로 두는 StateTree 작성 규칙 | `upper_layer_plan` **14.3** |
 | L3 태스크 라이브러리 승계 목록 | `upper_layer_plan` **3.2 / 4.2** |
-| `S_PlayerInputState` 5축 = AI→애니메이션 다리 | `prototypes/2026-09-04_p0-1_ai_drives_mm.md` **4절** |
+| `S_PlayerInputState` 5축 = AI→애니메이션 다리 | `ai/prototypes/2026-09-04_p0-1_ai_drives_mm.md` **4절** |
 
 ---
 
@@ -403,15 +403,15 @@ StateTree 태스크를 **C++로** 만들게 되면 `"StateTreeModule", "Gameplay
 
 ### 8.4 ★ 병행 초안이 요구한 인터페이스 — 수용 상태 [A]
 
-같은 날 작성된 `drafts/cover/` · `drafts/squad/` 초안이 **인지 담당에게 두 개의 인터페이스를
+같은 날 작성된 `cover/drafts/` · `squad/drafts/` 초안이 **인지 담당에게 두 개의 인터페이스를
 요구**하고 있다. 둘 다 수용했고, 초안 코드가 그 계약을 지키도록 고쳤다.
 
 | 요구자 | 인터페이스 | 우리 쪽 구현 | 상태 |
 |---|---|---|---|
-| `drafts/cover/.../EnvQueryContext_CoverThreats.h` | `ISoldierThreatProvider` — `GetPrimaryThreat` / `GetKnownThreats` (`FCoverThreatInfo{Location, Weight}`) | `GetPrimaryThreatWeighted` / `GetWeightedThreats`. **Weight = `Confidence × ThreatLevel`** (`FThreatMemory::GetThreatWeight`) | ✅ 값 계산까지 구현. 인터페이스 상속은 **상대 헤더가 프로젝트에 들어온 뒤** |
-| `drafts/squad/.../SquadTypes.h` | `ISoldierThreatMemorySink::ReceiveSharedThreat(const FSharedThreat&)` + **병합 규칙 R1/R2/R3** | `ReceiveSharedThreat(Target, Loc, Vel, Sigma, ObservedAt, Confidence)` | ✅ **R1·R2·R3 전부 구현**. 어댑터 한 줄만 남음 |
+| `cover/drafts/.../EnvQueryContext_CoverThreats.h` | `ISoldierThreatProvider` — `GetPrimaryThreat` / `GetKnownThreats` (`FCoverThreatInfo{Location, Weight}`) | `GetPrimaryThreatWeighted` / `GetWeightedThreats`. **Weight = `Confidence × ThreatLevel`** (`FThreatMemory::GetThreatWeight`) | ✅ 값 계산까지 구현. 인터페이스 상속은 **상대 헤더가 프로젝트에 들어온 뒤** |
+| `squad/drafts/.../SquadTypes.h` | `ISoldierThreatMemorySink::ReceiveSharedThreat(const FSharedThreat&)` + **병합 규칙 R1/R2/R3** | `ReceiveSharedThreat(Target, Loc, Vel, Sigma, ObservedAt, Confidence)` | ✅ **R1·R2·R3 전부 구현**. 어댑터 한 줄만 남음 |
 
-**세 규칙을 코드가 어떻게 지키는가** (분대 초안의 [Q-12] 합의 요청에 대한 답):
+**세 규칙을 코드가 어떻게 지키는가** (분대 초안의 [Q23] 합의 요청에 대한 답):
 
 | 규칙 | 구현 |
 |---|---|

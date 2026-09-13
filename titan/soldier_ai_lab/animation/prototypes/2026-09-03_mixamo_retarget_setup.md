@@ -2,7 +2,7 @@
 
 2026-09-03 / **성공 — 리타깃 경로 관통** / Mixamo walk이 `SK_UEFN_Mannequin` 위에서 루트모션을 갖고 재생된다. 커브 5종은 아직.
 
-관련 항목: **[C-30]** **[C-31]** / 관련 문서: `../assets/2026-09-02_...md` 4.2절 · 14절
+관련 항목: **[C-30]** **[C-31]** / 관련 문서: `assets/2026-09-02_...md` 4.2절 · 14절
 
 > **결과 요약**: `Walking.fbx` → 리타깃 → `EncodeRootBone` → **루트 전진 확인 · 발 미끄러짐 없음**.
 > 산출물 `/Game/SoldierLab/Animations/Walking_Anim` (`SK_UEFN_Mannequin`, 42키, 1.366667s,
@@ -125,7 +125,7 @@ Epic도 `bRotateWithPelvis = true`에 대해 "Pelvis Yaw가 애니메이션되�
 ## 4. ★ 진짜 위험 — 리타깃 포즈(T-pose vs A-pose)
 
 Mixamo는 T-포즈, UE5 Manny는 A-포즈다. 안 맞으면 팔이 벌어지거나 어깨가 뒤틀린 채로
-**전 클립이 구워진다.** `../assets/...` 4.3절이 "골반 배치 문제"로 적어둔 항목의 실제 정체다.
+**전 클립이 구워진다.** `assets/...` 4.3절이 "골반 배치 문제"로 적어둔 항목의 실제 정체다.
 
 **IK Rig이 아니라 리타기터에서 잡는다.** 엔진에 전용 기능이 있다
 (`IKRetargetCommands.cpp` — 문구는 소스 확인값):

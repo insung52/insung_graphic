@@ -1,8 +1,8 @@
 # 상위 층(L0~L3) 구조 계획 — 명령 · 분대 · 판단 · 실행
 
-2026-09-02 / 계획(설계 심화 대기) / 애니메이션 층 위에 얹히는 4개 층의 책임 경계·계층 간 계약·소속 판정 규칙·GASP가 이미 제공하는 StateTree 기반 조사·구현 순서. `../animation/2026-09-02_pose_pipeline_spec.md`의 상위 문서.
+2026-09-02 / 계획(설계 심화 대기) / 애니메이션 층 위에 얹히는 4개 층의 책임 경계·계층 간 계약·소속 판정 규칙·GASP가 이미 제공하는 StateTree 기반 조사·구현 순서. `animation/2026-09-02_pose_pipeline_spec.md`의 상위 문서.
 
-> **폴더 규칙·진행 상황·미해결 항목**: `../CLAUDE.md` · `../CURRENT_STATE.md` · `../OPEN_ITEMS.md`
+> **폴더 규칙·진행 상황·미해결 항목**: `CLAUDE.md` · `CURRENT_STATE.md` · `OPEN_ITEMS.md`
 >
 > **이 문서의 목적**: 애니메이션 층에서 "결정/수렴/자율"과 "8개 카테고리"로 새 항목의 자리를
 > 미리 만들어둔 것과 **같은 일을 상위 층에 대해 하는 것.** 새 전술·새 행동이 필요해질 때
@@ -20,7 +20,7 @@
 【L2 BRAIN  】 개인 판단 — 유틸리티 스코어러가 Intent 하나를 선택
 【L3 ACT    】 실행      — StateTree가 Intent를 태스크 시퀀스로 수행
 ─────────────────────────────────────────────────────────
- L4 MOTION   → ../animation/2026-09-02_pose_pipeline_spec.md (별도 문서)
+ L4 MOTION   → animation/2026-09-02_pose_pipeline_spec.md (별도 문서)
 ```
 
 ---
