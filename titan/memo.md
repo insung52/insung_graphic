@@ -699,3 +699,6 @@ selfdefense 모드에서 rcws 발사 시 환경뷰 및 cctv 에 반동 적용되
 
 
 kadex lobby 화면 ip 입력들 어떤거 입력해야하는지, 현재 내 아이피는 뭔지 그런거 쉽게 볼수 있게 사용자 커스텀
+
+
+dof
