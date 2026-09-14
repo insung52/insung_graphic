@@ -1,7 +1,9 @@
 # 구현 현황 — 실제로 만들어져 있는 것
 
-2026-09-13 / 유지보수 / **애니메이션 층(L4) 완료 · 무기/투사체 배선 완료 · AI 층 동작 확인.**
-AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교전·엄폐. **L0 명령 · L1 분대는 여전히 초안만.**
+2026-09-14 / 유지보수 / **애니메이션 층(L4) 완료 · 무기/투사체 배선 완료 · AI 층 동작 확인 · 아군 메시(soldier_T) 교체 완료.**
+AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교전·엄폐·**목표**. **L0 명령 · L1 분대는 여전히 초안만.**
+★ **2026-09-14 교정 라운드**: 노출의 사다리(조리개·사격자세) · 반동 · 조준 선회 · `FightingCost` · **목표 액터의 루트 컴포넌트 버그** → `ai/2026-09-14_exposure_ladder_and_corrections.md`
+⚠ **수비수가 정착해 쓰지 못하는 문제는 여전히 미해결이다** → **[C-95]**.
 
 ---
 
@@ -19,12 +21,13 @@ AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교
 |---|---|---|
 | **L4 모션** | ✅ **동작 확인** | GASP ABP 복제 + Lyra 라이플 세트 이식. 이동·조준·견착/총내림·사격·재장전·왼손 IK + **연속 자세 축 4종**(총구 정렬·린·블라인드 파이어·**stance**) |
 | **무기 · 투사체** | ✅ **동작 확인** (2026-09-12) | `ASoldierProjectile` 이식(포물선 탄도·도탄·재질별 명중·총알 휘파람) + `BP_AR4Rifle` + 캐릭터 배선. 3.1절 |
-| **AI 층 (인지~교전)** | ✅ **동작 확인** (2026-09-13) | C++ 8쌍 `Source/SoldierLab/AI/`. 진영·기록/감쇠/융합·시야·무전·제압·교전·엄폐 + 디버그 규약. 5절 |
+| **AI 층 (인지~교전)** | ✅ **동작 확인** (2026-09-13) | C++ **9쌍** `Source/SoldierLab/AI/`. 진영·기록/감쇠/융합·시야·무전·제압·교전·엄폐·**목표** + 디버그 규약. 5절 ★ **09-14 교정 라운드**: 조리개/사격자세 · 반동 · 조준 선회 · `FightingCost`. `ai/2026-09-14_exposure_ladder_and_corrections.md` |
 | L3 실행 | ⚠ **형태가 바뀜** | StateTree가 아니라 **컴포넌트 + Tick 접합**이 한다. `AIC_Soldier`의 `StartLogic`은 **삭제**됐다 → [C-43] |
 | L2 판단 | ⚠ **얇은 판이 돈다** | 유틸리티 스코어러는 없다. 교전/엄폐가 각자 자기 질문을 푼다. `ai/drafts/`는 **여전히 미반영** |
 | L1 분대 | ⬜ 초안만 | `squad/drafts/` |
-| L0 명령 | ⬜ 초안만 | `squad/drafts/` 의 명령 스키마. **목표·임무 개념 자체가 없다** → [D10] |
+| L0 명령 | ⬜ 초안만 | `squad/drafts/` 의 명령 스키마. **목표·임무 개념은 [D10]으로 생겼다** — 다만 `ASoldierObjective` 는 **레벨 마커 한 개**일 뿐 명령도 국면 전환도 아니다 → [W25] ★ **09-14에 목표가 실제로 돌기 시작했다** — 다만 여전히 **마커 하나 · 소유권 변경 없음** |
 | 엄폐 | ✅ **동작 확인** (2026-09-13) | **시야 판정을 거꾸로 돌린 것.** 볼륨·마커·베이크 없음. `cover/drafts/`의 EQS/SmartObject 초안은 **미채택** |
+| **목표(objective)** | ✅ **이제야 실제로 돌기 시작했다** (2026-09-14) | `ASoldierObjective` + 세 비용 스코어러. **레벨에 0개 배치**라 셋째 항이 항상 0 → **[W25]** · `ai/2026-09-13_objective_and_position_cost.md` ★ **09-14**: 레벨에 `Objective_AllyBase` **1개 배치**. 그런데 **놓기만 했으면 여전히 안 돌았다** — 루트 컴포넌트가 없어 `GetActorLocation` 이 **영원히 월드 원점**을 답하고 있었다(**P90**). 반경·밴드·환율도 전부 바뀜다 → **[C-94]** · `ai/2026-09-14_exposure_ladder_and_corrections.md` 6절 |
 
 **플레이어가 WASD로 직접 조작해 검증 가능하고, `GM_SoldierObserver`로 관전하면 AI끼리 싸운다.**
 **단 병사는 죽지 않는다** — 데미지·체력·사망이 없다 → [W18].
@@ -197,12 +200,19 @@ Slot 'DefaultSlot' → OffsetRootBone_0 → RemapCurves_0 → LocalToComponentSp
 
 ```
 TwoBoneIK_0   iKBone         = hand_l
-              effectorTarget = weapon_r        (BCS_BoneSpace)
+              effectorTarget = ~~본 weapon_r~~ → **소켓 `weapon_r`** (bUseSocket = true, BCS_BoneSpace)   ← 2026-09-13
               jointTarget    = lowerarm_l      (BCS_BoneSpace)
-              EffectorLocation 핀 ← 변수 LeftHandGripOffset    현재 (−30, 8, 4)
+              EffectorLocation 핀     ← 변수 LeftHandGripOffset    현재 (−30, 8, 4)
+              JointTargetLocation 핀  = **(−1, 1, 0)**   ← 2026-09-13. 0 이면 "FK 팔꿈치 자리를 폴로" — 아군에서 팔꿈치가 흉부를 뚫었다
               Alpha 핀         ← Get Curve Value("DisableLHandIK")
               alphaInputType = Float · alphaScaleBiasClamp  scale −1 / bias +1  (반전)
 ```
+
+> ★ **2026-09-13 — effector 가 본에서 소켓으로 바뀌었다** [A]. 아군 메시 `soldier_T` 에 `weapon_r` 본이 없어서다.
+> 소켓 이름은 본과 같은 `weapon_r` 이고 **양쪽 메시에 각각 있다** — 마네킹 `SKM_UEFN_Mannequin` 은 `weapon_r` **본에**
+> 항등으로(본과 결과 동일, 애니메이션 따라감), `soldier_T` 는 `hand_r` 에 마네킹 본의 레스트 오프셋
+> `(0.19749, 3.411153, −0.381067)` 로. 소켓 모드는 소켓이 없는 메시에서 `LogAnimation: socket doesn't exist` 와 함께
+> **조용히 꺼지므로**, 새 메시를 붙일 때마다 소켓 추가가 필수다 → 3.2절.
 
 - 부착 대상은 **`weapon_r`** 다. 가상본 `hand_r_prop_01_Socket`은 안 된다 —
   `props_root` 밑이라 애니메이션이 안 들어가 원점에 붙어 있다
@@ -1026,6 +1036,60 @@ BP_SoldierCharacter · BeginPlay 추가분
 
 ---
 
+### 3.2 캐릭터 메시 — 아군 `soldier_T` 를 마네킹 스켈레톤에 [A] (2026-09-13)
+
+**전문: `animation/prototypes/2026-09-13_ally_mesh_on_mannequin_skeleton.md`** — 실측·엔진 근거·기각한 경로·원복한 시도.
+
+원칙: **메시를 `SK_UEFN_Mannequin` 에 맞춘다.** PSD/스키마/애니메이션은 한 벌이고 어느 것도 바뀌지 않았다.
+
+```
+/Game/SoldierLab/Characters/Ally/soldier_T          스켈레톤 = SK_UEFN_Mannequin   ← Assign Skeleton (FBX 재임포트 아님)
+    87본 (마네킹 91본 중 attach · weapon_l/r · props_root · prop_01 · poi 6본이 없고, thigh_twist_02_l/r 2본이 더 있다)
+    바인드 T-포즈 · 키 181cm (마네킹 A-포즈 · 165.6cm) — 같은 스켈레톤 에셋이면 바인드 포즈 차이는 무관하다
+    메시 소켓 weapon_r        부모 hand_r · (0.19749, 3.411153, −0.381067) · rot 0    ← 총 부착 + 왼손 IK effector
+    머티리얼 슬롯 Ch15_body / Ch_49_body / Ch_49_eyelashes  ← Mat_Soldier / Mat_soldier2 / Ch_49_eyelashes
+    피직스 에셋 soldier_T_PhysicsAsset (원래 것 그대로. 바디 확인은 에디터에서 → [W29])
+    포스트프로세스 ABP 없음  ← 마네킹의 ABP_UEFN_Mannequin_PostProcess 는 thigh 1.12 · head 1.15 스케일 보정이라 붙이지 않는다
+/Game/SoldierLab/Characters/Ally/soldier_T_Skeleton  고아 (참조 0건) → 삭제 예정 [W29]
+
+/Game/Characters/UEFN_Mannequin/Meshes/SKM_UEFN_Mannequin
+    메시 소켓 weapon_r        부모 본 weapon_r · 항등             ← 2.5절의 소켓 모드 때문에 필요
+/Game/Characters/UEFN_Mannequin/Meshes/SK_UEFN_Mannequin
+    본 트리 91 → 93  (+ thigh_twist_02_l / thigh_twist_02_r, Assign Skeleton 이 병합)  GUID 재생성 · 전 클립 DDC 재압축 1회
+
+/Game/SoldierLab/Blueprints/BP_Soldier_Friendly    부모 BP_SoldierCharacter · Faction Friendly   (2026-09-13 AI 세션에서 생긴 자식 BP)
+    CharacterMesh0.SkeletalMesh = soldier_T
+    CharacterMesh0.Materials[0] 오버라이드 리셋      ← 부모의 MI_UEFN_Mannequin_CMC 가 슬롯 0(Ch15_body)을 덮었다
+    StanceStandZ 77.1 · StanceCrouchZ 36.4           ← 마네킹 89.7 / 39.4. **메시별 실측값** (아래)
+/Game/SoldierLab/Blueprints/BP_Soldier_Hostile     마네킹 그대로. 적군 메시는 미착수 → [Q42]
+
+L_SoldierTest   Ally_A · Ally_B · Ally_B2 · Ally_B3 = BP_Soldier_Friendly / Enemy_A · B · C = BP_Soldier_Hostile
+```
+
+**새 메시 하나를 붙일 때 필요한 것 (체크리스트)** — 애니메이션 쪽은 손대지 않는다:
+
+1. 스켈레탈 메시 에디터 → Asset → **Assign Skeleton** → `SK_UEFN_Mannequin`. 본 이름이 UE5 표준이고 부모 체인이 같아야 한다(`IsCompatibleMesh`). 메시에만 있는 본은 스켈레톤에 **추가**된다(GUID 재생성 → 클립 재압축) — 그 대가를 받아들일지 먼저 정한다
+2. 메시 소켓 `weapon_r` — `hand_r` 밑, 오프셋 `(0.19749, 3.411153, −0.381067)`. MCP `SkeletalMeshTools.add_socket` + `set_socket_transform`
+3. 자식 BP: 메시 지정 · 머티리얼 오버라이드 리셋 · `StanceStandZ/CrouchZ` 실측
+4. PIE 로 팔 높이(축 규약) · 총 위치 · 왼손 · 웅크림 확인. **마네킹이 안 바뀌었는지**도 같이
+
+**`StanceStandZ / StanceCrouchZ` 는 클립뿐 아니라 메시에도 종속이다** [A]. 2.5f 의 골반 역산이 `Target = base + StanceStandZ` 를 쓰는데
+이 값은 마네킹 골반 높이라, 다른 체형에서는 `PelvOff` 가 0 이 아닌 값에 정착해 매 프레임 골반을 밀어 올리거나 내린다
+(아군: +7 → LegIK 가 다리를 최대로 펴고 상체가 숙는 "어정쩡한" 자세). 재는 법은 HUD 역산 — 기립·웅크림 각각에서
+**새 값 = 옛 값 − PelvOff**. 자동 산출은 [W27].
+
+**기각한 경로** [A]: `soldier_T_Skeleton` 을 그대로 두고 Compatible Skeletons 로 애니메이션을 공유하는 것.
+엔진의 스켈레톤 간 리매핑(`SkeletonRemapping.cpp`)이 회전을 **레스트 포즈 델타**로 보존하므로 A-포즈↔T-포즈 차이만큼
+팔이 들린다 → **P76**.
+
+**시도 후 원복** [A]: 총내림 포즈 재저작(`MM_Rifle_LowReady`). 걷기에서 ADS 로코모션과 어긋나 기각. 총내림은 원래대로
+`MM_Rifle_Idle_Hipfire_AO_CD` + `BM_LowReady` 마스크다(2.4절). 에셋은 참조 0건으로 보존 → [C-90].
+
+**적군 (`Enemy`)** [A]: Mixamo 65본(`Hips` 루트, `root`/IK/트위스트 없음, 겹치는 본 0), 111,083 버텍스 · LOD 1개, 원본 FBX 는 다른 PC.
+리스킨 없이는 이 경로로 못 올린다. 경로 결정 → **[Q42]** (권장: 디자인팀에 "UEFN 마네킹 리그 · 마네킹 비율 피팅 · LOD" 스펙으로 요청).
+
+---
+
 ## 4. 자작 C++ [A]
 
 ```
@@ -1055,7 +1119,7 @@ Source/SoldierLab/                런타임 모듈 — ~~아직 비어 있다~~ 
                                   ~560줄(h) / ~1050줄(cpp). titan_example ARCWSProjectile 이식.
                                   Build.cs 에 **Niagara** 추가가 전제다(User. 파라미터 직접 쓰기)
 
-    AI/                           ★ 2026-09-13 추가 — AI 층 8쌍, ~3,070줄 (5절)
+    AI/                           ★ 2026-09-13 추가 — AI 층 9쌍, ~3,670줄 (5절)
         SoldierIdentity           ESoldierFaction · 눈/표적 소켓 · USoldierRegistrySubsystem
         SoldierPerception         ★ FSoldierEnemyRecord · 감쇠 · 역분산 가중 융합 · BroadcastGunshot
         SoldierSight              시야 생산자 (싸구려 기각 + 트레이스 예산)
@@ -1063,6 +1127,9 @@ Source/SoldierLab/                런타임 모듈 — ~~아직 비어 있다~~ 
         SoldierSuppression        0..1 제압 스칼라. SoldierProjectile이 몬다
         SoldierEngagement         ★ 사격 의도 5종 · 총구 높이 · 재장전 회계
         SoldierCover              시야 판정을 거꾸로 — 노출 + 필요 자세를 한 스윕에서
+                                  위치 선택은 세 비용(도착지 노출 + 경로 노출 + 땅의 값)
+        SoldierObjective          ★ 땅의 값. 로직 없는 레벨 마커 액터 — 한 개가 양쪽을 섬긴다
+                                  ⚠ 레벨 배치 0개 [W25]
         SoldierDebugDraw          네 오버레이 공통 규약 (색=출처 / 크기=해상도 / 굵기=신선도)
                                   Build.cs 에 **AIModule**(SetFocalPoint) ·
                                   **NavigationSystem**(엄폐 후보 네브메시 투영) 추가가 전제다
@@ -1083,26 +1150,58 @@ Source/SoldierLab/                런타임 모듈 — ~~아직 비어 있다~~ 
 
 ## 5. AI 층 [A] (2026-09-13)
 
-> 상세 3부작:
+> 상세 4부작:
 > **`ai/2026-09-13_perception_stack.md`**(인지·시야·무전·제압·디버그 규약) ·
-> **`ai/2026-09-13_engagement_and_cover.md`**(교전·엄폐) ·
-> **`ai/2026-09-13_ai_bridge_and_scene.md`**(블루프린트 배선·레벨·도구 함정 9건).
+> **`ai/2026-09-13_engagement_and_cover.md`**(교전·엄폐 기하) ·
+> **`ai/2026-09-13_objective_and_position_cost.md`**(★ 목표 · 세 비용 위치 선택) ·
+> **`ai/2026-09-13_ai_bridge_and_scene.md`**(블루프린트 배선·레벨·도구 함정 9건) ·
+> ★ **`ai/2026-09-14_exposure_ladder_and_corrections.md`**(**교정 라운드 — 값이 바뀜 자리는 이쪽이 최신이다**).
 > 이 절은 **무엇이 어디 있는가**만 적는다.
 
-### 5.1 C++ — `Source/SoldierLab/AI/` 8쌍 [A]
+### 5.1 C++ — `Source/SoldierLab/AI/` 9쌍 [A]
 
 | 파일 | 무엇 | 한 줄 |
 |---|---|---|
 | `SoldierIdentity` | 진영 · 소켓 · 등록부 | `ESoldierFaction{Friendly,Hostile,Neutral}` · 눈 `head` / 표적 **`spine_03`**(정수리만 넘어온 병사는 보이는 게 아니다) · `USoldierRegistrySubsystem`은 **평평한 배열 하나** |
-| `SoldierPerception` | ★ 이 층의 본체 | `FSoldierEnemyRecord`는 **관측된 그대로 + 절대 시각**만 담고, **감쇠는 전부 질의 함수**에 있다(P63). **신선도와 해상도를 합치지 않는다**(P62). 융합은 **역분산 가중**(P65) |
+| `SoldierPerception` | ★ 이 층의 본체 | `FSoldierEnemyRecord`는 **관측된 그대로 + 절대 시각**만 담고, **감쇠는 전부 질의 함수**에 있다(P63). **신선도와 해상도를 합치지 않는다**(P62). 융합은 **역분산 가중**(P65) ★ **09-14**: **추측항법이 만료된다** — `VelocityTrustSeconds 1.5`(총성 기록 0). 속도에 대한 믿음은 위치에 대한 믿음보다 먼저 죽는다 (P88) |
 | `SoldierSight` | 시야 생산자 | 싸구려 기각(거리²·콘 dot)은 전부, **트레이스만 예산**(라운드로빈 3/틱). **"시야 상실"을 보고하지 않는다** |
 | `SoldierComms` | 전달 생산자 | 지연을 지연으로 모델링하지 않았다 — **말하는 데 걸리는 시간**이 낡음과 속도제한을 동시에 만든다. 방송 판정은 **정보량**으로 |
 | `SoldierSuppression` | 0..1 스칼라 | 인과적·연속적이라는 것만 주장한다. 회복은 **무조건** 돈다 — 사격이 앞지를 뿐 |
-| `SoldierEngagement` | ★ 결정 | 방아쇠는 **"앎이 무기보다 나쁜가"**(P66). 거절 3종은 따로 — `Blocked`(총구에서 트레이스) / `Masked` / 탄약 |
-| `SoldierCover` | 엄폐 | **시야 판정을 거꾸로 돌린 것.** 한 스윕이 **노출 + 필요 자세** 두 답을 준다 |
+| `SoldierEngagement` | ★ 결정 | 방아쇠는 **"앎이 무기보다 나쁜가"**(P66). 거절 3종은 따로 — `Blocked`(총구에서 트레이스) / `Masked` / 탄약 ★ **09-14**: 막히면 거절하는 대신 **조리개**(Direct/Over/Right/Left)를 찾고 **사격 자세**(Open/Lean/Blind)를 고른다(P81). 사다리를 고르는 것은 **제압도**다. **반동**은 탄창이 줄어드는 것을 보고 센다([W26]). **조준은 240°/s 로 선회**하고 시야 콘도 그 회전을 읽는다(P86) → 새 의도 `Traversing`. `GetDesiredLean` / `GetDesiredBlindFireH/V` 발행([W19] 해결) · `WantsToSprint`(P89) |
+| `SoldierCover` | 엄폐 + 위치 선택 | **시야 판정을 거꾸로 돌린 것.** 한 스윕이 **노출 + 필요 자세** 두 답을 준다. 자리는 **세 비용 한 통화**로 고른다 — `Exposure + RouteRiskWeight×RouteRisk + ObjectiveWeight×ObjectiveCost` ★ **09-14**: 첫 항이 노출에서 **`FightingCost`** 로 바뀌었다(P82) — 한 스윙이 이제 **세 답**을 준다(노출 · 필요 자세 · **싸울 수 있는가**). 경로 위험은 **거리로 스케일**(P83) · 후보는 **두 겹 링** · 위협 추정은 **한 바퀴 동안 얼린다** · **정지 감지**(P87)와 **RVO 회피**도 여기 |
+| `SoldierObjective` | ★ 땅의 값 (2026-09-13 추가) | **로직 없는 레벨 마커 액터.** 한 개가 **쥔 쪽에겐 수비 · 나머지 전부에겐 공격**이 된다. 수비는 **반경 안 평평한 0**(거리로 매기면 수비대가 중심점으로 붕괴한다 — P73), 공격은 **평지 없는 비례**. ⚠ **레벨에 아직 0개** → **[W25]** ⚠ **09-14 정정**: 루트 컴포넌트가 없어 **여태까지 모든 거리를 (0,0,0) 에서 재고 있었다**(P90). 공격 비용의 **clamp 제거**(P84) · 반경 900→1500 · 밴드 900→1200 · 환율 6000→3000(P85) |
 | `SoldierDebugDraw` | 오버레이 공통 규약 | 색=출처 · 회색=센서 활동 · 크기=해상도 · 굵기=신선도 (P70) |
 
 `Build.cs`: **`AIModule`**(`SetFocalPoint`) · **`NavigationSystem`**(엄폐 후보 투영) 추가.
+
+**엄폐/위치 튜닝값 갱신 (2026-09-13 후반)**: `RouteSamples 3` · `RouteRiskWeight 1.0` ·
+`ObjectiveWeight 1.2` 신설, `MaxTracesPerTick 4→6`(후보 한 개가 3발→6발) ·
+`MoveImprovementMargin 0.35→0.25`. `ASoldierObjective`: `RadiusCm 900` ·
+`DefendBandCm 900` · `ApproachScaleCm 6000`. **전부 미측정** → **[C-88]**.
+⚠ **이 단락의 값 대부분은 2026-09-14에 바뀌었다** — 아래가 현행값이다.
+
+★ **2026-09-14 교정분** → **[C-91]~[C-94]** · **[C-96]**:
+
+```
+SoldierCover     NoCoverCost 1.0 / NoFiringPositionCost 0.5   (신설 — FightingCost)
+                 RouteRiskWeight       0.6   (← 1.0)  거리로도 스케일한다 (P83)
+                 ObjectiveWeight       2.0   (← 1.2)
+                 MoveImprovementMargin 0.3   (← 0.25 ← 0.35)
+                 InnerRingFraction     0.45  (신설 — 두 겹 링)
+                 StallSpeedCms         20    (신설 — 정지 감지, P87)
+                 bUseAvoidance / AvoidanceRadiusCm   true / 300   (RVO)
+SoldierObjective RadiusCm 1500 (← 900) · DefendBandCm 1200 (← 900)
+                 ApproachScaleCm 3000 (← 6000) · 공격 비용의 clamp **제거**
+SoldierEngagement  조리개/자세  LateralReachCm 70 · LeanSpreadScale 1.4 ·
+                                BlindSpreadScale 4.0 · SuppressionToGoBlind 0.45 ·
+                                BlindFireCloseRangeCm 400
+                   조준 선회    AimSlewDegreesPerSecond 240 · OnTargetConeRatio 1.0
+                   반동        RecoilPerShot 0.18 · RecoilRecoveryPerSecond 1.2 ·
+                                MaxRecoilSpreadScale 2.5 · BlindRecoilScale 2.0
+SoldierPerception  VelocityTrustSeconds 1.5   (총성 기록은 0)
+```
+
+**하나도 재지 않았다.** 그리고 ★ **수비수가 정착하지 못하는 문제는 여전히 미해결** → **[C-95]**.
 
 ### 5.2 블루프린트 [A]
 
@@ -1117,10 +1216,24 @@ BP_Soldier_Hostile     ─┘
 BP_AR4Rifle            Tick 에서 SetWeaponState(탄/탄창/재장전중) 를 캐릭터 교전 컴포넌트로
 AIC_Soldier            ⚠ StartLogic 노드 삭제 — 상속된 ST_Soldier_SmartObject 를 멈춘다
 BP_ObserverPawn        부모 DefaultPawn. 이동 방향은 GetControlRotation 에서 온다
+                       ★ 빙의 — Tick 에서 조준선 아래의 병사를 HoverSoldier 에 저장해
+                          "[F] 빙의" 를 그리고 F 가 **그 저장된 값**을 쓴다 (P94)
+                          나올 때도 같은 키 + **SpawnDefaultController()** — 안 하면 그냥 서 있다
+                       ⚠ 입력은 InputAction 이 아니라 직접 키 이벤트다 → [W31]
 GM_SoldierObserver     GetDefaultPawnClassForController 오버라이드 (P53 때문에 CDO를 못 쓴다)
-/Game/SoldierLab/Levels/L_SoldierTest
-                       SoldierLab_Urban  블록 19개(건물 7 · 중간 5 · 낮은 7) + LowWall_A
-                       SoldierLab_Test   적대 3 · 아군 2
+/Game/SoldierLab/Levels/L_SoldierTest      ★ 2026-09-14 재건
+                       네비 영역  x −4000..7000 · y −4500..4500   = 110m × 90m
+                       이전 19블록 시가지(액터 22개) 제거 → SoldierLab_Urban/ 5개 폴더
+                         Screens   Screen_N · Screen_S            30m 차폐벽 2장
+                         Defence   Bld_Def_N/S · Low_Def_A/B · Med_Def
+                         Plaza     Crate_Plaza ×3 · Low_Plaza_A/B   중앙 약 25m 공지
+                         Flanks    Bld_N1/N2 · Bld_S1/S2 · Low_N · Low_S
+                         Attack    Bld_Atk_N/S · Med_Atk · Low_Atk/Atk2
+                       SoldierLab_Test   적대 · 아군 · PlayerStart 전부 재배치
+                       ✅ Objective_AllyBase (−2500, 0) Friendly — 목표 **1개** 배치됨
+                          배치된 수비 엄폐가 전부 목표 비용 0.00~0.05 임을 확인 [A]
+                       ⚠ 규모를 키운 이유: 교전 상한이 **정지 95m** 라
+                          옛 레벨에서는 어디서 쓰든 항상 사거리 안이었다 → [C-97]
 ```
 
 **AI→몸 다리의 모양 — 연속 축 전부 동일** (P71):
@@ -1139,12 +1252,13 @@ SetX( SelectFloat( A = RampAxisTo(X, clamp(AITarget), Rate, dt),
 
 ```
 SetAIPoseDriven(NOT IsPlayerControlled) → SetAITargetStance(Engagement) →
+★ SetAITargetLean / SetAITargetBlindFireH / SetAITargetBlindFireV (Engagement) →   ← 09-14, [W19]
 SetActualStance(StanceAxis) → <기존 갱신 체인> →
 Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToReload) → StartReload
 ```
 
 **조준 상태**: AI는 `WantsToAim` 을 **GASP 입력 상태 구조체**에 Break/Make 로 실어
-`UpdateInputStateServer` 로 보낸다(다른 필드는 전부 보존). 프로젝트 자신의 기존 AI 경로
+`UpdateInputStateServer` 로 보낸다(다른 필드는 전부 보존). ★ **2026-09-14에 `WantsToSprint` 가 같은 경로로 붙었다** — 규칙이 아니라 **느릴 이유의 부재**다(P89). 프로젝트 자신의 기존 AI 경로
 `STT_SetSoldierInputState` 를 읽어서 찾았다. ⚠ **"AI가 총을 안 들고 몸도 안 돈다"의 근본
 원인**이 이것이었다 — `Enable_AO()` 가 `RotationMode == aim` 을 요구하고, 그것은
 `S_PlayerInputState.WantsToAim` 에서 파생된다. 파생 플래그 `AOActive` 를 직접 만졌던
@@ -1185,6 +1299,10 @@ Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToRelo
 | **캡슐/엄폐 높이가 여전히 이진** | stance 축이 **보이는 높이만** 연속으로 만든다. `Crouch()`가 문턱에서 86↔60을 한 번에 바꾸므로 **충돌과 엄폐 높이는 이진**이고, **AI의 엄폐 판단이 읽는 것이 바로 그 높이**다. 남은 조각 중 **AI 관점에서 가장 값어치 있고 위험도 가장 높다**(관통·계단 오르기·**일어설 때의 천장 스윕**은 CMC가 이진 경우에 대해서만 구현해 두었다) → **[W9]** · 안정성 판정은 **[C-3]** |
 | **웅크림 카메라** | `CameraRig_CrouchOffset`은 Camera Pose 공간의 고정 `TranslationOffset (40, 0, −30)`이고 **블렌더블/데이터 파라미터가 없다** — 즉 **블렌드되는 이진**이라 float를 못 받는다. **결정: 리그를 고치지 않고 비활성화한 뒤 SpringArm Z를 stance 축으로 직접 몬다.** 미착수 → **[W10]** |
 | **`IA_Crouch` 토글이 무력** | stance 축이 `bIsCrouched`를 매 프레임 소유한다. 제거하거나 "stance를 0/1로 명령하는 입력"으로 재정의할 것 → **[W13]** |
+| **적군 메시** | `BP_Soldier_Hostile` 은 **마네킹 그대로**다. `Enemy` 에셋은 Mixamo 리그라 리스킨 전에는 못 올린다. 경로 결정 대기 → **[Q42]**, 3.2절 |
+| **`StanceStandZ/CrouchZ` 자동 산출** | 메시별 실측값이라 캐릭터 메시가 올 때마다 HUD 역산으로 재야 한다 → **[W27]** |
+| **총내림 자세의 재저작** | 2026-09-13에 저작·배선했다가 걷기에서 어긋나 **원복**. `MM_Rifle_LowReady` 참조 0건으로 보존 → **[C-90]** |
+| **아군의 "마네킹 비율" 근사** | 사용자 요구: soldier_T 가 마네킹 뼈 길이로 움직이게. translation retargeting `Animation` 5분 시험 미실시 → **[W28]** |
 | **투사체의 리플리케이션** | 이식하며 **3분기 Multicast 라우팅을 걷어냈다** — 세 핸들러가 전부 `PlayImpactEffect`로 되돌아왔으므로 방송할 대상이 없는 지금은 직접 호출과 같다. 멀티가 생기면 여기로 돌아온다 → **[W17]** |
 | **진영(Faction) 판정 — 투사체만** | **정식 소스는 2026-09-13에 생겼다**(`USoldierIdentityComponent::Faction`, 5.1절). AI 층은 전부 그것을 읽는데 **투사체만 아직 `bHitEnemy = IsA<ACharacter>()` 대역**이다 → **[R7]** · 갈아끼우기 **[W23]** |
 | **바람** | 나이아가라 `WindVectorCms` 파라미터에 **0을 먹인다.** 바람 소스가 생기면 한 줄 |
@@ -1195,9 +1313,13 @@ Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToRelo
 | ~~제압(suppression) 신호~~ | **✅ 해결 (2026-09-13)** — `ApplySuppressionAlongSegment()`가 휘즈와 같은 최근접 판정을 **병사 등록부**에 대해 한 번 더 한다. 그 과정에서 `PreviousLocationForWhiz` 가 휘즈 블록 **안**에서 갱신되던 버그를 고쳤다 → **[W16]** |
 | **에셋 경로 정리** | `M_Decal_Bullet` · `M_RCWSRound` 가 **마이그레이션된 경로 그대로** 있다 → **[W14]** |
 | ~~엄폐 · 인지~~ | **✅ 구현됨 (2026-09-13)** — 단 **초안과 다른 물건**이다. 5절 |
-| **분대 · 명령 · 목표** | 여전히 초안 단계. ⚠ **목표/임무 개념이 아예 없어서** 엄폐 층이 노출만 최적화하고, 그래서 병사들이 **무모하게 앞으로 기어 나간다** → **[D10]** |
-| **린 · 블라인드 파이어를 AI가 몰지 않음** | 변수와 `SelectFloat` 배선은 다 있다. **넣는 쪽이 없을 뿐** → **[W19]** |
-| **경로의 노출 · 엄폐 후보의 다양성 · 소리 차폐** | 각각 **[W20]** · **[W21]** · **[W22]** |
+| **분대 · 명령** | 여전히 초안 단계. ★ **목표는 2026-09-14에 실제로 돌기 시작했다** — 레벨에 1개 배치 + 루트 컴포넌트 버그 수정(P90). 다만 여전히 **마커 하나 · 소유권 변경 없음 · 국면 전환 없음** → **[W25]** |
+| ~~린 · 블라인드 파이어를 AI가 몰지 않음~~ | ✅ **해결 (2026-09-14)** — 교전 컴포넌트가 `GetDesiredLean` / `GetDesiredBlindFireH/V` 를 발행한다. ★ **새 판단 재료를 하나도 안 만들었다** — 조리개의 답이 **위 아니면 옆**이고 그것이 이미 있던 두 축이었다(P81). 칸을 고르는 것은 제압도 → ~~[W19]~~ · `ai/2026-09-14_exposure_ladder_and_corrections.md` 1절 |
+| **경로의 노출(직선뿐) · 엄폐 후보의 다양성 · 소리 차폐** | 경로 항은 들어왔으나 **네브메시 경로가 아니라 직선 표본**이다(09-14에 **거리 스케일**이 붙었다). 후보는 09-14에 **두 겹 링**이 됐으나 여전히 **고정 반경 둘**이다. 각각 **[W20]** · **[W21]** · **[W22]** |
+| ~~반동 누적이 없다~~ | ✅ **해결 (2026-09-14)** — `RecoilSpread` 가 `EffectiveSpreadAtCm` 의 곱셈 항으로 들어갔고, 발사는 **탄창이 줄는 것**으로 센다(새 훅 없음). 맹목사격은 상승률 2배 → ~~[W26]~~ · 값은 **[C-92]** |
+| **1인칭 카메라 · 플레이어가 조종하는 병사의 1인칭 모드** | **요청됐고 만들지 않았다.** 빙의(P94)는 있으나 카메라는 3인칭이다. ⚠ 총구 정렬·조준 오프셋·블라인드 파이어의 **판정 기준이 1인칭에서 바뀐다** → **[W30]** |
+| **조리개 트레이스가 예산 밖** | `FindAperture` 가 틱당 최대 4발을 쓰는데 엄폐의 라운드로빈 예산에 없다. 디버그를 켜면 **한 번 더** 돌아 8발이 된다 → **[W32]** · [C-83] |
+| ★★ **수비수가 정착해 쓰지 못한다** | 두 번 시도했고 둘 다 실패했다. 다음은 추측이 아니라 **진단**이다 — 엄폐 오버레이가 **HERE · best · 여유**를 전부 찍는다 → **[C-95]** · `ai/2026-09-14_exposure_ladder_and_corrections.md` 12절 |
 | **`Cover` 채널(`GameTraceChannel4`)이 미사용** | 시야·엄폐·사선 셋 다 `GameTraceChannel5`("Sight")를 쓴다. [Q21]이 채널을 둘 판 이유가 아직 실현되지 않았다 → **[W24]** |
 | **45명 규모에서의 AI 비용** | 인지·시야·엄폐가 전부 매 틱 트레이스를 쓴다(예산은 있다). 한 번도 안 재봤다 → **[C-83]** |
 | 멀티플레이 검증 | 한 번도 안 했다 |

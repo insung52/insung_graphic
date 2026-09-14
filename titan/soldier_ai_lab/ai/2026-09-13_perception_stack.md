@@ -408,12 +408,16 @@ SoldierLab.Debug.Comms
 SoldierLab.Debug.Suppression
 SoldierLab.Debug.Cover                 ← ai/2026-09-13_engagement_and_cover.md
 SoldierLab.Debug.Engagement            ← 〃
+SoldierLab.Debug.Objective             ← ai/2026-09-13_objective_and_position_cost.md
 
 SoldierLab.Debug.AI.Filter <text>      이름에 이 문자열이 든 병사만 그린다
 SoldierLab.Debug.AI.Self 0|1           필터가 없을 때: 1 = 지금 조종 중인 병사만 (기본값)
 ```
 
 **`AI.Self` 기본값이 1인 이유**: 병사 5명이 접촉 3개를 추적하면 **겹친 도형 40개**다.
+
+⚠ **`.Objective` 만 `AI.Filter`/`AI.Self` 를 따르지 않는다.** 그 둘은 *병사*를 고르는
+필터인데 목표는 병사가 아니다 — 액터가 자기를 그리므로 세계에 하나만 그려진다.
 
 ---
 

@@ -6,7 +6,24 @@
 
 관련: **[C-83]** · **[C-86]** · **[C-87]** · **[W18]~[W24]** / 원칙: **P66~P69**
 관련 문서: `ai/2026-09-13_perception_stack.md` · `ai/2026-09-13_ai_bridge_and_scene.md` ·
+**`ai/2026-09-13_objective_and_position_cost.md`**(★ 7절의 갱신분) ·
 `IMPLEMENTED.md` 2.5f절(연속 stance 축) · `cover/drafts/` (미채택)
+
+> ★★ **2026-09-14 — 이 문서에는 후속편이 있다**: `ai/2026-09-14_exposure_ladder_and_corrections.md`
+> 그곳에서 바뀐 것 — **막힌 사선에 조리개를 찾고 사격 자세를 고른다**(3.1절의 확장) ·
+> **반동 누적**([W26] 해결, 4절의 `EffectiveSpreadAtCm` 에 곱셈 항) ·
+> **조준 선회 240 °/s** 와 새 의도 `Traversing`(1절의 열거형에 값이 하나 늘었다) ·
+> **재장전 조건**(5절 — 오지 않는 소강상태를 기다리고 있었다) ·
+> **7절 위치 선택의 첫 항이 노출에서 `FightingCost` 로** · 8절 튜닝값 다수.
+> **여기 적힌 기구는 그대로 유효하고, 값과 사다리만 넓어졌다.**
+
+> ★ **2026-09-13 갱신 — 7절(엄폐)의 *점수식*이 그 뒤에 넓어졌다.**
+> 여기 적힌 **엄폐 기하**(시야를 거꾸로 돌린 판정 · 한 스윕이 주는 두 답)는 그대로 유효하다.
+> 그러나 **"어느 자리를 고르는가"는 이제 노출 하나가 아니라 세 비용**(도착지 노출 · 경로
+> 노출 · 땅의 값)이고, 8절 표의 `MaxTracesPerTick 4` · `MoveImprovementMargin 0.35` 는
+> **옛 값**이다(→ **6** · **0.25**). 전문: **`ai/2026-09-13_objective_and_position_cost.md`**.
+> 10절의 **[D10]**(목표 개념 자체가 없음)은 그 문서로 해소됐다 — 다만 **레벨에 목표 액터가
+> 아직 한 개도 놓여 있지 않아** 셋째 항은 지금 항상 0이다 → **[W25]**.
 
 > ⚠ **`cover/drafts/`의 EQS + Smart Object 초안은 여전히 미반영이다.** 여기 적힌 엄폐는
 > **EQS도 Smart Object도 쓰지 않는다.** 설계 문서의 "Smart Object 예약 + EQS 스코어링"
@@ -19,6 +36,7 @@
 
 ```
 ESoldierFireIntent   Hold / Suppressive / Aimed / Masked / Blocked
+                     (→ 2026-09-14에 **Traversing** 추가 — 총이 아직 표적에 안 왔다)
 ```
 
 컴포넌트는 **결정만 하고 행동하지 않는다.** 조준만 직접 건다(`AAIController::SetFocalPoint` —
@@ -128,6 +146,7 @@ Aimed 는 잔량 조건 없음
 ```
 EffectiveSpreadAtCm(d) = d × tan(3°) × ( 1 + MovementSpreadScale 2.0
                                              × min(1.5, 속도 / ReferenceSpeedCms 600) )
+        → 2026-09-14 갱신: × 사격자세 배수(Lean 1.4 / Blind 4.0) × (1 + 반동)
 TotalErrorCm = √( RadiusCm² + SpreadCm² )        ← 두 오차는 독립이다
 절대 게이트    TotalErrorCm ≤ SuppressiveRadiusCm 500
 ```
@@ -162,8 +181,11 @@ TotalErrorCm = √( RadiusCm² + SpreadCm² )        ← 두 오차는 독립이
 ```
 bEmpty  = Ammo <= 0                                → 무조건
 그 외    MagFraction < ReloadBelowFraction 0.5
-         AND  bLull  = !WantsToFire()
+         AND  bLull  = !WantsToFire()          ← ⚠ 이 소강상태는 오지 않았다
          AND  bSafe  = Exposure ≤ MaxExposureToReload 0.5
+
+→ 2026-09-14 갱신: bSafe 와 소강상태 둘 다에 **"숨을 곳이 있다"(CanHideHere)** 가 들어갔고,
+   재장전 중에는 엄폐가 있으면 DesiredStance 를 1 로 강제한다(담 뒤에서 넣는다)
 ```
 
 **재장전의 값은 그것이 막는 사격이다.** 그러니 그 값이 가장 쌀 때 산다 — 어차피 쏠 것이
@@ -197,10 +219,16 @@ CandidateCount        12
 HeightSamples         3
 StandChestHeightCm    135
 CrouchChestHeightCm   80
-MaxTracesPerTick      4
-MoveImprovementMargin 0.35
+MaxTracesPerTick      4          → 갱신 6   (후보 한 개가 3발에서 6발로 올랐다)
+MoveImprovementMargin 0.35       → 갱신 0.25 → **0.3** (09-14)
+InnerRingFraction     —          → **0.45** (09-14, 두 겹 링)
 CoverChannel          ECC_GameTraceChannel5 ("Sight")   ⚠ 8.1절
 ```
+
+> ★ **이 절은 "이 자리가 나를 가려 주는가"까지가 원본이다.** 그 답들로 **어느 자리를
+> 고르는가**는 뒤에 **세 비용 스코어러**로 넓어졌다 —
+> `Cost = Exposure + RouteRiskWeight×RouteRisk + ObjectiveWeight×ObjectiveCost`.
+> 전문: **`ai/2026-09-13_objective_and_position_cost.md`** 2절.
 
 ### 7.1 ★ 엄폐는 **시야 판정을 거꾸로 돌린 것**이다
 
@@ -217,6 +245,10 @@ CoverChannel          ECC_GameTraceChannel5 ("Sight")   ⚠ 8.1절
 ```
 Exposure      = FirstHidden / (Samples − 1)      ← 여기 서면 얼마나 드러나는가
 RequiredStance = Exposure                        ← 일단 가면 얼마나 낮춰야 하는가
+
+→ 2026-09-14에 **세 번째 답**이 같은 스윙에서 나왔다 (새 트레이스 0발):
+bCanHide  = FirstHidden < Samples    어느 높이에선가 막힌다
+bCanFight = FirstHidden > 0          맨 위 표본이 아직 보인다 = 쏴 수 있다
 ```
 
 - **전부 뚫린다** → `Exposure = 1`, `RequiredStance = 0`
@@ -233,13 +265,13 @@ RequiredStance = Exposure                        ← 일단 가면 얼마나 낮
 `SearchRadiusCm` 반경의 링에 `CandidateCount` 개를 놓고 **네브메시에 투영**한다.
 **투영이 바로 "숨을 자리"와 "바위 속"을 가르는 것**이다.
 
-시야와 같은 라운드로빈 예산(`MaxTracesPerTick 4`, 후보당 `HeightSamples 3` 소모).
+시야와 같은 라운드로빈 예산(`MaxTracesPerTick 4` → **갱신 6**, 후보당 `HeightSamples 3` → **갱신 6**(경로 표본 3발이 붙었다) 소모).
 이유도 같다 — **어디로 갈지에 대해 몇 프레임 낡은 답은 멈칫하는 것보다 훨씬 싸다**
 (`..._perception_stack.md` 5.2절).
 
 ### 7.4 이동 결정 — 건너는 값을 결정에 물린다
 
-`MoveImprovementMargin = 0.35`. 지금 자리보다 **이만큼 이상 나아야** 움직인다.
+`MoveImprovementMargin = 0.35`(→ **갱신 0.25**). 지금 자리보다 **이만큼 이상 나아야** 움직인다.
 **탁 트인 땅을 건너는 값**을 결정 쪽에 물리는 장치다.
 
 **이미 진행 중인 이동은 건드리지 않는다.** 매 바퀴 다시 고르게 뒀더니 **지난 목적지에
@@ -299,6 +331,8 @@ SoldierLab.Debug.Engagement   총구→조준점 선 + 텍스트
                                know <반경> vs weapon <탄착>  c <확신>  ammo n/m"
 SoldierLab.Debug.Cover        위협의 눈 → 후보 몸 높이들로 향하는 트레이스
                               막힘 = 짙은 회색 / 안 막힘 = 옅은 회색
+                              (+ 갱신분: 경로 표본 점 · 후보 구체 · "exp/obj/cost/stance")
+SoldierLab.Debug.Objective    목표 원과 밴드 — `..._objective_and_position_cost.md` 8절
 ```
 
 **교전 선을 가슴이 아니라 총구에서 그린다.** 가슴에서 그리면 **이 오버레이가 존재하는
@@ -313,9 +347,10 @@ SoldierLab.Debug.Cover        위협의 눈 → 후보 몸 높이들로 향하�
 
 | 없는 것 | 결과 | ID |
 |---|---|---|
-| **목표·임무 개념 자체** — 사수할 곳도, 뺏을 땅도, 지킬 것도 없다 | 엄폐 층이 **노출만 최적화**하므로 병사들이 **무모하게 앞으로 기어 나간다.** 다음 큰 조각이다 | **[D10]** |
+| ~~**목표·임무 개념 자체**~~ | ✅ **해소 (2026-09-13)** — `ASoldierObjective` + 세 비용 스코어러. ⚠ 단 **레벨에 한 개도 놓여 있지 않아** 셋째 항은 지금 항상 0이다 → **[W25]** · `ai/2026-09-13_objective_and_position_cost.md` | ~~[D10]~~ |
 | 분대 조율·명령 | 각자 논다 | `squad/drafts/` |
-| 경로의 노출 — 어디로 **건너가는지**는 안 본다 | 더 나은 엄폐로 가려고 **적의 정면을 가로지를 수 있다** | **[W20]** |
+| ~~경로의 노출 — 어디로 **건너가는지**는 안 본다~~ | ✅ **들어왔다 (2026-09-13)** — 다만 **직선 표본이지 네브메시 경로가 아니다.** 건물을 돌아가는 경로는 여전히 틀리게 읽는다 | **[W20]**(범위 축소) |
 | 엄폐 후보가 **한 반경의 링 하나** | **2m 앞의 완벽한 자리는 후보가 된 적이 없다** | **[W21]** |
-| 데미지·체력·사망 | 병사는 죽지 않는다 — 교전이 **끝나지 않는다** | **[W18]** |
+| ~~**반동 누적** — 지속 사격도 맹목사격도 산포를 넓히지 않는다~~ ✅ **들어왔다 (2026-09-14)** | **30번째 탄이 첫 탄과 같다.** 제압 사격이 공짜로 정확하고, 맹목사격의 "근거리 전용"이 자동으로 성립하지 않는다. 붙일 자리는 `EffectiveSpreadAtCm` 한 함수다 | **[W26]** |
+| 데미지·체력·사망 | 병사는 죽지 않는다 — 교전이 **끝나지 않는다.** ⚠ **의도된 미구현** — 위험 회피는 노출 점수만으로 성립하고, 피격 반응은 **합류 시점에 `titan_example` 에서** 가져올 계획이다 [B] | **[W18]** |
 | 45명 규모 성능 | | **[C-83]** |

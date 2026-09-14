@@ -230,13 +230,13 @@ GM_SoldierObserver   GetDefaultPawnClassForController 를 오버라이드
 |---|---|
 | **P53** | `ObjectTools.set_properties` 가 **쓰기를 못 한다** — 컴포넌트 템플릿 · 배치 인스턴스의 컴포넌트 · CDO 전부, float·FName·enum 가리지 않고 `false`. **읽기는 된다.** 이 문서의 모든 기본값은 **사용자가 직접 넣었거나 그래프 편집으로 우회**한 것이다(7.1절) |
 | **P54** | `find_node_types` 가 `context_pins` 없이는 **아무것도 안 준다.** 맞는 타입의 출력 핀을 넘겨야 컨텍스트 노드가 나온다. **도구가 불안정한 것으로 오독했다** |
-| **P55** | 발견은 되는데 **생성이 안 되는 노드**가 있다 — `CallFunction|Shoot`, 다른 블루프린트 그래프에서 본 라이플 변수 게터. 우회: **exec 입력 핀은 연결을 여러 개 받는다** → 기존 호출 노드를 두 호출자가 공유 (3절의 `Shoot()`) |
+| **P55** | 발견은 되는데 **생성이 안 되는 노드**가 있다 — `CallFunction\|Shoot`, 다른 블루프린트 그래프에서 본 라이플 변수 게터. 우회: **exec 입력 핀은 연결을 여러 개 받는다** → 기존 호출 노드를 두 호출자가 공유 (3절의 `Shoot()`) |
 | **P56** | `get_node_type_pins` 가 **트랜지언트 노드를 만들고 호출이 끝나면 부순다.** 반환된 참조를 재사용하면 **조용히 실패하고 끊긴 가지를 남긴다** → 엉뚱한 컴파일 ICE(`SetVariableOnPersistentFrame - No property found. Delta Seconds`) |
 | **P57** | `UCLASS()` 매크로와 클래스 선언 **사이에** 무엇을 끼우면 UHT가 매크로를 **그 끼어든 것에** 적용한다 (`Found ';' when expecting '{'`) |
-| **P58** | `Pawn|GetControlRotation` 이 **APawn에도 AController에도 있다.** `create_node` 는 Controller 쪽을 고르고 블루프린트는 `This blueprint (self) is not a Controller` 로 죽는다 → `declaring_class` 로 못박는다 (7.3절) |
+| **P58** | `Pawn\|GetControlRotation` 이 **APawn에도 AController에도 있다.** `create_node` 는 Controller 쪽을 고르고 블루프린트는 `This blueprint (self) is not a Controller` 로 죽는다 → `declaring_class` 로 못박는다 (7.3절) |
 | **P59** | **툴 에러를 파이썬에서 잡아도 스크립트는 프레임워크 레벨에서 중단되고 반환값이 버려진다.** 이미 수행된 부작용은 **보이지 않게 남는다** — **컴포넌트 5개가 한 벌 더 생겼다**(2절) |
-| **P60** | 블루프린트 변수의 **카테고리를 바꾸면 노드 type_id 경로가 바뀐다** — `Variables|SoldierLab|AIBridge|Get...` 이지 `Variables|Default|Get...` 이 아니다 (1절) |
-| **P61** | `write_graph_dsl` 은 **ABP 세터 노드가 든 그래프를 다시 쓰지 못한다**(읽기 전용 형태 `|SetBF_AlphaL`). 다만 **쓰기 전에 검증하므로 그래프는 망가지지 않는다** — [6.1f]("`read_graph_dsl`은 무손실이 아니다")의 구체적 실패 지점 하나 |
+| **P60** | 블루프린트 변수의 **카테고리를 바꾸면 노드 type_id 경로가 바뀐다** — `Variables\|SoldierLab\|AIBridge\|Get...` 이지 `Variables\|Default\|Get...` 이 아니다 (1절) |
+| **P61** | `write_graph_dsl` 은 **ABP 세터 노드가 든 그래프를 다시 쓰지 못한다**(읽기 전용 형태 `\|SetBF_AlphaL`). 다만 **쓰기 전에 검증하므로 그래프는 망가지지 않는다** — [6.1f]("`read_graph_dsl`은 무손실이 아니다")의 구체적 실패 지점 하나 |
 
 ---
 
