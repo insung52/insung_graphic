@@ -240,6 +240,7 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 | **P94** | **화면이 *예고한 것*과 키가 *실행하는 것*은 같은 계산에서 나와야 한다** | 관전 폰의 빙의 판정을 **Tick 에서** 하고 결과를 변수에 저장한 뒤, 프롬프트(`[F] 빙의`)와 F 키가 **그 저장된 값 하나**를 쓴다. 키를 누르는 순간에 다시 판정하면 **둘이 각각 다른 계산**에서 나오고 어긋나는 순간이 생긴다. P7("디버그 표시는 1급 시민")의 조작 판본. 위 문서 10.2절 |
 | **P95** | **참조 스캔에서 이름이 `_숫자` 로 끝나는 항목은 따로 검증한다** | UE 의 `FName` 은 `Foo_90` 을 **베이스 `Foo` + 숫자 90** 으로 쪼개 저장해서, 참조하는 파일 안에 온전한 이름이 없다. 1차 스캔이 `MM_Rifle_TurnLeft_90` 등 **살아 있는 클립 8개를 고아로 잘못 잡았다.** 이 오차는 **"지워도 된다" 쪽으로** 틀리므로 조용히 자산을 잃는다. `migration/2026-09-14_asset_cleanup.md` 0절 |
 | **P96** | **이름을 바꿀 거면 `Fix Up Redirectors` 를 돌린 *뒤에* Migrate 한다** | 순서가 뒤집히면 리다이렉터가 폐포에 따라가 남의 프로젝트에 쌓인다. 이동도 같다 |
+| **P102** | **플러그인을 이름으로 수작업 검색해 켤 때는 켠 목록을 원본과 대조한다** | UE 에는 `MovieSceneAnimMixer`/`MovieScenePoseSearchTracks`, `StateTree`/`GameplayStateTree`/`StateTreeToolset` 처럼 **접두가 겹치는 형제 플러그인**이 많다. 2026-09-14 이관에서 21개를 수작업으로 켜며 **1건을 오인**했다(`MovieScenePoseSearchTracks`). **잘못 켜도 에러가 나지 않아** 발견되지 않는다 — 안 쓰는 모듈이 하나 더 로드될 뿐이다. 대조는 `.uproject` 두 개의 `Plugins` 집합 차집합으로 끝난다 |
 | **P101** | **이관 규모를 `get_dependencies` 재귀로 재지 않는다 — 소프트/클래스 참조를 빠뜨린다** | 2026-09-14 에 그 방법으로 934개/920 MB 로 예측한 이관이 실제로는 **3622개/5.5 GB** 였다. 같은 시점 바이트 스캔은 3613개로 거의 맞혔는데 "과다 보고"로 치부해 버렸다 — **과다 보고는 하지만 누락은 하지 않는다.** 두 방법이 크게 어긋나면 **큰 쪽을 믿고**, 확정은 **Migrate 확인 대화상자의 파일 목록**으로 한다. `migration/2026-09-14_titan_example_migration.md` 4.2a |
 | **P100** | **없는 모듈을 참조하는 에셋은, 모듈을 들여와 고치지 않고 참조를 끊어 고친다** | 이식으로 딸려온 참조는 *기능이 필요해서* 가 아니라 *에셋이 그 자리에 있었기 때문에* 생긴다. `AN_PlayWeaponMontage` 하나가 `/Script/LyraGame`(= GAS 기반 프레임워크 한 벌)을 요구했는데, 그 노티파이가 하려던 일(무기 메시 몽타주)은 **`SK_AR4_X` 에 ABP 가 없어 애초에 동작할 수 없었다.** 되물을 질문은 "그 기능을 우리가 쓰고 있었나" 다. `migration/2026-09-14_titan_example_migration.md` 3.4 |
 | **P99** | **두 프로젝트를 합칠 때는 빌드하기 전에 심볼을 대조한다** | 이식으로 생긴 코드는 **원본과 이름을 공유한 채로** 돌아오고, 각자의 프로젝트 안에서는 완벽히 정상이다. 대조 셋 — ① `IMPLEMENT_PRIMARY_GAME_MODULE` ② `UCLASS`/`USTRUCT`/`UENUM` 이름(**모듈이 달라도 전역 유일**) ③ 콘솔 변수 이름. 2026-09-14 SoldierLab→titan_example 편입에서 **셋 다 걸렸다.** ③은 컴파일이 아니라 **에디터가 안 뜨는 것**으로 나타난다. UENUM/USTRUCT 개명은 `[CoreRedirects]` 없이 하면 저장된 BP 프로퍼티가 타입을 잃는다. `migration/2026-09-14_titan_example_migration.md` 3.1 |
@@ -252,9 +253,10 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 
 | 항목 | 값 |
 |---|---|
-| 프로젝트 | `C:\working\kadex\anim_test\SoldierLab` (UE5.8, GASP 기반) — **2026-09-03 PC 이관으로 `works\` 가 빠졌다** |
+| 프로젝트 | ★ **2026-09-14 부터 `C:\working\kadex\titan_example` 이 본체다** (UE5.8). `SoldierLab` 은 `Content/SoldierLab/` + `Source/SoldierLab/` + `Source/SoldierLabEditor/` 로 편입됐다 → `migration/2026-09-14_titan_example_migration.md` |
+| 옛 프로젝트 | `C:\working\kadex\anim_test\SoldierLab` — **이관 원본. 더 이상 작업하지 않는다** (측정·대조용으로만 남긴다) |
 | MCP 포트 | **8000** (2026-09-03 변경. 이전 8001. 언리얼 쪽 `ServerPortNumber`가 8000이라 `.mcp.json`을 맞췄다. `titan_example`을 같은 PC에서 동시에 띄우면 충돌하니 그때 다시 분리할 것) |
-| `.mcp.json` | `anim_test/SoldierLab/` 에만 있음 (`anim_test/` 쪽은 이관 후 없음) |
+| `.mcp.json` | 2026-09-14 부터 `titan_example/` 쪽을 쓴다. **둘을 동시에 띄우면 8000 포트가 충돌한다** — 이관 중 실제로 한쪽을 닫아야 했다. 어느 에디터에 붙었는지는 `AssetTools.exists("/Game/Soldiers/BP_Ally_kadex")`(titan 전용)로 확인한다 |
 | MCP 사전 조건 | Project Settings → Model Context Protocol → **Auto Start Server 켜기** (프로젝트별 설정) |
 | 유용한 툴셋 | `editor_toolset.*`, `state_tree_toolset.*`, `animation_toolset.*`, `ProgrammaticToolset`(배치 실행) |
 

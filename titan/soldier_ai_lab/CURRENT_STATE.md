@@ -1,6 +1,6 @@
 # 현재 상태 — soldier_ai_lab
 
-2026-09-14 / **★ AI 층 동작 확인 · 아군 메시 교체 완료** / 병사가 스스로 보고·듣고·전달받고·제압당하고·쏘고·엄폐한다.
+2026-09-14 / **★ `titan_example` 편입 완료 · AI 층 동작 확인 · 아군 메시 교체 완료** / 병사가 스스로 보고·듣고·전달받고·제압당하고·쏘고·엄폐한다.
 **아군은 이제 `soldier_T` 외형이다** — `Assign Skeleton` 으로 `SK_UEFN_Mannequin` 에 올려 애니메이션·PSD·ABP 를
 **하나도 안 고치고** 돈다 (`IMPLEMENTED.md` 3.2절). 적군 외형은 **결정 대기 [Q42]** — 지금은 마네킹 그대로이고 AI 작업을 막지 않는다.
 ⚠ 메시를 바꾸면 `StanceStandZ/CrouchZ` 같은 **실측값을 메시별로 다시 재야 한다**(P77). 사용자가 원하는 다음 시험은
@@ -15,35 +15,45 @@
 
 ---
 
-## ★ 2026-09-14 — `titan_example` 편입 결정
+## ★ 2026-09-14 — `titan_example` 편입 **완료**
 
-디자인팀과 합의: **GASP/Lyra 가 기존 `titan_example` 애니메이션 시스템보다 낫다**는 판단으로
-`SoldierLab` 을 본체에 편입한다. **이 PC 에서의 작업은 이관까지고, 그 뒤로는 문서만 남는다.**
+디자인팀이 GASP/Lyra 채택을 결정해 `SoldierLab` 을 본체에 편입했다. **에디터 기동 · PIE · `L_SoldierTest` 실행 전부 확인.**
+**이 PC 의 `SoldierLab` 프로젝트에서의 작업은 여기서 끝난다** — 이후 작업은 `C:\working\kadex	itan_example` 에서 한다.
 
-**실사 결과 — 걱정한 3건은 전부 무충돌** (`migration/2026-09-14_titan_example_migration.md`):
-엔진 둘 다 5.8 · titan 은 **커스텀 트레이스 채널이 0개**라 `Cover`(4)/`Sight`(5) 번호 충돌 없음 ·
-`PhysicalSurfaces` 5줄이 **글자까지 동일**(투사체가 원래 titan 것이라 설정을 같이 가져왔다) ·
-titan 에 `UEFN` 에셋 0건이라 **2본 추가된 `SK_UEFN_Mannequin` 이 덮어쓸 것이 없다** · 모듈 이름 충돌 없음.
+전문: **`migration/2026-09-14_titan_example_migration.md`** (충돌 실사 · 절차 · 결과) ·
+**`migration/2026-09-14_asset_cleanup.md`** (참조 전수 스캔 · 외부 의존 감사)
 
-**대신 나온 것**: titan 에 GASP 가 한 조각도 없어 기반이 통째로 들어간다 → **[Q43]** (2.7 GB) ·
-플러그인 **16종**을 켜야 한다(교집합 3종뿐) → **[W34]** · 빠지면 **조용히 껍데기**가 된다.
+### 무엇이 넘어갔나
 
-**정리 스캔** (`migration/2026-09-14_asset_cleanup.md`) — `Content/` 전체를 바이트 단위로 훑었다:
-★ **`GM_SoldierLab` 의 캐릭터 목록 배열 하나가 약 2.5 GB 를 끌고 온다** → **[W36] 최우선** ·
-참조 0건 **약 44 MB** 삭제 가능(백업 3 · Pistol/Shotgun/Death/HitReact · `_MF/` 39 · `_Extra/` 12) ·
-`SoldierLab/` 밖에 남은 우리 것 **9건** · 이동 후 빈 폴더 **6개** · 이름 충돌 `soldier_T` → **[W33]**.
-⚠ 스캔에는 오차가 둘 있고 **둘 다 실제로 물렸다**(P95 · 낡은 경로 문자열) — 0절을 먼저 읽을 것.
+| 구성 | 에셋 | 용량 |
+|---|---|---|
+| `Content/SoldierLab/` | 377 | 320 MB |
+| `Characters/UEFN_Mannequin` (GASP 로코모션) | 1583 | 1874 MB |
+| `Characters/Heroes` · `UE5_Mannequins` · 기타 | 905 | 1316 MB |
+| **합계** | **2865** | **3510 MB** |
 
-### 다음 순서
+C++ 는 `Source/SoldierLab/`(Runtime) + `Source/SoldierLabEditor/`(Editor) 두 모듈. 플러그인 **42종 활성**
+(SoldierLab 이 쓰던 것 중 `RigLogic`·`HairStrands`·`LiveLink`·`LiveLinkControlRig` 4개만 빠졌고, 넷 다 삭제한 샘플 콘텐츠용이라 불필요).
+
+### 이관에서 배운 것 (P95~P101)
+
+- **P98** 폴더 크기는 상한이지 이관 비용이 아니다 — 2.7 GB 폴더에서 실제로 따라온 건 1874 MB
+- **P99** 두 프로젝트를 합칠 때는 **빌드 전에 심볼을 대조**한다 — `IMPLEMENT_PRIMARY_GAME_MODULE` · `UCLASS`/`USTRUCT`/`UENUM` 이름 · 콘솔 변수. 이번에 **셋 다** 걸렸다
+- **P100** 없는 모듈을 참조하는 에셋은 모듈을 들여와 고치지 않고 **참조를 끊어** 고친다 (`/Script/LyraGame` → 0건)
+- **P101** ★ **이관 규모를 `get_dependencies` 재귀로 재지 말 것** — 소프트/클래스 참조를 빠뜨린다. 934개로 예측한 것이 실제 3622개였다
+
+### 남은 일 (우선순위)
 
 ```
-1. 에셋 정리        [W36] → 백업/미사용 삭제 → [W37] 폴더 교차 → 빈 폴더
-2. 마이그레이션      Config 먼저 → 플러그인 → 모듈 → Migrate → 검증 8단계
-3. 적군 스켈레톤 규격서   디자인팀. "soldier_T 와 같은 규격" 한 줄이면 된다 [Q42]
-4. 디자인팀 핸드오프  애님 시퀀스 목록(266개, 손대도 되는 것 구분) + 기능 사용법
+1. [C-95]  ★ 수비수가 정착해 쓰지 못한다 — 이관과 무관하게 그대로다. 세 갈래 진단
+2. 디자인팀 핸드오프
+     · 적군 스켈레톤 규격서 — "soldier_T 와 같은 규격" 한 줄이면 된다 [Q42]
+     · 애님 시퀀스 목록 (손대도 되는 것 / 건드리면 커브가 깨지는 것 구분)
+     · 기능 사용법 (레벨 · 콘솔 변수 · 조작키)
+3. [W35]  계측 잔해 게이트 — 45명이 전부 DrawDebugCoordinateSystem 을 그린다
+4. [C-99] 재질별 명중이 실제로 갈리는가 · [C-100] FootstepEffectTagModifier
+5. [W30]  1인칭 카메라 (요청됐고 미구현)
 ```
-
-⚠ **[C-95](수비수 정착 실패)는 이관과 무관하게 열려 있다.** 이관 후에도 그대로 재현된다.
 
 <details>
 <summary>2026-09-11 시점의 한 줄 요약 (접힘)</summary>

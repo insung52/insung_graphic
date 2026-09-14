@@ -4,9 +4,10 @@
 
 ⚠ **하나 미해결이 크다**: 수비수가 **자리를 잡고 쓰지 못한다.** 두 번 시도했고 둘 다 실패했다 → **[C-95]**
 
-> ★ **2026-09-14 — 디자인팀이 GASP/Lyra 채택을 결정해 `titan_example` 본체 편입이 확정됐다.**
-> 이 PC 에서의 작업은 **이관까지**다. 새 세션은 `CURRENT_STATE.md` 의 2026-09-14 블록과
-> **`migration/` 두 문서를 먼저** 읽을 것 — 무엇이 조용히 깨지는지, 무엇을 지우고 갈지가 거기 있다.
+> ★ **2026-09-14 — `titan_example` 본체 편입 완료.** 에디터·PIE·`L_SoldierTest` 정상.
+> **이후 작업은 `C:\working\kadex	itan_example` 에서 한다** — `anim_test/SoldierLab` 은 이관 원본으로만 남는다.
+> 이관 총량 **2865개 / 3510 MB**. 새 세션은 `CURRENT_STATE.md` 의 2026-09-14 블록과
+> **`migration/` 두 문서**를 먼저 읽을 것.
 
 ---
 
@@ -130,11 +131,11 @@ soldier_ai_lab/
 ├── cover/             엄폐 — ⚠ **구현은 `ai/2026-09-13_engagement_and_cover.md` 에 있다**
 │   └── drafts/        ⬜ 미반영           EQS/Smart Object 초안 — **미채택**
 │
-├── migration/         ★ titan_example 편입 (2026-09-14 결정)
-│   ├── 2026-09-14_titan_example_migration.md  충돌 실사·절차·검증 8단계
-│   │                                     (채널 번호·플러그인 16종·2.7 GB 결정)
-│   └── 2026-09-14_asset_cleanup.md       참조 전수 스캔 — 지울 것·이름·빈 폴더
-│                                         (GM_SoldierLab 이 2.5 GB 를 끌고 온다)
+├── migration/         ★ titan_example 편입 (2026-09-14 **완료**)
+│   ├── 2026-09-14_titan_example_migration.md  충돌 실사·절차·결과·플러그인 대조
+│   │                                     (채널 번호 · 심볼 충돌 3건 · LyraGame 절단)
+│   └── 2026-09-14_asset_cleanup.md       참조 전수 스캔 · 이펙트 외부 의존 감사
+│                                         (FName 숫자접미 함정 · 나이아가라 이미터 상속)
 │
 ├── weapons/           무기 · 투사체
 │   └── 2026-09-12_projectile_port.md     ★ ARCWSProjectile 이식 — 끊어낸 의존 4종,

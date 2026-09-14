@@ -1,5 +1,10 @@
 # 구현 현황 — 실제로 만들어져 있는 것
 
+> ★ **2026-09-14 — `titan_example` 편입 완료.** 아래 경로는 전부 `/Game/...` 그대로지만 **프로젝트가 바뀌었다**:
+> `C:\working\kadex\titan_example`. C++ 는 `Source/SoldierLab/` · `Source/SoldierLabEditor/` 모듈 2개.
+> 이관 중 생긴 변경(타입 개명 · cvar 개명 · `AC_VisualOverrideManager` 편집)은
+> `migration/2026-09-14_titan_example_migration.md` 3.1 · 3.4 · 4.3 참고.
+
 2026-09-14 / 유지보수 / **애니메이션 층(L4) 완료 · 무기/투사체 배선 완료 · AI 층 동작 확인 · 아군 메시(soldier_T) 교체 완료.**
 AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교전·엄폐·**목표**. **L0 명령 · L1 분대는 여전히 초안만.**
 ★ **2026-09-14 교정 라운드**: 노출의 사다리(조리개·사격자세) · 반동 · 조준 선회 · `FightingCost` · **목표 액터의 루트 컴포넌트 버그** → `ai/2026-09-14_exposure_ladder_and_corrections.md`

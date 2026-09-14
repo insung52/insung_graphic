@@ -1,6 +1,6 @@
 # SoldierLab 을 titan_example 로 옮긴다 — 충돌 실사와 절차
 
-2026-09-14 / **실사 완료 · 이관 미착수** / 디자인팀이 GASP/Lyra 채택을 결정해 `SoldierLab` 을 `titan_example` 본체에 편입한다. 두 프로젝트의 `.uproject` · `Config` · `Content` 를 실측해 충돌 지점을 확정했다. **막을 것으로 예상했던 3건은 충돌이 없다. 폐포 실측 결과 이관 총량은 920 MB 다(4절) — 정리 전 추정 3 GB 는 폴더 크기로 짐작한 것이라 틀렸다.**
+2026-09-14 / **✅ 이관 완료** / 디자인팀이 GASP/Lyra 채택을 결정해 `SoldierLab` 을 `titan_example` 본체에 편입한다. 두 프로젝트의 `.uproject` · `Config` · `Content` 를 실측해 충돌 지점을 확정했다. **막을 것으로 예상했던 3건은 충돌이 없다. 폐포 실측 결과 이관 총량은 920 MB 다(4절) — 정리 전 추정 3 GB 는 폴더 크기로 짐작한 것이라 틀렸다.**
 
 관련 항목: [W33] [W34] [W35] [C-98] [Q43] / 관련 문서: `IMPLEMENTED.md` 6절, `weapons/2026-09-12_projectile_port.md` (역방향 이관의 선례)
 
@@ -292,6 +292,126 @@ SoldierLab/Animations/Actions/*      →  Characters/Heroes 140
 
 ---
 
+## 4.3 이관 후 정리 — **2.0 GB 제거 완료** (2026-09-14) [A]
+
+4.2d 의 시뮬레이션대로 **편집 2건**으로 `GM_Sandbox` 를 폐포에서 끊었다. `Content` 폴더를 지운 것이 아니라 **참조를 끊은 것**이다(P100).
+
+### 무엇을 했나
+
+| # | 대상 | 변경 | 근거 |
+|---|---|---|---|
+| ① | `GM_SoldierLab` | `PlayerControllerClass` : `PC_Sandbox` → `PlayerController` | `PC_Sandbox` 의 부모는 **순수 `PlayerController`** 이고 내용은 `NextPawn`(캐릭터 순환) · `NextVisualOverride`(외형 순환) · 모바일 가상 조이스틱 숨김뿐. 나머지 입력 이벤트는 **전부 빈 이벤트**. ★ **`IMC_Sandbox` 는 `SandboxCharacter_CMC` 와 `BP_ObserverPawn` 이 붙인다 — PC 가 아니다.** 그래서 입력이 죽지 않는다 |
+| ② | `AC_VisualOverrideManager` `FindAndApplyVisualOverride` | `CastToGM_Sandbox` · `GetVisualOverrides_Soft` · `SetVisualOverridesList` · `GetGameMode` 4노드 삭제 후 진입 exec 재연결 | **이미 죽은 코드였다** — `GM_SoldierLab` 의 부모가 `GameModeBase` 라 `GM_Sandbox` 로의 캐스트가 **런타임에 항상 실패**한다. 하는 일 없이 `GM_Sandbox` 를 하드 참조로 붙들어 2 GB 를 끌고 왔을 뿐 |
+
+② 후 남은 함수 본문:
+```
+(fn FindAndApplyVisualOverride ()
+  (bind _returnvalue (|GetVisualOverrideWithCVAR_Soft (Variables|Default|GetVisualOverridesList)))
+  (CallFunction|LoadVisualOverride _returnvalue))
+```
+→ `AC_VisualOverrideManager` 의 의존은 `BFL_HelpfulFunctions` 하나만 남았다.
+
+> ⚠ `AC_VisualOverrideManager` **컴포넌트 자체는 뗄 수 없다.** `BP_SoldierCharacter` 의 부모가
+> `SandboxCharacter_CMC` 이고(**복제본이 아니라 자식 클래스다** — 이전 문서의 "복제" 표기는
+> 부정확했다) 그 부모가 가진 컴포넌트이기 때문이다. 그래서 컴포넌트는 두고 **안쪽 캐스트만**
+> 끊었다.
+
+### 결과 [A]
+
+| | 이관 직후 | ①② 후 |
+|---|---|---|
+| 폐포 | 3613개 / **5532 MB** | 2865개 / **3511 MB** |
+
+폐포에서 빠진 것: `GM_Sandbox` · `PC_Sandbox` · `BP_Echo` · `BP_Kellan` · Echo · Paragon · MetaHumans · UE4_Mannequin · RetargetedCharacters.
+
+### 남은 것과 그 이유
+
+| 폴더 | 크기 | 왜 남나 |
+|---|---|---|
+| `Characters/UEFN_Mannequin` | 1874 MB | **GASP 로코모션. 실제로 쓴다** |
+| `Characters/Heroes` | 526 MB | 사용자가 남기기로 한 Dash/Death/HitReact 몽타주 |
+| `Characters/UE5_Mannequins` | 331 MB | `RTG_Lyra_to_UEFN`(리타깃 도구)가 물고 있다. 사용자가 남기기로 함 |
+| 기타 | ~780 MB | Tutorial/Blueprints · Soldiers/New_Soldiers · Weapons/Rifle · LevelPrototyping 등 |
+
+### titan 에서 지워도 되는 것 [A]
+
+titan `Content` 13,063개를 전수 스캔해 **서로 말고는 참조하는 것이 없음**을 확인했다:
+
+```
+Characters/Echo · Characters/Paragon · MetaHumans
+Characters/UE4_Mannequin · Blueprints/RetargetedCharacters
+Blueprints/GM_Sandbox · Blueprints/PC_Sandbox
+```
+지운 뒤 **Fix Up Redirectors**(P96).
+
+> ⚠ **`SandboxCharacter_Mover` 는 지울 수 없다** — GASP 초이서 두 개
+> (`CHT_MoverCharacterAnimations_PoseMatch` · `CHT_PoseSearchDatabases_Relaxed`, 둘 다
+> `UEFN_Mannequin` 안)가 참조한다. 따라서 **`Mover`/`ChaosMover`/`NetworkPrediction`/
+> `MoverExamples`/`MovieSceneAnimMixer` 플러그인 5개는 켜 둬야 한다.** ([W34] 정정)
+
+---
+
+## 4.4 최종 상태 — **이관 완료** (2026-09-14) [A]
+
+`titan_example` 에서 에디터 기동 · PIE · `L_SoldierTest` 실행 **모두 확인**. 이 PC 의 `SoldierLab` 프로젝트에서의 작업은 여기서 끝난다.
+
+### 폐포 추이
+
+| 단계 | 에셋 | 용량 |
+|---|---|---|
+| Migrate 직후 | 3613 | 5532 MB |
+| 참조 정리 후(4.3 ①②) | 2865 | 3511 MB |
+| **폴더 삭제 후 (최종)** | **2865** | **3510 MB** |
+
+| 구성 | 에셋 | 용량 | 비고 |
+|---|---|---|---|
+| `Content/SoldierLab/` | 377 | 320 MB | 우리가 만든 것 전부 |
+| `Characters/UEFN_Mannequin` | 1583 | 1874 MB | GASP 로코모션 — **실제로 쓴다** |
+| `Characters/Heroes` | 103 | 526 MB | 남겨 둔 Dash/Death/HitReact 몽타주 |
+| `Characters/UE5_Mannequins` | 105 | 331 MB | `RTG_Lyra_to_UEFN`(리타깃 도구)가 물고 있다 |
+| 기타 | 697 | ~459 MB | Tutorial · Soldiers/New_Soldiers · Weapons/Rifle · LevelPrototyping · NiagaraExamples 등 |
+
+### 플러그인 대조 [A]
+
+`titan_example` **42개 활성** / `SoldierLab` 29개. **SoldierLab 이 쓰는 것은 4개만 빼고 전부 켜져 있고, 그 4개는 전부 불필요하다.**
+
+| titan 에 없는 것 | 판정 |
+|---|---|
+| `RigLogic` | MetaHuman 얼굴용 — **MetaHumans 를 지웠으므로 불필요** |
+| `HairStrands` | Echo 머리카락용 — **Echo 를 지웠으므로 불필요** |
+| `LiveLink` · `LiveLinkControlRig` | 모션캡처 입력. 미사용 |
+
+★ **`Mover` 계열 5개(`Mover`/`ChaosMover`/`NetworkPrediction`/`MoverExamples`/`MovieSceneAnimMixer`)는 켜 둬야 한다** — GASP 초이서 두 개(`CHT_MoverCharacterAnimations_PoseMatch` · `CHT_PoseSearchDatabases_Relaxed`, 둘 다 `UEFN_Mannequin` 안)가 `SandboxCharacter_Mover` 를 참조한다.
+
+**이름이 비슷해서 잘못 켰던 것 1건** — 21개를 수작업으로 켜는 과정에서 나왔다:
+
+| 잘못 켠 것 | 켜려던 것 |
+|---|---|
+| `MovieScenePoseSearchTracks` (Sequencer 의 PoseSearch 트랙 저작용, 미사용) | `MovieSceneAnimMixer` |
+
+→ 제거하고 `MovieSceneAnimMixer` · `GameplayInsights` 를 추가했다(2026-09-14, 에디터 종료 상태에서 `.uproject` 직접 편집). 나머지 20개는 정확했다.
+
+> **P102** — **플러그인을 이름으로 수작업 검색해 켤 때는 켠 목록을 원본과 대조한다.**
+> UE 에는 `MovieSceneAnimMixer` / `MovieScenePoseSearchTracks`, `StateTree` /
+> `GameplayStateTree` / `StateTreeToolset` 처럼 **접두가 겹치는 형제 플러그인**이 많다.
+> 잘못 켜도 **에러가 나지 않는다** — 그냥 안 쓰는 모듈이 하나 더 로드될 뿐이라 발견되지 않는다.
+> 대조는 `.uproject` 두 개의 `Plugins` 집합 차집합으로 끝난다.
+
+### 남은 자잘한 것
+
+- `Characters/Echo/Rigs/CR_Echo_Helpers` · `CR_Echo_Twist` — **참조 0건**. 지우면 800 KB 회수
+- 리다이렉터 4개 중 2개(`Vehicles/UGV/*`)는 titan 원래 것. `Fix Up Redirectors` 로 정리
+
+### 이관하지 *않은* 것
+
+`SoldierLab` 프로젝트 쪽에만 남는 것 — 필요하면 개별로 다시 가져온다.
+
+- `SoldierLab/Animations/Actions/` 의 미사용 몽타주 일부, `Rifle/_MF/` · `_Extra/`(사용자가 남긴 것은 따라갔다)
+- `Saved/closure_*.txt`(이 문서의 측정 산출물)
+- `Config/DefaultInput.ini`(Perforce 읽기 전용, 한 번도 수정 안 함 — 매핑은 `IMC_Sandbox` 안에 있다)
+
+---
+
 ## 5. `soldier_T` 가 둘이 된다 [A]
 
 | | 경로 | 스켈레톤 | 쓰는 곳 |
@@ -397,6 +517,8 @@ Source/SoldierLabEditor/ →  titan_example/Source/SoldierLabEditor/
 | 6 | 사격 시 재질별 명중 이펙트가 맞다 | `PhysicalSurfaces` |
 | 7 | `LogAnimation`/`LogSkeletalMesh` 경고 0건 | 스켈레톤/커브 |
 | 8 | 45명 배치 시 프레임 | `AnimationBudgetAllocator` · [W6] 계측 잔해 |
+
+✅ **2026-09-14 — 1~4 통과, 에디터·PIE·`L_SoldierTest` 정상.** 5~8 은 실사용에서 계속 볼 것.
 
 **5번이 이 문서의 존재 이유다.** 1~4 가 다 통과해도 5 는 따로 깨질 수 있고, **깨져도 에러가 없다.** 병사가 엄폐물을 무시하고 벌판에 서 있으면 AI 버그로 보이지 AI 가 잘못된 채널을 보고 있다고는 안 보인다.
 
