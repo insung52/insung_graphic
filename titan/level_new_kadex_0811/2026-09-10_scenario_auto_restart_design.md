@@ -1,225 +1,223 @@
 # 시나리오 자동 재시작 (데모 모드) — 설계
 
-2026-09-10 / 설계단계 / 데모 모드에서 적 섬멸 10초 뒤 자동 재시작. 레벨 재오픈 대신 **인플레이스 소프트 리셋**(액터 부활+원위치)을 권장하는 근거와 리셋 대상 전수 목록.
+2026-09-10 작성 / 2026-09-11 개정(에디터 실측 반영) / 설계확정·구현대기 / 적 섬멸 10초 뒤 인플레이스 소프트 리셋 → 3초 뒤 "적 특작부대 침투 상황 발생"으로 재시작. 방식은 **부활(revive)+원위치**로 확정.
 
 관련: `scenario_three_stage_combat.md`(구현 현황), `2026-09-01_scenario_run_modes_demo_fullsystem.md`(데모 모드),
-`2026-09-02_scenario_double_eval_travel_bug.md`(레벨 트래블이 시나리오 상태에 남긴 사고),
-`scenario_authoring_guide.md`(DT 저작).
+`2026-09-02_scenario_double_eval_travel_bug.md`(타이머/이중 평가 사고), `scenario_authoring_guide.md`(DT 저작).
 
 ---
 
-## 0. 요구사항
+## 0. 목표 타임라인
 
-전시 데모(`AScenarioConfig::RunMode == Demo`)에서 **적군 전멸 → 약 10초 뒤 → 시나리오가 처음부터 다시**.
-무인 방치로 하루 종일 반복 재생되는 것이 목적.
+```
+[적 15명 전멸]
+   │  ScenarioComplete 행 발동 → "시나리오 완료" 토스트
+   │  (+10초)  ← 새 행 ScenarioRestart, TriggerDelaySeconds=10
+   ▼
+[재시작 실행]  페이드 아웃 0.3s → 인플레이스 리셋(1프레임) → 페이드 인 0.5s
+   │  (+3초)   ← ScenarioConfig.DemoAutoStartDelaySeconds = 3 (실측 확인됨)
+   ▼
+[BeginEnemyContactScenario()]
+   │  "적 특작부대 침투 상황 발생" 토스트 7초 (WBP_Notify_EnemyContact)
+   │  스텝 평가 시작 → +1s EnemyApproach, +3s UAVMission …
+   ▼
+[1사이클 반복]
+```
 
-풀 시스템(통제기·상위체계 연동) 구성에서는 **절대 자동 재시작하면 안 된다** — 통제기가 상황을 쥐고 있는데
-언리얼이 혼자 판을 갈아엎는 꼴이 된다. 게이트 필수.
+사용자 질문 "3초 맞나" → **맞다.** `ScenarioConfig_1.DemoAutoStartDelaySeconds = 3`이고,
+그 타이머가 끝나면 `DemoAutoStartScenario()` → `BeginEnemyContactScenario()`가 불리며,
+그 함수가 직접 `ShowScenarioNotification("EnemyContact", 7초)`를 띄운다. 재시작도 **정확히 같은
+경로를 재사용**하면 되므로 알림을 따로 만들 필요가 없다.
 
 ---
 
-## 1. 트리거는 DT 한 행이면 끝난다
+## 1. 에디터에서 실측 확인한 사실 (2026-09-11, MCP)
 
-`DT_ScenarioSteps_ThreeStage`에는 이미 종료 행이 있다:
-
-| RowName | Prereq | Trigger | Effect |
-|---|---|---|---|
-| `ScenarioComplete` | `EnemyEngage` | `AllEnemiesEliminated` | `ShowUIMessage` |
-
-여기에 한 행만 매단다:
-
-| RowName | Prereq | Trigger | 값 | Effect |
-|---|---|---|---|---|
-| `ScenarioRestart` | `ScenarioComplete` | `TimerOnly` | **10s** | **`RestartScenario`** (신설) |
-
-- `AllEnemiesEliminated`는 `UDetectableTargetSubsystem`의 Enemy 등록이 0이 되는 순간 참이라
-  **"적이 아직 안 뜬 시작 직후"에도 참이 된다**(`ScenarioStepTypes.h` 주석의 함정). 설계표
-  (`scenario_three_stage_combat.md` §4)는 `ScenarioComplete`의 Prereq를 `EnemyEngage`로 두어 이를 피한다 —
-  **DT에서 실제로 그렇게 들어가 있는지 확인할 것**(uasset 바이너리로는 행 이름만 확인됨).
-  재시작 후에도 이 Prereq가 매 사이클 다시 걸려야 무한 재시작 루프가 안 생긴다.
-- 10초는 DT의 `TriggerDelaySeconds`로 저작 — 전시장에서 페이싱만 바꾸고 싶으면 빌드 없이 조정 가능.
-- 데모 게이트는 **이펙트 구현부**에서: `IsDemoMode()`가 거짓이거나 `ScenarioConfig::bDemoAutoRestart`가
-  꺼져 있으면 로그만 남기고 no-op. 이러면 같은 DT를 두 구성이 공유해도 안전하다(`bEnabled`를 껐다 켰다 하는
-  운용은 실수하기 쉬움).
-
-`AScenarioConfig`에 추가할 값(기존 `Scenario|Run Mode` 카테고리 옆):
-
-| 필드 | 기본 | 의미 |
+| 항목 | 실측값 | 설계에 주는 의미 |
 |---|---|---|
-| `bDemoAutoRestart` | true | 데모에서 자동 재시작 사용 |
-| `RestartFadeOutSeconds` / `RestartFadeInSeconds` | 0.3 / 0.5 | 리셋 순간을 가리는 페이드 |
-| `HardReloadEveryNCycles` | 0(끔) | N회마다 소프트 대신 레벨 재오픈(§5 하이브리드) |
+| `ScenarioConfig_1.RunMode` | **Demo** | 데모 게이트가 바로 동작 |
+| `DemoAutoStartDelaySeconds` | **3.0** | 위 타임라인의 3초 |
+| `bDemoAutoStartScenario` / `bDemoForceUGVAutoFire` / `bDemoForceCommandPostAutoFire` | 전부 true | 재시작 후 `ApplyDemoRunModeSetup()` 재실행만 하면 RCWS 복구 |
+| `DemoFireMode` | Burst | 재시작 시 같이 재적용 |
+| `ScenarioStepTable` | `DT_ScenarioSteps_ThreeStage` | 재시작 행을 여기에 추가 |
+| `UGVZone3Destination` | **None** (+ `UGVMoveZone3` 행 `bEnabled=false`) | 3차에서 UGV는 안 움직임 — 리셋 대상에서 빠짐 |
+| 적 | `BP_Enemy_kadex_C_1..15` = **15명** | |
+| 아군 | `BP_Ally_kadex_C_1..25` = **25명** | |
+| 적 인스턴스 초기값 | `Health=100`, `IsDead=false`, **`IsParachuting=true`**, `IsHoldingWeapon?=false`, `CurrentRifle=None` | 초기 상태가 "무기 없이 낙하 상태" — 클래스 기본값이 아니라 **인스턴스 스냅샷**을 떠야 하는 근거 |
+| 적 사망 처리(BP_Enemy_Base EventGraph) | `… → Delay(5.0) → DestroyActor(CurrentRifle) → DestroyActor(self)` | **self 파괴 노드 1개만 지우면** 부활 방식이 성립 |
+| 소총 | 런타임에 `EquipRifle` 커스텀 이벤트가 `SpawnActorFromClass`로 생성 | 부활 시 `EquipRifle` 재호출로 복구 |
+| 아군 사망 처리 | `IsDead` 변수를 가진 BP는 적군 계열뿐. `UAllyFormationComponent`에도 체력 없음 | **아군은 현재 무적** — 부활 불필요, 위치/상태만 리셋 |
+| RCWS 탄약 | `URCWSComponent::CurrentData`가 **private**, `ConsumeAmmo`만 존재(리로드 없음) | 리필 함수 신설 필요 |
+| UGV 컴포넌트 | `RtspBridge` 존재 확인 | 레벨 재오픈 시 RTSP가 끊기는 근거 |
+| 확인창 인프라 | `UNotificationSubsystem::ShowConfirmDialog(FText)` + `OnConfirmed`/`OnCancelled` 이미 존재 | 향후 "재시작 하시겠습니까?"는 거의 공짜(§7) |
+| 알림 DT 행 | `EnemyContact`, `RoadExitWarning`, `ScenarioComplete` | 재시작 전용 알림을 원하면 행 1개 추가 |
+| 레벨 | `New_kadex_0811.umap` 187MB 모놀리식(WP/OFPA 아님), `GameDefaultMap=/Game/kadex_lobby` | 재오픈은 비싸다. 단, 로비 맵이 있어 하드 리셋 폴백 경로는 존재 |
 
 ---
 
-## 2. 재시작 방식 3안
+## 2. 방식 확정 — 부활(revive) + 원위치
 
-### A. 레벨 재오픈 (`OpenLevel` / `ServerTravel`)
+재스폰이 아니라 부활로 간다. 근거:
 
-구현 5줄, 초기화 100% 보장. 하지만 이 프로젝트에서는 비용이 크다:
+1. 적/아군은 레벨 배치 인스턴스이고 인스턴스별 저작 데이터가 많다(`CombatZones[0..2]` 마커 6개 +
+   자세, `SquadId`, `AmbushMarker`, 감지 반경 …). 재스폰하면 전부 복제해야 하고 하나 빠지면
+   2회차 연출이 달라진다. 위 표의 `IsParachuting=true`처럼 **클래스 기본값과 다른 인스턴스 값**이
+   실제로 존재하므로, 재스폰은 "클래스에서 새로 만들면 된다"가 성립하지 않는다.
+2. 스켈레탈메시 40개 동시 스폰은 프레임 스파이크다.
+3. 걸림돌이었던 "죽으면 액터가 사라진다"는 **노드 1개 삭제로 해결**된다(§8-1).
+4. 시체를 남겨도 기존 로직이 안 깨지는 것을 코드로 확인했다:
+   - 생존/잔여 수 판정은 액터 유효성이 아니라 `UDetectableTargetComponent::IsIncapacitated()`
+     (`CollectEnemyCombatComponents`).
+   - 도주 정원·빈 역할 승계도 `AliveEnemies.Contains(Original)` 기준(`BeginEnemyFleeToZone`).
+   - 사격/타겟팅은 감지 레지스트리 기반이라 시체를 쏘지 않는다.
 
-1. **`New_kadex_0811.umap`이 187MB 모놀리식**(World Partition/OFPA 아님 — `Content/__ExternalActors__`에
-   이 레벨 항목이 없다). 여기에 PCG 숲까지 얹혀 있어 매 사이클 수 초~수십 초 암전. 관람객 앞에서 반복된다.
-   → 실측하려면 로그의 `LogLoad: Took N seconds to LoadMap`을 보면 된다(현재 로그엔 에디터 기동분만 있음).
-2. **RTSP 12스트림이 전부 끊긴다.** `URtspStreamComponent`는 차량의 **액터 컴포넌트**이고
-   `UVehicleRtspBridgeComponent`가 BeginPlay 시점에 RenderTarget 크기로 NVENC 세션/SDP를 확정한다
-   (`VehicleRtspBridgeComponent.h` 주석). 월드가 새로 뜨면 마운트가 통째로 재생성 → VLC/통제기/전시 모니터가
-   전부 재접속해야 한다. **무인 데모에서 이건 사실상 실격 사유.**
-3. 2대 PC 구성이면 비-seamless 트래블로 **클라이언트(자체방호 축)도 같이 암전 + 재접속**.
-4. 하루 8시간 × 수십 사이클의 로드/GC 반복 — 안정성은 오히려 검증이 더 필요하다.
-
-`bUseSeamlessTravel` + 전환 맵을 써도 2번(액터가 새로 생기므로 스트림 재수립)은 그대로다.
-
-### B. 인플레이스 소프트 리셋 — **권장**
-
-액터를 파괴/재생성하지 않고 "레벨 시작 직후 상태"로 되돌린다.
-
-- 레벨 로드 0, **RTSP 무중단**, 클라이언트 재접속 없음, 전환 비용은 한 프레임 + 물리 안정화 1~2틱.
-- 유일한 리스크는 **리셋 대상을 빠뜨리는 것** — 빠뜨리면 2회차부터 조용히 어긋난다(예: 탄약).
-  그래서 §4에 전수 목록을 만들고, §7의 10사이클 연속 검증으로 잡는다.
-
-### C. 하이브리드
-
-소프트 리셋을 기본으로 하되 `HardReloadEveryNCycles`(예: 20)마다 한 번은 레벨 재오픈으로 완전 세탁.
-누적 드리프트·누수 보험. 카운터는 GameInstance 서브시스템에 둔다(레벨을 넘어 살아남아야 하므로).
-
-**결론: B로 만들고 C를 옵션으로 남긴다.**
+**초기 상태는 각 컴포넌트가 자기 `BeginPlay`에서 스스로 스냅샷**을 뜬다(액터 트랜스폼, 메시 상대
+트랜스폼, BP 변수 초기값, MaxWalkSpeed, 포탑 기본각). 서브시스템이 남의 초기값을 알 필요가 없다.
 
 ---
 
-## 3. "재스폰이냐 위치 이동이냐" — 부활(revive)이 답
+## 3. 무한 재시작 분석 (사용자 요청 항목)
 
-### 재스폰이 나쁜 이유
+### 3.1 구조적으로 왜 안 도는가
 
-적/아군은 **레벨에 배치된 인스턴스**이고, 인스턴스별 저작 데이터가 매우 많다:
-`CombatZones[0..2]`의 FiringPose/CoverPose 마커 6개 + BodyPose + Lean, `SquadId`, `bIsSquadLeader`,
-`DefaultWatchYawDeg`, 수신호 몽타주, `AmbushMarker`, 감지 스피어 반경…
-(`scenario_three_stage_combat.md` §7 마커 인벤토리 전체가 인스턴스 값이다.)
+재시작이 `FiredScenarioSteps`를 비우므로, **재시작 직후 `Prereq=None`인 행들이 다시 평가 대상**이
+된다. DT에서 `Prereq=None`인 행은 4개뿐이고 각각을 따져보면:
 
-재스폰하면 이걸 전부 스냅샷 떠서 복제해야 하고, 하나라도 빠지면 2회차 연출이 달라진다.
-게다가 스켈레탈메시+ABP+피직스애셋 40개 동시 스폰은 그 자체로 프레임 스파이크다.
-**재스폰은 더 비싸고 더 위험하다.**
+| 행 | 트리거 | 재시작 직후 즉시 참이 되는가 | 판정 |
+|---|---|---|---|
+| `UAVMission` | TimerOnly 3s | 3초 뒤 정상 발동 | ✅ 의도대로 |
+| `EnemyApproach` | TimerOnly 1s | 1초 뒤 정상 발동 | ✅ 의도대로 |
+| `EnemyEngage` | `UGVFiredNearEnemy` ≤100m | **아니오** — `UGVFireWatch`를 리셋하면 `LastShotsFired=INDEX_NONE`이 되고, `UpdateRCWSFireWatch`는 첫 관측 틱에서 **기준선만 잡고 리턴**한다(코드 확인). 이전 사이클 누적 발사수는 영향을 못 준다 | ✅ 안전 |
+| `EnemyFleeToZone2` | `EnemyCasualtyCountAtLeast` 3 | **위험** — `Casualty = ScenarioEnemyCountBaseline − Alive`인데, 부활 전에 스텝 평가가 돌면 Alive=0이라 즉시 발동한다 | ⚠ §3.2로 차단 |
 
-### 그래서 "부활 + 원위치"
+그리고 `ScenarioComplete`는 **`Prereq=EnemyEngage`**(DT 실측 확인)이므로, 새 사이클에서 UGV가
+100m 이내에서 다시 쏘기 전까지는 절대 발동할 수 없다. 즉 **"섬멸 → 재시작 → 즉시 섬멸 판정 →
+재시작"의 폭주 루프는 구조적으로 불가능**하다. `EnemyEngage`가 루프 브레이커다.
 
-같은 액터를 그대로 두고 상태만 초기화하면 저작 데이터는 손댈 일이 없다. 걸림돌은 하나:
+### 3.2 그래도 지켜야 하는 3가지 (안 지키면 조용히 깨진다)
 
-> ⚠️ **`BP_Enemy_Base`가 사망 시 `K2_DestroyActor`를 호출한다**(uasset에서 확인).
-> 그러면 부활시킬 액터가 없다.
+1. **평가 루프를 먼저 완전히 멈춘다.** `FTimerHandle::Invalidate()`가 아니라
+   `ClearTimer(ScenarioStepTickTimerHandle)`. 재시작은 **같은 월드**라 `ResetForNewWorldIfNeeded`의
+   월드 비교가 걸리지 않으므로 그 안전망이 없다. 게다가 `BeginScenarioSteps`는
+   `bScenarioStepsRunning || IsTimerActive(...)`이면 **조용히 리턴**한다 — 안 멈추고 다시 부르면
+   "재시작 버튼을 눌렀는데 아무 일도 안 일어남"이 된다(2026-09-02 사고의 쌍둥이).
+2. **부활 → (3초 공백) → 스텝 시작** 순서를 지킨다. 리셋 시점에 루프가 죽어 있고, 3초 뒤
+   `BeginScenarioSteps`가 `ScenarioEnemyCountBaseline = CountAliveEnemies()`를 다시 잡는다.
+   그 시점엔 이미 15명이 살아 있으므로 `EnemyFleeToZone2`가 오발동하지 않는다.
+   → **가드 추가**: `BeginScenarioSteps` 직전에 살아있는 적 수를 로그로 남기고, 0이면 재시작을
+   중단하고 에러 로그(부활 실패를 조용히 넘기지 않기 위함).
+3. **재진입 잠금.** `bRestartInProgress` 플래그 — 페이드/틱 대기 사이에 두 번째 재시작이
+   들어오지 못하게. 향후 수동 재시작 버튼(§7)이 생기면 자동 타이머와 겹칠 수 있어 필수.
 
-**해결: BP에서 Destroy를 빼거나 `bDestroyOnDeath` 변수로 게이트한다.** 시체는 랙돌로 누워 있게 두면 된다.
+### 3.3 폭주 대신 "정지"가 날 수 있는 경우
 
-이게 안전한 이유(코드로 확인함):
-
-- 사망 판정과 "몇 명 남았나"는 **액터 유효성이 아니라 `UDetectableTargetComponent::IsIncapacitated()`**로
-  한다(`UScenarioStateSubsystem::CollectEnemyCombatComponents`). 시체가 남아도 생존 수는 정확하다.
-- 도주 정원/빈 역할 승계도 `AliveEnemies.Contains(Original)` 기준이라 영향 없다
-  (`BeginEnemyFleeToZone`). 오히려 `CaptureEnemyZoneRoles` 스냅샷이 필요했던 원인
-  ("죽은 적 액터가 파괴되면서 마커째 사라져 정원이 깎인다")이 사라진다 — 스냅샷은 그대로 둬도 무해하다.
-- 사격/타겟팅도 레지스트리 기반이라 시체를 쏘지 않는다(`EnemyCombatComponent.h:978` 주석).
-- 랙돌 40구의 물리 비용이 걱정되면 사망 N초 뒤 `SetSimulatePhysics(false)`로 굳히면 된다.
-
-### 아군은 애초에 죽지 않는다
-
-`IsDead`를 가진 BP는 적군 계열뿐이고(`BP_Enemy_Base`/`ABP_Enemy_*`), `BP_Ally_kadex`에도
-`UAllyFormationComponent`에도 체력/사망 처리가 없다. **현재 빌드에서 아군은 무적**이다.
-→ 아군 리셋은 "부활"이 아니라 위치/자세/상태 초기화만 하면 된다(§4c). 나중에 아군 사망이 들어오면
-적군과 같은 축으로 확장.
+부활이 실패해 적이 0명이면: RCWS가 쏠 대상이 없음 → `EnemyEngage` 미발동 → `ScenarioComplete`
+미발동 → **재시작도 안 걸리고 데모가 멈춘다.** 폭주보다는 낫지만 무인 전시에선 똑같이 치명적이다.
+그래서 §3.2-2의 "부활 검증 로그 + 중단"과, 옵션으로 §8-6의 하드 리셋 폴백을 둔다.
 
 ---
 
 ## 4. 리셋 대상 전수 목록
 
-빠뜨리면 2회차부터 깨지는 것들. 레이어별로.
+빠뜨리면 2회차부터 조용히 어긋나는 것들. **굵은 항목은 실측으로 확인된 함정.**
 
-### (a) 시나리오 서브시스템
+### (a) 시나리오 서브시스템 — `ResetScenarioRuntimeState()`
 
-**기존 `ResetForNewWorldIfNeeded()`의 본문이 곧 정답 목록이다.** 이걸
-`ResetScenarioRuntimeState()`로 뽑아내서 **월드 변경 경로와 재시작 경로가 같은 함수를 쓰게 한다.**
-두 벌로 복사하면 한쪽만 갱신되는 사고가 반드시 난다.
+기존 `ResetForNewWorldIfNeeded()` 본문이 곧 이 목록이다. **그 본문을 함수로 뽑아내서 월드 변경
+경로와 재시작 경로가 같은 함수를 쓰게 한다**(두 벌로 복사하면 한쪽만 갱신되는 사고가 난다).
 
-- 타이머 3종(`ScenarioStepTickTimerHandle`/`DemoAutoFireTimerHandle`/`DemoAutoStartTimerHandle`)은
-  **반드시 `ClearTimer`** — `Invalidate()`는 핸들만 버리고 타이머는 계속 돈다
-  (2026-09-02 이중 평가 사고의 직접 원인). 재시작은 **같은 월드**라 `ResetForNewWorldIfNeeded`의
-  월드 비교가 걸리지 않으므로, 이 정리를 재시작 경로가 스스로 해야 한다.
+- 타이머 3종 `ScenarioStepTickTimerHandle` / `DemoAutoFireTimerHandle` / `DemoAutoStartTimerHandle`
+  → **ClearTimer**
+- 아군 신호·집결 타이머 `ApproachSignalTimerHandle` / `AmbushSignalTimerHandle` /
+  `FormUpAdvanceTimerHandle` / `FormUpStaggerTimerHandle` → ClearTimer (기존 월드 리셋 함수에는
+  빠져 있다 — 재시작 경로에서는 반드시 필요)
 - `FiredScenarioSteps`, `ScenarioStepFireTimes`, `ScenarioStepsStartTime`
-- `ScenarioEnemyCountBaseline`, `ScenarioAllyFireCountBaseline`
+- `ScenarioEnemyCountBaseline`(0으로 — Max로만 올라가므로 반드시 내려야 함), `ScenarioAllyFireCountBaseline`
 - `LoggedEnemyDeaths`, `TrackedEnemies`, `LastEnemyRosterRefreshTime`
-- `ScenarioZoneRoles`, `ScenarioSquadTotals` (재시작 후 `CaptureEnemyZoneRoles`가 다시 뜬다)
-- `UGVFireWatch`, `CommandPostFireWatch`
-  → **RCWS의 `ShotsFiredCount` 자체는 리셋 불필요**. Watch의 `LastShotsFired`가 `INDEX_NONE`으로
-    돌아가면 다음 관측에서 기준선을 다시 잡는 구조다.
-- `FormUpLeader`, `bUGVAdvanceTriggered`, `AlliesReachedFormation`, `bAllAlliesReachedFormation`,
-  `FormUpStaggerQueue`, `bHasEnemyPredictedLocation`/`EnemyPredictedLocation`, standby destination
-- 아군 신호/집결 타이머(`ApproachSignalTimerHandle`, `AmbushSignalTimerHandle`,
-  `FormUpAdvanceTimerHandle`, `FormUpStaggerTimerHandle`) 전부 ClearTimer
-- `RemoveUGVNavObstacle()` — 집결 때 붙인 NavModifier 정리
-- GameState: `EScenarioPhase` 초기값, 미니맵 "적 예상 위치" 마커 클리어
+- `ScenarioZoneRoles`, `ScenarioSquadTotals`
+- **`UGVFireWatch`, `CommandPostFireWatch`** → 구조체 새로 대입. RCWS의 `ShotsFiredCount` 자체는
+  **리셋 불필요**(§3.1 근거)
+- `FormUpLeader`, `FormUpDestination`, `bUGVAdvanceTriggered`, `AlliesReachedFormation`,
+  `bAllAlliesReachedFormation`, `FormUpStaggerQueue`, `bHasUGVStandbyDestination`
+- `bHasEnemyPredictedLocation`, `EnemyPredictedLocation`
+- `RemoveUGVNavObstacle()`
+- GameState: `EScenarioPhase` 초기값, 미니맵 적 예상 위치 마커
 
-### (b) 적군 15 — `UEnemyCombatComponent::ResetForScenarioRestart()`
+### (b) 적군 15 — 부활
 
-- **액터**: BeginPlay에서 떠둔 초기 트랜스폼으로 `TeleportTo`, 랙돌 해제
-  (`SetSimulatePhysics(false)` → 메시를 캡슐에 재부착 + 초기 상대 트랜스폼 복원), 콜리전 프로파일 복원,
-  `StopAllMontages` + 애님 인스턴스 재초기화
-- **BP 변수**: `Health` = Max, `IsDead` = false — 프로젝트에 이미 있는 리플렉션 세터 관용구
-  (`SetBoolPropertyByName`류) 사용. `IsDead`를 내리면 `UDetectableTargetComponent::PollBlueprintDeathState`가
-  다시 죽었다고 오인하지 않는다(그 폴링은 `bIsIncapacitated`가 false일 때만 돈다 → 순서 주의:
-  **`IsDead`를 먼저 내리고 그 다음 `SetIncapacitated(false)`**)
-- **`UDetectableTargetComponent`**: `SetIncapacitated(false)`(레지스트리 재등록),
-  **`SetRevealed(false)`**(다시 숨김 — `RevealEnemies` 스텝 전 상태로), `bLowPriorityForEnemyTargeting` 원복
-- **컴포넌트 상태**: `CurrentState = Standby`, `bEngaged = false`, `CurrentZoneIndex = 0`,
-  포즈 사이클 상태/타이머, 타겟 해제, 단발 사격 쿨다운, `SetDetectionEnabled(false)`,
-  `SetTargetableByAlliesAndUGV(true)`, `SetFireHold(false)`
-- **이동**: 경로 취소 + `CharacterMovement` 속도 0 + `MaxWalkSpeed` 초기값 복원
+- **랙돌 해제**: `Mesh->SetSimulatePhysics(false)` → 캡슐에 재부착 → 저장해둔 메시 상대 트랜스폼
+  복원 → 콜리전 프로파일 복원 → `StopAllMontages`
+- **BP 변수 복원(리플렉션)**: `Health`, `IsDead`, **`IsParachuting`**, `IsHoldingWeapon?`,
+  `DeathIndex`, `HasTarget`, `IsProne`/`IsKneeling`/`IsLookingAround`/`IsSprinting`,
+  `BurstShotsRemaining`, `IsReloading?`, `LastHitLocation`/`LastHitDirection`/`LastHitBoneName`/
+  `LastHitVelocity`, `MoveTarget`, `TargetLocation`, `CurrentAlly`
+  → 전부 **인스턴스 초기 스냅샷 값**으로(클래스 기본값이 아님)
+- **소총 재장착**: 사망 5초 뒤 `CurrentRifle`이 Destroy되므로 `EquipRifle` 커스텀 이벤트를
+  리플렉션으로 재호출(프로젝트에 이미 있는 관용구)
+- **`UDetectableTargetComponent`**: `SetIncapacitated(false)` — 단 **`IsDead`를 먼저 false로**
+  내린 뒤에 호출할 것. `PollBlueprintDeathState`는 `bIsIncapacitated==false`일 때만 도는데,
+  `IsDead`가 아직 true면 다음 틱에 다시 죽은 것으로 되돌린다.
+- **`SetRevealed(false)`** — 다시 숨긴다. **안 하면**: 데모 RCWS가 이미 AutoFire 상태라
+  재시작 직후 UGV가 제자리의 적을 바로 쏘기 시작하고, 드론 정찰·낙하산 발견·UGV 출발 순서가
+  통째로 건너뛰어진다. 2회차부터 데모가 다른 물건이 된다.
+- `SetTargetableByAlliesAndUGV(true)`, `SetFireHold(false)` (`ExcludeFleeingEnemies` /
+  `HoldFleeingFire` 이펙트가 꺼둔 것)
+- 컴포넌트 상태: `CurrentState=Standby`, `bEngaged=false`, `CurrentZoneIndex=0`, 포즈 사이클
+  타이머, 타겟 해제, 단발 사격 쿨다운, `SetDetectionEnabled(false)`
+- 이동: 경로 취소, `CharacterMovement` 속도 0, `MaxWalkSpeed` 초기값
+- 액터 트랜스폼: 초기 스냅샷으로 `TeleportTo`
 
-### (c) 아군 25 — `UAllyFormationComponent::ResetForScenarioRestart()`
+### (c) 아군 25 — 위치/상태만
 
-위치/자세 복원, 매복·집결 상태 초기화, `SetStopsignRaised(false)`, 타겟 해제, 이동 중단.
-**`FireTriggerCount`는 건드리지 말 것** — `BeginScenarioSteps`가 재시작 시 그 합으로 baseline을
-다시 잡으므로, 카운터를 0으로 되돌리는 쪽이 오히려 위험하다(둘 다 리셋하면 무해하지만, 한쪽만 하면 깨진다).
+위치·회전 복원, 매복/집결 상태 초기화, `SetStopsignRaised(false)`, 타겟 해제, 이동 중단,
+자세 사이클 초기화.
+**`FireTriggerCount`는 건드리지 않는다** — `BeginScenarioSteps`가 그 합으로 baseline을 다시
+잡으므로 카운터를 0으로 만들면 오히려 어긋난다.
 
-### (d) UGV(`BP_UGV_0901` / `AUGV0901Pawn`) — 가장 성가신 축
+### (d) UGV (`BP_UGV_0901_C_1`)
 
-- **AI**: `AUGVAIController` 경로 취소 + 목적지 상태 초기화, `SetUGVEnemyDistanceSpeedLimit(false)`
-- **Chaos 차량**: `SetActorTransform(..., ETeleportType::TeleportPhysics)` +
-  선/각속도 0 + 스로틀/브레이크 입력 0. 텔레포트 직후 1~2틱은 서스펜션이 튈 수 있다 → §6의 페이드로 가린다.
-- **RCWS**: 포탑 yaw/pitch 원위치, 락온 게이지·배럴 스핀·줌 램프 리셋, `SetControlMode` 초기값,
-  데모면 `ApplyDemoRCWSAutoFire()` 재실행
-- **탄약**: `URCWSComponent::CurrentData.AmmoCurrent = AmmoMax`.
-  현재 **리로드 플로우가 아예 없다**(`ConsumeAmmo`만 있고 반대 방향이 없음, `RCWSComponent.h:303` 주석).
-  세터를 하나 신설해야 한다. **소프트 리셋에서 가장 놓치기 쉬운 항목** — 600발이라 2~3사이클이면 마르고,
-  그 뒤로는 아무도 안 쏴서 시나리오가 1차 교전에서 영구 정지한다.
+- AI: `AUGVAIController` 경로 취소, 목적지 상태 초기화
+- `SetUGVEnemyDistanceSpeedLimit(false)` (`UGVSpeedLimitOn` 이펙트가 켠 것)
+- **`FireControl->bRespectEnemyTargetingExclusion = false`** — `ExcludeFleeingEnemies` 이펙트가
+  UGV RCWS에 켜두는 플래그. 안 되돌리면 2회차부터 UGV가 일부 적을 영영 안 쏜다
+- Chaos 차량: `SetActorTransform(..., ETeleportType::TeleportPhysics)`, 선/각속도 0,
+  스로틀·브레이크 입력 0
+- RCWS: 포탑 방위/고각 원위치, 락온 게이지·배럴 스핀·줌 램프 리셋, 모드 재적용
+- **탄약**: `CurrentData.AmmoCurrent = AmmoMax`. 600발이라 2~3사이클이면 마르고, 마르면 UGV가
+  못 쏴서 `EnemyEngage`가 영영 안 걸린다(=§3.3의 정지). `CurrentData`가 private이므로
+  `URCWSComponent`에 리필 함수 신설 필요
 - `UGVAvoidanceProxyComponent` 상태
 
-### (e) 이동형지휘소(`BP_TitanTruck0`)
+### (e) 이동형지휘소 (`BP_TitanTruck_C_4`)
 
-RCWS 동일(모드/탄약/포탑/게이지). 위치는 안 움직이므로 트랜스폼 복원은 생략 가능.
+RCWS 동일(모드/탄약/포탑/게이지). 위치는 안 움직이므로 트랜스폼 복원 불필요.
 
-### (f) 드론(`BP_Drone` / `ADronePawn`)
+### (f) 드론 (`ADronePawn`)
 
-`Flight->ResetTo(SpawnLocation + (0,0,200), SpawnYawDegrees)` — `OnResetPressed`가 이미 쓰는 경로를
-그대로 재사용. 여기에 자율비행/스플라인 진행도 초기화, `RecenterGimbal()`, 프레이밍 세트 `None`,
-`bHasObservedParachute = false`, 단계별 탐지(아군만 → +낙하산 → +적군) 초기 단계로.
+- `Flight->ResetTo(SpawnLocation + (0,0,200), SpawnYawDegrees)` — `OnResetPressed`가 쓰는 기존 경로
+- **`bParachuteObserved = false`** — 안 되돌리면 `UAVSpotted`(트리거 `UAVParachuteObserved`)가
+  재시작 직후 즉시 참이 되어 UGV가 바로 출발하고 정찰 연출이 통째로 날아간다
+- 자율비행/스플라인 진행도 초기화, `RecenterGimbal()`, 프레이밍 세트 `None`,
+  단계별 탐지(아군만 → +낙하산 → +적군) 초기 단계로
 
-### (g) 낙하산 액터
+### (g) 낙하산 (`BP_Parachute_C_3`)
 
-강하 연출이 1회성이면 초기 위치/타임라인으로. BP 액터이므로 §5의 인터페이스를 BP에서 구현하는 게 맞다.
+초기 위치(z=1030)/타임라인 복원. BP 액터이므로 §5 인터페이스를 BP에서 구현.
 
 ### (h) 월드 잔재
 
-살아있는 `ARCWSProjectile` 전부 Destroy, 총구/피격 나이아가라 원샷은 자연 소멸(수명 확인),
-루프 사운드 정지, 탄흔 데칼(수명 무한이면 정리 — 하루 종일 누적되면 성능에 영향),
-알림 위젯 숨김, 대시보드의 사상자/탄약 표시 갱신.
+살아있는 `ARCWSProjectile` 전부 Destroy, 루프 사운드 정지, 탄흔 데칼 정리(수명 무한이면 하루
+누적 시 성능 영향), 떠 있는 토스트 숨김, 대시보드 카운터 갱신.
 
 ### (i) 리플리케이션
 
-전부 **서버 권위**로 실행하고 클라는 리플리케이트 결과를 따른다(스텝 평가가 이미 서버 전용).
-클라 전용 캐시(위젯 누적 로그 등)는 멀티캐스트 1발로 같이 리셋. 소프트 리셋의 큰 장점이
-"클라이언트 재접속이 없다"는 점이므로, 여기서 클라 상태를 놓치면 장점이 반감된다.
+전부 서버 권위(스텝 평가가 이미 서버 전용). 클라 전용 캐시는 멀티캐스트 1발로 같이 리셋.
 
 ---
 
-## 5. 구현 형태 — 인터페이스 하나로
+## 5. 코드 설계
+
+### 5.1 인터페이스
 
 ```cpp
 // UI/ScenarioResettable.h
@@ -236,70 +234,137 @@ public:
 };
 ```
 
-- C++ 컴포넌트(적/아군/UGV/드론/RCWS)는 네이티브 구현, BP 전용 액터(낙하산 등)는 BP 이벤트로 구현.
-- 서브시스템은 **월드에서 이 인터페이스 구현체를 전부 순회해 한 번씩 호출**하면 끝 →
-  나중에 액터가 추가돼도 서브시스템 코드를 안 고친다.
-- **초기 상태 스냅샷은 각 컴포넌트가 자기 BeginPlay에서 스스로 뜬다**(액터 트랜스폼, 메시 상대 트랜스폼,
-  MaxWalkSpeed, 포탑 기본각 등). 서브시스템이 남의 초기값을 알 필요가 없어 결합도가 최소가 된다.
+서브시스템은 월드의 구현체를 순회해 한 번씩 호출한다. 액터가 늘어나도 서브시스템을 안 고친다.
 
-### 실행 순서 (`UScenarioStateSubsystem::RestartScenarioInPlace()`)
+**적/아군은 BP 그래프를 건드리지 않는다** — C++ 컴포넌트(`UEnemyCombatComponent` /
+`UAllyFormationComponent`)가 자기 소유 액터의 BP 변수를 리플렉션으로 복원하고 `EquipRifle`도
+리플렉션으로 호출한다. 프로젝트에 이미 같은 패턴이 있다(`PollBlueprintDeathState`,
+`SetBoolPropertyByName`류, 구 `BeginEngagementApproach` 호출). BP 작업은 §8-1의 **노드 1개 삭제**뿐.
 
-1. 스텝 평가 루프 정지(ClearTimer) + 재진입 잠금
-2. 페이드 아웃 시작(`RestartFadeOutSeconds`)
-3. 월드 잔재 정리(투사체/이펙트/사운드)
-4. 인터페이스 구현체 전부 `ResetForScenarioRestart()` 호출
-5. **한 틱 대기** — 텔레포트한 Chaos 차량/캐릭터가 같은 프레임에 이동 명령을 받으면 물리가 튄다
-6. `ResetScenarioRuntimeState()` (§4a)
-7. `ApplyDemoRunModeSetup()` 재실행(RCWS ARM+AutoFire, 발사 모드)
-8. 페이드 인 + `DemoAutoStartDelaySeconds` 뒤 `BeginEnemyContactScenario()`
-9. 로그 1줄: `재시작 #N — 적 15/15 복원, 아군 25/25, 탄약 600/600, 소요 12.3ms`
+### 5.2 공개 진입점 (자동/수동 공용)
+
+```cpp
+// UScenarioStateSubsystem
+UFUNCTION(BlueprintCallable, Category = "Scenario")
+bool RequestScenarioRestart(bool bForce = false);   // 유일한 진입점
+```
+
+- DT 이펙트 `RestartScenario`, 콘솔 exec 명령, 향후 UI 버튼/확인창이 **전부 이걸 호출**한다.
+- `bForce=false`면 데모 게이트(`IsDemoMode() && Config->bDemoAutoRestart`)를 확인하고,
+  수동 호출(버튼)은 `bForce=true`로 풀 시스템에서도 쓸 수 있게 둔다.
+- `bRestartInProgress`면 false 반환.
+
+### 5.3 ScenarioConfig 추가 필드
+
+| 필드 | 기본 | 의미 |
+|---|---|---|
+| `bDemoAutoRestart` | true | 데모 자동 재시작 사용 |
+| `RestartFadeOutSeconds` / `RestartFadeInSeconds` | 0.3 / 0.5 | 리셋 순간을 가림 |
+| `HardReloadEveryNCycles` | 0(끔) | N회마다 레벨 재오픈으로 완전 세탁(§8-6) |
+
+### 5.4 DT 행
+
+| RowName | Prereq | Trigger | 값 | Effect | bEnabled |
+|---|---|---|---|---|---|
+| `ScenarioRestart` | `ScenarioComplete` | `TimerOnly` | **10** | `RestartScenario` | true |
+
+10초는 DT 값이라 빌드 없이 전시장에서 조절 가능. 데모 게이트는 이펙트 구현부에 있으므로
+풀 시스템과 같은 DT를 공유해도 안전하다.
 
 ---
 
-## 6. 연출
+## 6. 실행 시퀀스
 
-리셋 순간 0.3초 페이드 아웃 → 리셋 → 0.5초 페이드 인. 관람객에겐 "장면 전환"으로 보이고,
-텔레포트 팝과 물리 튐을 전부 가린다. 종료~재시작 10초 구간에는 `ShowUIMessage`로 안내 문구
-(`DT_NotificationWidgets`에 행 추가). 카운트다운까지 넣을지는 취향.
+`RequestScenarioRestart()` 내부:
+
+| # | 동작 | 이유 |
+|---|---|---|
+| 1 | 게이트 확인 + `bRestartInProgress = true` | 재진입 차단 |
+| 2 | `ClearTimer(ScenarioStepTickTimerHandle)` + `bScenarioStepsRunning = false` | §3.2-1 |
+| 3 | 페이드 아웃 시작 | 텔레포트 팝·물리 튐을 가림 |
+| 4 | 월드 잔재 정리(투사체/사운드/토스트) | |
+| 5 | `IScenarioResettable` 구현체 전부 `ResetForScenarioRestart()` | 부활 + 원위치 |
+| 6 | **한 틱 대기** | 텔레포트한 Chaos 차량/캐릭터가 같은 프레임에 명령을 받으면 물리가 튄다 |
+| 7 | `ResetScenarioRuntimeState()` | §4(a) |
+| 8 | 부활 검증: `CountAliveEnemies() == 기대치`인지 로그, 0이면 중단+에러 | §3.2-2 |
+| 9 | `ApplyDemoRunModeSetup()` 재실행 | RCWS ARM+AutoFire+Burst 복구 |
+| 10 | 페이드 인 + `DemoAutoStartDelaySeconds`(3초) 타이머 | |
+| 11 | `BeginEnemyContactScenario()` → EnemyContact 토스트 + 스텝 평가 시작 | 기존 경로 재사용 |
+| 12 | `bRestartInProgress = false`, 사이클 카운터 +1, 요약 로그 | |
+
+로그 1줄 예시:
+`[ScenarioStateSubsystem] 재시작 #7 완료 — 적 15/15 부활, 아군 25/25, UGV탄 600/600, 트럭탄 600/600, 소요 14.2ms`
 
 ---
 
-## 7. 검증
+## 7. 수동 재시작 / "재시작 하시겠습니까?" (향후)
 
-**10사이클 연속 자동 실행 후 1회차와 비교**:
+인프라가 이미 있어서 추가 작업이 거의 없다:
+
+- `UNotificationSubsystem::ShowConfirmDialog(FText)` + `OnConfirmed` / `OnCancelled` (기존)
+- 버튼/단축키 → `ShowConfirmDialog("시나리오를 재시작하시겠습니까?")` →
+  `OnConfirmed` → `RequestScenarioRestart(true)`
+
+⚠ **주의**: `OnConfirmed`/`OnCancelled`는 서브시스템 단위 멀티캐스트 델리게이트라 **모든 확인창이
+공유**한다. 재시작 핸들러를 상시 바인딩해두면 "종료하시겠습니까?" 같은 다른 확인창에서 확인을
+눌러도 재시작이 걸린다. **띄울 때 바인딩하고 결과가 오면 즉시 언바인딩**할 것.
+
+§5.2에서 `RequestScenarioRestart`를 처음부터 공개 API로 만들어 두면, 자동 타이머·콘솔·버튼·확인창이
+전부 같은 경로를 타므로 나중에 UI를 붙일 때 C++을 다시 안 건드린다.
+
+---
+
+## 8. 작업 순서 (파일별)
+
+1. **`Content/Soldiers/BP_Enemy_Base`** — EventGraph의 `DestroyActor(self)` 노드 하나 삭제
+   (`K2Node_CallFunction_171`). 앞의 `Delay(5.0) → DestroyActor(CurrentRifle)`는 그대로 둔다.
+   → 이것 없이는 나머지가 전부 무의미. **P4 체크아웃 먼저.**
+2. **`UI/ScenarioResettable.h`** 신설 (§5.1).
+3. **`UI/ScenarioStateSubsystem.*`** — `ResetForNewWorldIfNeeded` 본문을
+   `ResetScenarioRuntimeState()`로 추출, `RequestScenarioRestart()` + 시퀀스(§6),
+   `bRestartInProgress`, 사이클 카운터, 콘솔 exec 명령.
+4. **`UI/ScenarioStepTypes.h`** — `EScenarioEffectType::RestartScenario` 추가 +
+   `ExecuteScenarioEffect`에 케이스 추가(내부는 `RequestScenarioRestart()` 호출 한 줄).
+5. **`Soldiers/EnemyCombatComponent.*`** — BeginPlay 스냅샷 + `ResetForScenarioRestart()` 구현
+   (§4b). 가장 큰 덩어리. 이 단계까지만 해도 "적만 부활"로 1차 검증이 가능하다.
+6. **`Soldiers/AllyFormationComponent.*`** — 동일 축, 훨씬 작음(§4c).
+7. **`Vehicles/RCWSComponent.*`** — 탄약 리필 + 포탑/게이지 리셋 함수.
+   **`Vehicles/RCWSFireControlComponent.*`** — `bRespectEnemyTargetingExclusion` 원복 포함 리셋.
+8. **`Vehicles/UGV0901Pawn.*` / `UGVAIController.*` / `TitanTruck.*` / `Drone/DronePawn.*`** —
+   각자 `ResetForScenarioRestart()` 구현(§4d~f).
+9. **`UI/ScenarioConfig.h`** — 필드 3종(§5.3).
+10. **DT 행 `ScenarioRestart` 추가**(§5.4) + 필요하면 알림 DT에 재시작 예고 행.
+11. 페이드 연출.
+12. **선택**: 하드 리셋 폴백 — `HardReloadEveryNCycles`마다, 또는 §3.3의 부활 실패 시
+    `OpenLevel(New_kadex_0811)`. 로비 맵(`kadex_lobby`)이 이미 있으므로 경유 경로도 가능.
+13. 10사이클 연속 검증(§9).
+
+---
+
+## 9. 검증
+
+10사이클 연속 자동 실행 후 1회차와 비교:
 
 | 항목 | 기대 |
 |---|---|
-| 적 생존 수 / 아군 수 | 15 / 25 |
+| 적 부활 수 / 아군 수 | 15 / 25 |
 | UGV·트럭 탄약 | 600 / 600 |
-| 사상자 로그 누적 | 사이클마다 15에서 초기화 |
-| UGV 최종 위치 | 3차 목적지 부근(1회차와 동일) |
+| 사상자 로그 누적 | 사이클마다 0에서 다시 셈 |
+| 스텝 발동 순서 | `[ScenarioStateSubsystem] 시나리오 스텝 발동:` 로그가 1회차와 동일 순서 |
+| 적 최종 위치 | 3차 전투지 부근(1회차와 동일) |
 | fps / `stat memory` | 1회차와 유의미한 차이 없음 |
 | RTSP 스트림 | 재접속 없이 계속 살아 있음 |
 
-각 사이클의 스텝 발동 순서(`[ScenarioStateSubsystem] 시나리오 스텝 발동:`)가 1회차와 같은지도 로그로 대조.
+특히 **2회차**를 집중해서 본다 — 위 §4의 함정(재은폐, 낙하산 관측 플래그, 탄약,
+`bRespectEnemyTargetingExclusion`)은 전부 "1회차는 멀쩡하고 2회차부터 깨지는" 종류다.
 
 ---
 
-## 8. 작업 순서
+## 10. 리스크 / 미결
 
-1. **`BP_Enemy_Base` 사망 시 `K2_DestroyActor` 제거(또는 `bDestroyOnDeath` 게이트).**
-   이게 없으면 나머지가 전부 무의미하다.
-2. `IScenarioResettable` 신설 + 서브시스템에 `ResetScenarioRuntimeState()` 추출 +
-   `RestartScenarioInPlace()` 구현.
-3. 적군 컴포넌트 Reset 구현(가장 큰 덩어리) → 이 단계에서 "적만 부활" 상태로 1차 검증 가능.
-4. RCWS 탄약 리필 세터 + 포탑/게이지 리셋.
-5. UGV / 드론 / 트럭 / 아군 Reset.
-6. 이펙트 `RestartScenario` + DT 행 `ScenarioRestart` + `ScenarioConfig` 필드 3종.
-7. 페이드 + 알림 연출.
-8. 10사이클 검증 → 필요시 하이브리드(`HardReloadEveryNCycles`) 활성화.
-
----
-
-## 9. 미결 / 판단 필요
-
-- **전멸이 영영 안 오는 경우**(적 1명이 지형에 끼는 등) 데모가 멈춘다. "시나리오 시작 후 N분 경과 시
-  강제 재시작" 실패 안전장치를 넣을지는 사용자 판단 — 요구에 없는 안전로직을 임의로 넣지 않는다는
-  프로젝트 원칙이 있으므로 지시가 있을 때만 추가.
-- 랙돌 시체를 남기는 기간(사망 후 즉시 굳힐지, 재시작까지 물리 유지할지) — 연출 취향 + 성능 실측.
-- 하이브리드 주기(`HardReloadEveryNCycles`)의 적정값은 §7 검증에서 메모리 추이를 보고 정한다.
+- **부활 실패 시 정지**(§3.3). 검증 로그 + 하드 리셋 폴백으로 대응. "시나리오 시작 후 N분 경과 시
+  강제 재시작" 같은 시간 기반 안전장치를 넣을지는 사용자 판단 — 요구에 없는 안전로직을 임의로
+  넣지 않는다는 프로젝트 원칙이 있으므로 지시가 있을 때만.
+- 랙돌 시체를 언제 굳힐지(사망 직후 vs 재시작까지 유지) — 연출 취향 + 성능 실측.
+- 낙하산 강하 연출이 1회성 타임라인이면 BP 쪽 리셋 구현이 필요(§4g) — BP 구조 확인 후 확정.
+- `HardReloadEveryNCycles` 적정값은 §9의 메모리 추이를 보고 결정.
