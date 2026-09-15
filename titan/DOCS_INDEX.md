@@ -1,7 +1,7 @@
 # 문서 전체 목록 (DOCS_INDEX)
 
-2026-08-31 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
-반영판.
+2026-09-15 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
+반영판(이후 세션별로 항목 추가 중).
 
 폴더는 "시스템 하나당 폴더 하나" 축으로 통일됨(`CLAUDE.md` 참고). `guide/`는 에버그린
 레퍼런스, 나머지는 전부 devlog(시간순 기록, 안 고침). 날짜는 문서 내용 기준, 없으면
@@ -75,12 +75,17 @@
 
 ## `vehicle/drone/`
 
-- `drone_flight_dev_guide.md` (최종 2026-09-10) — **드론 시스템 에버그린 레퍼런스.** 로터별
+- `drone_flight_dev_guide.md` (최종 2026-09-15) — **드론 시스템 에버그린 레퍼런스.** 로터별
   추력→강체운동 물리, 자율비행(Pure Pursuit+제동곡선), **교전 관측 이동(16절)**,
-  **수동 조종·비행/짐벌 분리(17절)**, 짐벌,
-  프로펠러 사운드, 바람, 단계별 탐지, 시나리오 연동, 클라이언트 권위 리플리케이션까지 전부.
+  **수동 조종·비행/짐벌 분리(17절)**, 짐벌(**2축 안정화 12.4절**),
+  프로펠러 사운드, 바람, 단계별 탐지, 시나리오 연동, 리플리케이션(**모드별 주체 표 15절, 2 PC
+  검증 완료**)까지 전부.
   `guide/`에 드론 문서가 없어서 이 파일이 그 역할을 겸한다 — **드론 동작이 바뀌면 여기를 같이
   고칠 것.**
+- `2026-09-15_drone_gimbal_stabilization.md` — **짐벌 2축 안정화.** 짐벌 각도 기준을 기체 →
+  수평 프레임으로 바꿔 가감속 기울기가 카메라에 안 실림(롤은 상쇄 안 함, 실제 2축과 동일). 자동
+  추적 목표각을 같은 프레임으로 통일하는 게 핵심(안 맞추면 가짜 오차를 쫓아 더 떨림). CineCamera
+  니어플레인이 씬캡쳐(위젯/RTSP)에 복사 안 되던 것 수정.
 - `2026-09-10_drone_manual_control_split.md` — 수동 조종을 **비행/짐벌 두 축으로 분리**해
   "카메라만 수동" 모드 신설. 함정 4건(짐벌 자동 로직 안에 비행 로직이 섞여 있던 것, 정찰 단계
   Idle 가드가 교전 중 입력을 버리던 것, 짐벌 버튼이 비행 IMC 안에 있어 "버튼 켰는데 무반응",
@@ -92,10 +97,15 @@
   **유도 루프 구조 결함 3연쇄**(적분 와인드업 → 축별 누락 → 속도 피드포워드 부재, ζ=0.51 진동).
 - `2026-09-01_drone_replaces_bp_uav.md` — 구 `BP_UAV` 갭 분석과 대체 작업 경과, 겪은 함정 6건
   (짐벌 본 공간, 자율주행 10km/h 고정, 커브 감속 무효, 바람 과잉상쇄, 트리거 불일치, 유니티
-  빌드 상수 재정의). **2프로세스 실환경 검증만 남음.**
+  빌드 상수 재정의). 당시 남겨둔 "2프로세스 실환경 검증"은 2026-09-15에 완료
+  (`replication/2026-09-15_drone_two_pc_validation.md`).
 
 ## `rcws/` — RCWS 전용 devlog
 
+- `2026-09-15_search_sweep_hull_relative_elevation.md` (2026-09-15) — 자동정찰 탐색 스윕이
+  **내리막에서 하늘을 보던** 문제. 고각 목표가 월드 수평(`CurrentData.ElevationDegrees`) 기준이라
+  차체가 기울면 위로 들렸음 → 새 `SearchSweepElevationDegrees`(기본 -3°, 차체 기준)로 좌우와
+  기준 통일. **코드 완료, 빌드·실차 경사로 확인 대기.**
 - `2026-08-31_selfdefense_camera_shake_bugs.md` — 자체방호축 카메라 떨림 + UGV 발사 셰이크
   누출 버그 2건, 원인 확정+코드 수정 완료(`SceneCaptureViewParity`/`RCWSProjectile`).
   **2-PC 실환경 검증 대기.**
@@ -155,7 +165,11 @@
 
 ## `level_new_kadex_0811/` — 신규 레벨 디자인/시나리오
 
-- `scenario_authoring_guide.md`/`scenario_three_stage_combat.md` (2026-08-23) — 3단계 전투
+- `2026-09-15_demo_ugv_autofire_on_zone1_arrival.md` (2026-09-15) — **데모 모드 UGV RCWS
+  자동사격(탐색 스윕) 시작 시점을 레벨 시작 → 1차 목적지 도착으로.** 새 이펙트
+  `SetDemoUGVAutoFire`(데모 게이트 내장) + DT 행 `UGVArriveZone1`(`ActorStopped`), 레벨 시작
+  강제는 지휘소만 남김. **진행중 — 빌드 후 그 행의 EffectType 설정 + PIE 검증 대기.**
+- `scenario_authoring_guide.md`/`scenario_three_stage_combat.md` (2026-08-23, 09-15 갱신) — 3단계 전투
   시나리오 DataTable 구현. **완료.**
 - `scenario.md` (2026-08-22) — 위 시나리오 요구사항 정리판(구현 전).
 - `new_kadex_0811_forest_perf.md` (2026-08-22) — PIE 2.3→31fps 성능 폭락 수정. **완료.**
@@ -194,7 +208,8 @@
 
 ## `protocol/` — LIG 원격통제기 UDP/JSON 프로토콜
 
-- `protocol_icd.md` (최종 2026-08-31) — **필드 단위 명세, 가장 자주 참조되는 핵심 문서.**
+- `protocol_icd.md` (최종 2026-08-31, 09-15 §3.3/§4.1 RTSP 전송 "TCP만"→"TCP/UDP 둘 다, TCP 권장"
+  정정) — **필드 단위 명세, 가장 자주 참조되는 핵심 문서.**
 - `ugv_rc_feature_gap_analysis.md` (최종 2026-08-31) — UGV축 cmd별 구현 상태 대조표.
 - `selfdefense_rc_feature_gap_analysis.md` (2026-08-17) — 자체방호축 동일 성격 대조표.
 - `lig_questions_0816.md` (최종 2026-09-02) — **LIG 문의 통합본, 최신.** 1차 답변 반영 완료,
@@ -207,13 +222,20 @@
 
 ## `rtsp/` — RTSP 영상 송출
 
-- `rtsp_poc_findings.md` (2026-08-18 최종) — NVENC/GStreamer PoC 전체 기록(크로스플랫폼 포함).
+- `rtsp_poc_findings.md` (2026-08-18 최종, 09-15 추기) — NVENC/GStreamer PoC 전체 기록(크로스플랫폼
+  포함). SDK 13.1.15 언급은 당시 기록이고 09-15에 13.0.37로 내림(추기 주석만 붙임).
+- `2026-09-15_lig_rtsp_describe_timeout_analysis.md` (2026-09-15, 완료) — **LIG PC에서 RTSP DESCRIBE
+  20초 타임아웃 원인 분석.** IP 오인 → 스크린샷 대조로 "인코딩 프레임 0장" 확정 → 원인은 드라이버
+  595.84 vs NVENC SDK 13.1(610+ 필요). SDK 13.0.37로 내림 + 인코더 실패 시 마운트 미등록(즉시 404)
+  코드 수정, 사내 리눅스 PC를 595.84로 내려 실증. LIG 재발송만 남음.
 - `rtsp_integration_complete_0817.md` (2026-08-17) — 실 카메라 연결 완료, mount 확정.
 - `rtsp_integration_status_0817.md` (해소됨 — 위 문서로 대체).
-- `linux_wayland_x11_present_bottleneck.md` (2026-08-19) — Linux 풀스크린 프레임폭락 해결.
-- `rtsp_client_reception_guide.md` (2026-08-24) — **LIG 공유용 최종 수신 가이드.**
+- `linux_wayland_x11_present_bottleneck.md` (2026-08-19, 09-15 추기) — Linux 풀스크린 프레임폭락 해결.
+  09-15 추기: X11 폴백 래퍼 수동 복사는 `Config/BootstrapPreamble.sh` 자동 삽입으로 대체됨.
+- `rtsp_client_reception_guide.md` (2026-08-24, 09-15 §2.4에 서버 드라이버 요구 1줄 추가, §1.1/§1.2
+  프로토콜 행을 "TCP/UDP 둘 다, TCP 권장"으로 정정) — **LIG 공유용 최종 수신 가이드.**
 - `rtsp_latency_investigation.md` (2026-08-19 최종) — 지연 441ms→68ms 조사 전체.
-- `RTSP_Perf_Investigation.md` (2026-08-19) — 위 조사 원본 진행 로그.
+- `RTSP_Perf_Investigation.md` (2026-08-19, 09-15 추기) — 위 조사 원본 진행 로그.
 - `rtsp_resolution_customization_0820.md` (2026-08-20) — 해상도 커스터마이징+CCTV 잘림버그+
   RCWS 이중렌더링 해결. **완료.**
 
@@ -222,9 +244,15 @@
 - `replication_audit.md` (최종 2026-08-14, §8 최신) — 리플리케이션 감사+구현 로그, 거의 완료.
   ⚠️ §8의 "UAV(2026-08-13 구현 완료)" 항목은 구 `AUAVPawn` 기준이라 옛날 얘기 — 새 드론은
   아래 문서 참고.
+- `2026-09-15_drone_two_pc_validation.md` (2026-09-15, 완료) — ★ **2대 PC 실환경 첫 검증 + 버그 3건.**
+  (a) 데모 모드에서 서버·클라 둘 다 주체(판정 순서), (b) 풀 시스템에서 `Server_ReportState`가
+  **로그 없이** 폐기 — 엔진 기본 `AutoPossessAI`로 AI 컨트롤러가 빙의해 `APawn::GetNetConnection`이
+  null(`SetOwner`만으론 부족), (c) 서버가 주체일 때 Rep*를 아무도 안 채움. "왜 주체가 모드별로
+  다른가" 표, 진단 로그 읽는 법, 검증 로그 근거.
 - `2026-09-01_drone_client_authoritative.md` — 새 드론은 서버가 아니라 **자체방호축 클라이언트가
   시뮬레이션**한다(조종 주체가 그쪽이라). Chaos Resimulation 기각 근거(RTSP +33ms, UGV 거동
-  변화), 배선, `SetOwner` 소유권 함정. 2대 PC 실환경 검증 대기.
+  변화), 배선, `SetOwner` 소유권 함정. 상단 09-15 배너로 판정 규칙 변경·AI 빙의 함정·서버 주체
+  게시 경로 반영. 2대 PC 검증은 2026-09-15 완료.
 
 ## `rc_mockup_tools/` — RC 목업/테스트 클라이언트
 
@@ -234,18 +262,32 @@
 
 ## `packaging/` — 패키징/배포 실행 절차
 
-- `kadex_0902_패키징_실행가이드.md` — **패키지와 함께 넘기는 실행 가이드(단독 배포용).** 우분투
-  환경 준비(필수 라이브러리·NVIDIA 드라이버·Vulkan ICD), 실행(`run_titan_example.sh`가 Wayland/X11
-  자동 판별), 축 선택 화면 입력값(RC IP 필수), 접속 정보(UDP 포트·RTSP URL). Wayland·X11 양쪽 실측 검증.
+- `kadex_0915_패키징_실행가이드.md` (2026-09-15, 완료) — **★ 현재 배포용 실행 가이드(패키지와 함께
+  받는 쪽에 넘기는 문서, Ubuntu 실행 절차만).** 파일명은 배포물 관례(`kadex_<빌드날짜>_…`)라 날짜 접두
+  규칙의 예외. 필수 라이브러리·NVIDIA 드라이버 **≥570**·Vulkan ICD 두 경로, `./titan_example.sh` 하나로
+  Wayland/X11 자동 판별, 축 선택 화면 입력값, 접속 정보(RTSP TCP/UDP 둘 다, 방화벽 시 TCP 권장),
+  증상표, 09-02 대비 변경 이력. **패키징(우리 쪽) 절차는 여기 없고 아래 내부 가이드 §2가 유일.**
+- `kadex_0902_패키징_실행가이드.md` (2026-09-02, 09-15 갱신, **폐기 — 위 0915 가이드로 대체**) — 09-02
+  패키지를 받은 쪽과의 대조용으로만 보관. `run_titan_example.sh`/`titan_example_x11_fallback.sh` 안내가
+  더 이상 맞지 않음(세션 판별이 `titan_example.sh`에 내장됨).
+- `2026-09-15_linux_nvidia_driver_595_run_install.md` (2026-09-15, 완료) — **고객 환경 재현용**: 리눅스
+  테스트 PC 드라이버를 특정 버전(595.84)으로 맞추는 NVIDIA 공식 `.run` 설치 절차, 검증 명령,
+  커널 hold, Secure Boot 주의, 원복(`--uninstall` → `ubuntu-drivers install`). `.run` 설치본은 Vulkan
+  ICD가 `/etc/vulkan/icd.d/`에 들어감.
 - `ugv_controller_demo_실행가이드.md` — **통제기 목업 GUI(`ugv_controller_demo`, 구 `ugv_rc_gui`)
   실행 가이드(단독 배포용).** Windows/Linux 설치, 실행 인자, 조작 순서(연결 → 제어권+REMOTE →
   주행/조준), 조이스틱 매핑, 탐지 bbox 색.
 - `2026-09-02_linux_package_ugv_host_rc_test_guide.md` — 위 문서들의 **내부용 상세판**. 패키징 절차,
-  데모/풀 시스템 스위치 배경, 코드 근거, 로그 확인 포인트까지 포함.
-- `2026-09-15_new_laptop_linux_packaging_setup.md` — **빌드 PC 쪽 환경 구성.** 아무것도 안 깔린
-  머신에서 RTSP까지 살아있는 리눅스 패키지를 뽑기까지: 크로스컴파일 툴체인(v26_clang-20.1.8-rockylinux8),
-  Video Codec SDK 13.0.37(13.1.15 아님 — 드라이버 하한), Linux GStreamer/CUDA 벤더링 번들 생성
-  스크립트, Build.cs soft-fail 때문에 조용히 RTSP가 빠지는 걸 잡아내는 검증 절차.
+  데모/풀 시스템 스위치 배경, 코드 근거, 로그 확인 포인트까지 포함. §2는 2026-09-15에 정정
+  (MCP 서버 켜진 상태에서는 커스텀 빌드로 패키징; §2-4 래퍼 스크립트 복사 절차는
+  `Config/BootstrapPreamble.sh` 자동 삽입으로 폐지; §2-5 성공 확인 체크리스트·§2-6 패키징 절차
+  변경 이력 신설 — **패키징 절차의 유일한 문서**), §3-1/§7-1에 드라이버 버전(≥570)·`.run` ICD
+  경로 추기, §3-2/§3-4/§7을 프리앰블 기준으로 수정, §1/§3-3/§5/§7의 RTSP "TCP만" 표기를 "TCP/UDP
+  둘 다, TCP 권장"으로 정정.
+- `2026-09-15_linux_cook_failed_mcp_port_clash.md` — 쿡이 `Done!`까지 돌고도 `Cook failed`로 끝나던
+  원인 조사. 커맨드릿은 Error 로그 1줄이면 실패하는데, 쿠커가 에디터와 같은 127.0.0.1:8000에 MCP
+  서버를 띄우려다 남긴 바인드 에러가 원인(CDO Constructor 에러는 오진, `AdditionalCookerOptions`
+  ini 키는 존재하지 않음). `ProjectCustomBuilds`로 쿠커 포트만 8001로 비켜 해결, 향후 진단 절차 포함.
 
 ## `infra_architecture/`
 

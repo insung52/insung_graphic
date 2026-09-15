@@ -81,6 +81,12 @@ ModelContextProtocol.GenerateClientConfig ClaudeCode
 - `claude mcp add`로 수동 추가하면 **안 됨** — `.mcp.json`이 올바른 방법
 - 서버 타입은 `http` (SSE 아님)
 - 에디터가 실행 중이어야 서버가 동작함
+- **Auto Start Server가 켜진 채로 에디터에서 패키징하면 쿡이 실패한다**(2026-09-15 확인). 쿠커
+  (`UnrealEditor-Cmd.exe`)가 같은 사용자 환경설정을 읽어 `127.0.0.1:8000`에 MCP 서버를 또 띄우려다
+  `LogHttpListener: Error: HttpListener unable to bind` 한 줄을 남기고, 커맨드릿은 Error 로그가 1줄이라도
+  있으면 실패로 끝난다(쿡은 `Done!`까지 돌고도 `Cook failed`). 패키징은 Platforms ▸ Project Custom
+  Builds ▸ **"Package Linux (MCP 8000 회피)"**(쿠커만 8001 사용)로 하거나, MCP를 끄고/에디터를 닫고
+  할 것. 상세: `packaging/2026-09-15_linux_cook_failed_mcp_port_clash.md`
 - **스플라인 포인트를 써넣어도 `UpdateSpline()`이 안 불린다**(2026-09-02 확인). 좌표는 들어가지만
   탄젠트가 기본값 `(100,0,0)`으로 남고 arc-length 테이블이 갱신 안 돼서 `GetSplineLength()`가
   **1.0m**(=손대지 않은 기본 2포인트 스플라인)를 반환한다. 같은 컴포넌트에 `bClosedLoop`를

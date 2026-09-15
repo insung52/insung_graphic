@@ -351,6 +351,7 @@ void UpdateManualZoomRamp(float DeltaTime)
 ```cpp
 float SearchSweepSpeedDegPerSec = 15.f;      // 기존 MaxAutoAimSlewRateDegPerSec 재사용 안 함(확정)
 float SearchSweepHalfRangeDegrees = 50.f;    // 반각 — ±50도 = 좌우 100도 (2026-07-28에 100→50)
+float SearchSweepElevationDegrees = -3.f;    // 2026-09-15 추가 — 차체 기준 고각, 음수 = 아래
 float SearchZoomLevel = 1.f;                 // 2026-09-01: 0.5 → 1.0
 ```
 
@@ -365,6 +366,18 @@ float SearchZoomLevel = 1.f;                 // 2026-09-01: 0.5 → 1.0
 진행, ±`SearchSweepHalfRangeDegrees`에서 방향 반전. 목표 오프셋 자체가 이미 일정한
 속도로 서서히 움직이므로, 2절과 동일한 레이트 제한 슬루잉으로 그 목표를 쫓아가면
 결과적으로 일정 속도의 연속 회전이 됨(별도의 "부드럽게 만드는" 로직 불필요).
+
+**고각도 차체 기준 (2026-09-15)** — 스윕 중 고각 목표는 `SearchSweepElevationDegrees`(기본
+-3°, 차체 기준 **조준선** pitch, 음수 = 아래)이고, 현재값은 조준 카메라의 월드 회전을 차체
+회전으로 되돌린 값(`Owner->GetActorQuat().Inverse() * RCWS->GetSightWorldRotation().Quaternion()`의
+pitch)으로 읽어 오차를 낸다. 마운트의 relative pitch를 쓰면 안 된다 — TitanTruck은
+`RCWSSightCineCamera`가 마운트 아래에 자체 pitch 오프셋(-6.1°)을 갖고 있어서 마운트 기준 -3°가
+카메라 기준 -9.1°가 된다(같은 날 그 버전으로 한 번 나갔다가 정정됨). 그 전까지는 `CurrentData.ElevationDegrees`(2026-07-20부터 **월드 수평 기준** pitch)를 0으로
+맞춰서, 내리막에서 차체가 앞으로 기울면 포탑이 차체 대비 위로 들려 하늘을 봤다(현장 피드백).
+좌우 스윕이 원래부터 차체 heading 기준이었으니 상하도 같은 기준으로 통일한 것. 값은
+`MinElevationDegrees(-20)`/`MaxElevationDegrees(60)` 안쪽이어야 하고, 안정화(2절)를 켜면 매 틱
+차체 pitch를 상쇄하려 들어 이 목표와 싸운다(좌우 스윕과 마찬가지, 기존 구조). 상세는
+`rcws/2026-09-15_search_sweep_hull_relative_elevation.md`.
 
 ### 8.5 조준 시 거리비례 자동 줌 — **2026-09-01부로 기본 비활성화**
 

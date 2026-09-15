@@ -48,7 +48,10 @@ QuadCamModule/GenesisOSCBridge/JoystickPlugin 등 다른 트랙은 건드리지 
   실제로 렌더링하는 텍스처는 `ID3D12Resource`입니다 (D3D11 아님).
 - NVIDIA Video Codec SDK 13.1.15엔 `NvEncoderD3D12` (D3D12 텍스처를 NVENC에 직접 먹이는
   공식 래퍼)가 이미 있어서, D3D12 → D3D11 브리지나 CUDA interop 없이 **D3D12 리소스를 그대로
-  NVENC에 넘기는 경로**로 갔습니다. UE의 `ID3D12DynamicRHI` 인터페이스(엔진이 정확히 이런
+  NVENC에 넘기는 경로**로 갔습니다.
+  > [2026-09-15 추기] SDK는 이후 **13.0.37로 내림**(13.1은 드라이버 610+ 필수, LIG PC 595.84에서
+  > 인코더 초기화 실패). 이유·경위는 `2026-09-15_lig_rtsp_describe_timeout_analysis.md`. 아래 본문의
+  > 13.1.15 언급은 당시 기록 그대로 둠. UE의 `ID3D12DynamicRHI` 인터페이스(엔진이 정확히 이런
   외부 인코더 연동을 위해 제공하는 API — `RHIGetResource`, `RHIGetGraphicsCommandList`,
   `RHISignalManualFence`)를 그대로 활용.
 - 그 결과 CUDA Toolkit은 **설치는 했지만 실제 코드에서 링크도 include도 안 함** —
@@ -822,7 +825,7 @@ GError;`라는 전역 변수(치명적 에러 출력 담당)가 있는데, GLib�
 | 항목 | 경로 | 용도 |
 |---|---|---|
 | CUDA Toolkit v13.3 | `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3` | **실제로 안 씀** (§0) |
-| NVIDIA Video Codec SDK 13.1.15 | `C:\SDK\Video_Codec_SDK_13.1.15` | 헤더+샘플 소스 (vendored 완료), `nvencodeapi.lib` 링크 |
+| NVIDIA Video Codec SDK 13.1.15 | `C:\SDK\Video_Codec_SDK_13.1.15` | 헤더+샘플 소스 (vendored 완료), `nvencodeapi.lib` 링크. **[2026-09-15] 13.0.37(`C:\SDK\Video_Codec_SDK_13.0.37`)로 내림** — `2026-09-15_lig_rtsp_describe_timeout_analysis.md` |
 | GStreamer (MSVC x86_64, Complete) | `C:\Program Files\gstreamer\1.0\msvc_x86_64` | gst-rtsp-server 등 링크 + 런타임 DLL |
 | VLC | 기본 설치 경로 | RTSP 재생 테스트 |
 

@@ -1,6 +1,6 @@
 # Titan (KADEX 전시회) — 현재 프로젝트 상태
 
-2026-09-10 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
+2026-09-15 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
 (최초 작성 2026-09-01, 이후 항목별로 날짜를 붙여 갱신 중.)
 
 이 문서는 "지금 뭐가 어디까지 되어 있는가"만 다룬다. 문서 자체의 목록(날짜/위치)은
@@ -27,15 +27,25 @@ UDP+JSON, LIG 정식 ICD(`protocol/lig_icd_ugv_rc_full.md`) 기준 구현 완료
 
 UGV 5스트림 + 자체방호 7스트림(부가 1개 포함) 전부 실 카메라 연결, mount 확정
 (`protocol/protocol_icd.md` §3.3/§4.1). 종단 지연 441~484ms → **68ms**로 최적화(수신측
-GStreamer+NVDEC). 전송은 TCP interleaved만(UDP 아님). Linux 패키지 빌드 풀스크린 프레임 폭락
+GStreamer+NVDEC). 전송은 TCP interleaved 권장(2026-09-15 정정: UDP도 됨 — 코드에 프로토콜 제한
+호출 없음, gst-rtsp-server 기본값; TCP는 저지연 검증 기준이고 UDP는 RTP 포트가 동적 협상이라 방화벽
+환경에선 TCP). Linux 패키지 빌드 풀스크린 프레임 폭락
 (11fps) 원인 규명·해결(Wayland/Xwayland 이슈). RTSP 스트림에 SSR/피격흔들림 안 나오던 문제
 (SceneCapture가 메인 뷰포트와 다른 카메라라 `ReflectionMethod=None` 강제되던 것) 원인 규명,
 해상도 커스터마이징+CCTV 잘림버그+RCWS 이중렌더링도 해결됨(2026-08-20,
 `camera_pipeline/rtsp_postprocess_parity_0820.md`/`rtsp_resolution_customization_0820.md`).
 상세: `rtsp/`, `camera_pipeline/`. **순수 Xorg 세션 검증 완료(2026-09-04)** — Wayland/Xorg 양쪽에서
 시뮬레이터 실행 + RTSP 수신 확인, 세션 자동 판별 런처(`run_titan_example.sh`) 신설
-(`packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §7-1). 남은 것: 자체방호축 6스트림
-정밀 지연 재측정. **[2026-08-31 원인 확정+코드 수정 완료]** 자체방호축에서 RCWS
+(`packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §7-1). **[2026-09-15] 그 자동 판별을
+`Config/BootstrapPreamble.sh`로 옮겨 `titan_example.sh`에 패키징마다 자동 삽입**(UAT
+`StageBootstrapExecutable` 훅) — 래퍼 스크립트 복사 절차 폐지, 받는 쪽은 `./titan_example.sh`만 실행.
+배포용 실행 가이드는 `packaging/kadex_0915_패키징_실행가이드.md`(받는 쪽 절차만, 0902판 폐기), 패키징
+절차는 내부 가이드 §2가 유일. 남은 것: 자체방호축 6스트림
+정밀 지연 재측정. **[2026-09-15] NVENC SDK 13.1.15 → 13.0.37로 내림** — 09-02 LIG 전달 패키지가
+LIG PC(드라이버 595.84, 업데이트 거부)에서 인코더 초기화 실패로 RTSP 불통이었음(13.1 = 드라이버
+610+, 13.0 = 570+). 함께 `RtspStreamComponent`를 인코더 성공 후에만 마운트 등록하도록 바꿔
+인코더 실패 시 20초 타임아웃 대신 즉시 404. 사내 리눅스 PC를 595.84로 내려 정상 동작 실증.
+**LIG 재발송 대기.** (`rtsp/2026-09-15_lig_rtsp_describe_timeout_analysis.md`) **[2026-08-31 원인 확정+코드 수정 완료]** 자체방호축에서 RCWS
 조준 이동 시 전장카메라/CCTV가 떨리는 버그, UGV 발사 반동이 자체방호축 카메라에도 리플리케이션
 되는 버그(2-PC 환경) — `SceneCaptureViewParity`/`RCWSProjectile` 수정 완료
 (`rcws/2026-08-31_selfdefense_camera_shake_bugs.md`), **2-PC 실환경 검증만 남음**.
@@ -114,7 +124,7 @@ Input 탭 완료(`ui/ingame_settings_input_system.md`).
 지형/바위/나무/PCG 전체 재질별 피격 이펙트(파티클/사운드/데칼) 배선 완료. 상세:
 `sfx_vfx/hit_effects_update_2026-08-26.md`.
 
-## 9. 드론(UAV) 물리 재구현 + 교전 관측 이동 — 완료, 2프로세스 검증만 남음
+## 9. 드론(UAV) 물리 재구현 + 교전 관측 이동 — 완료, 2대 PC 실환경 검증 완료(2026-09-15)
 
 기존 운동학 근사 비행을 로터별 추력→토크→강체 운동 정통 모델로 전면 재구현
 (`ADronePawn`). **2026-09-01 기준 구 `BP_UAV` 대체 작업까지 전부 완료** — 구동계·수동 조종
@@ -126,9 +136,10 @@ Input 탭 완료(`ui/ingame_settings_input_system.md`).
 적 탐색 단계와 아군 집결 대기는 제거됨. `DT_ScenarioSteps_ThreeStage`에 `DroneSeeEnemies`/
 `DroneWideView` 행 신설.
 
-리플리케이션은 **클라이언트(자체방호축) 권위** — 조종 주체가 그쪽이기 때문. Chaos
-Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
-(`replication/2026-09-01_drone_client_authoritative.md`).
+리플리케이션은 **풀 시스템에선 클라이언트(자체방호축) 권위, 데모 모드에선 리슨서버 권위** —
+풀은 조종 주체가 클라라 지연 때문이고, 데모는 자체방호 클라가 없는 1 PC 구성이 정상이라서.
+주체는 접속 여부가 아니라 모드로 판정한다(핸드오버 회피). Chaos Resimulation은 RTSP 지연 +33ms와
+UGV 거동 변화 때문에 기각(`replication/2026-09-01_drone_client_authoritative.md`).
 
 **2026-09-03~05 — 교전 관측 이동 추가, 실동작 확인 완료.** 교전이 시작되면 드론이 **활성 경로
 스플라인 위에서 "전황을 가장 잘 보여주는 지점"으로 스스로 이동**한다(짐벌은 각도만 바꿀 뿐
@@ -151,12 +162,24 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
 시작"으로 오판해 이륙 단계로 들어가던 것)과, 교전 관측 중 수동을 껐다 켜면 **관측 상태를 잃고
 경로 끝까지 주행**하던 것.
 
-남은 것: **2대 PC 실환경 검증**, 그 후 구 `AUAVPawn`/`BP_UAV`와 폴백 분기 제거, 경로 고도
-상향(부감이 선호 범위 -45~-60°를 못 채움 — 교전 반경 R 대비 R×1.0~1.25 위가 기준), 도주 시작
-장면 프레이밍 개선(4단계 대상이 33개라 도주하는 적이 점으로 보임). 상세:
-`vehicle/drone/drone_flight_dev_guide.md`(레퍼런스),
-`vehicle/drone/2026-09-01_drone_replaces_bp_uav.md`·`2026-09-05_drone_engagement_observation.md`
-(작업 경과).
+**2026-09-15 — 짐벌 2축 안정화 + 2대 PC 실환경 검증 완료.** 짐벌 각도의 기준을 기체 → 수평
+프레임으로 바꿔 낙하산 순항 가감속 기울기가 카메라에 안 실린다(요·피치만, 롤은 리그에 본이
+없어 상쇄 안 함). 자동 추적 목표각을 같은 프레임으로 통일한 게 핵심. CineCamera 니어플레인이
+씬캡쳐(위젯/RTSP)에 복사 안 되던 것도 수정.
+
+2대 PC(서버=UGV축, 클라=자체방호축) 첫 실환경 검증에서 "전혀 리플리케이션 안 됨" → 버그 3건
+수정 후 풀/데모 양쪽 정상: (a) 데모 모드에서 서버·클라 **둘 다** 주체(판정 순서), (b) 풀
+시스템에서 `Server_ReportState`가 **로그 없이** 폐기 — 엔진 기본 `AutoPossessAI`로 AI 컨트롤러가
+빙의해 `APawn::GetNetConnection`이 null, `SetOwner`만으론 부족했음(`AutoPossessAI=Disabled` +
+`GetNetConnection` 오버라이드), (c) 서버가 주체일 때 Rep*를 아무도 안 채워 데모 클라 드론이
+출발점에 굳음(서버 Tick에서 직접 게시). 상세 `replication/2026-09-15_drone_two_pc_validation.md`.
+
+남은 것: 구 `AUAVPawn`/`BP_UAV`와 폴백 분기 제거, 경로 고도 상향(부감이 선호 범위 -45~-60°를
+못 채움 — 교전 반경 R 대비 R×1.0~1.25 위가 기준), 도주 시작 장면 프레이밍 개선(4단계 대상이
+33개라 도주하는 적이 점으로 보임), 원격 보간(`RemoteInterpSpeed`) 품질 튜닝(문제 보고 없음).
+상세: `vehicle/drone/drone_flight_dev_guide.md`(레퍼런스),
+`vehicle/drone/2026-09-01_drone_replaces_bp_uav.md`·`2026-09-05_drone_engagement_observation.md`·
+`2026-09-15_drone_gimbal_stabilization.md`(작업 경과).
 
 ## 10. 문서 관리 — 2026-08-31, 1단계 완료
 
@@ -177,8 +200,8 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
 - 자체방호축 PC 고정 IP 미확정(LIG 확인 필요).
 - `RC_MotionMode` 용도 불명(LIG도 "차후 논의", 급하지 않음).
 - 자율주행 목적지 명령(`HQ_MissionMoveToEngage`)이 LIG 정식 스펙 아님, 확정 대기 중.
-- 드론 2프로세스(2대 PC) 실환경 검증 대기 — 코드 완료, 단일 프로세스/PIE까지만 확인(§9).
-- 구 `AUAVPawn`/`BP_UAV` 및 시나리오 폴백 분기 제거 — 위 검증 후 착수(§9).
+- 구 `AUAVPawn`/`BP_UAV` 및 시나리오 폴백 분기 제거 — 2대 PC 검증(2026-09-15 완료)이 끝났으니
+  착수 가능(§9).
 - 살아있는 적이 이동 중 피격되면 몸이 회전하는 현상 — 재현 실패로 보류
   (`ai_combat/2026-09-01_enemy_spin_on_hit_investigation.md`).
 - 버스트 사격 중 사격선(아군 관통) 재검사 없음 — 사격 시작 시점에만 검사
@@ -190,7 +213,20 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
   미착수 — `packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §3-1.
 - **Vulkan ICD 미설치 시 `Failed to load Vulkan Driver`로 실행 불가** — `nvidia-smi`가 되고
   `libvulkan1`이 있어도 발생한다(로더 ≠ 드라이버). 검증은 `vulkaninfo --summary`로 해야 함.
-  같은 문서 §7-1.
+  같은 문서 §7-1. ICD 위치는 apt 설치본 `/usr/share/vulkan/icd.d/`, NVIDIA `.run` 설치본
+  `/etc/vulkan/icd.d/`(2026-09-15 확인).
+- **NVIDIA 드라이버 570 미만이면 프로세스는 뜨지만 RTSP만 안 된다**(2026-09-15 확정) — NVENC SDK
+  13.0.37 기준. 실행 가이드 §0에 명시, 미달 시 클라이언트는 즉시 404(09-15 빌드부터).
+  고객 드라이버 버전 재현 절차는 `packaging/2026-09-15_linux_nvidia_driver_595_run_install.md`.
+- **에디터 MCP 서버(Auto Start Server, 8000)가 떠 있으면 기본 Package Project는 `Cook failed`로
+  끝난다**(2026-09-15 원인 규명·우회 완료) — 쿠커가 같은 포트에 MCP 서버를 띄우려다 남긴 Error 1줄
+  때문. 패키징은 Platforms ▸ Project Custom Builds ▸ "Package Linux (MCP 8000 회피)"로 할 것
+  (`packaging/2026-09-15_linux_cook_failed_mcp_port_clash.md`). 이 경로로 09-15 전체 패키징 성공 확인.
+- **리눅스 패키지 실행 스크립트의 Wayland/X11 자동 판별은 `Config/BootstrapPreamble.sh`에 의존**
+  (2026-09-15) — 이 파일이 체크아웃에 없으면 패키징은 조용히 성공하지만 `titan_example.sh`에 판별
+  블록이 빠져 순수 X11 머신에서 `wayland not available`로 죽는다. 결과물의 스크립트에 `### Added from
+  project Config BootstrapPreamble.sh` 마커가 있는지 확인할 것
+  (`packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §2-5 체크리스트).
 - **UGV에 안티롤바가 없다** — `RollbarScaling=0.15`가 설정돼 있지만 엔진이 축을 **휠 클래스
   기준**으로 묶는 탓에 6륜이 한 축이 되고, 롤바 코드가 `축당 휠 2개`만 처리해서 스킵된다.
   한쪽 바퀴만 장애물을 타면 차체가 복원력 없이 기운다. 살리려면 휠 클래스를 앞/중/뒤 3개로

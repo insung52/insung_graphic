@@ -92,6 +92,8 @@ exec "$SCRIPT_DIR/titan_example.sh" -sdlvideodriver=x11 "$@"
 
 **주의**: `titan_example_x11_fallback.sh`는 UE 패키징이 자동으로 포함해주는 파일이 아니다 — 패키지 결과물(`titan_example.sh`가 있는 폴더)에 매번 수동으로 같이 복사해서 배포해야 한다.
 
+> **[2026-09-15 추기]** 위 "매번 수동 복사" 문제는 원천에서 해결됐다. UAT는 리눅스 스테이징 때 `<Project>/Config/BootstrapPreamble.sh`가 있으면 그 내용을 생성하는 `titan_example.sh` 맨 앞에 끼워 넣는다(`LinuxPlatform.Automation.cs` `StageBootstrapExecutable`). 프로젝트에 그 파일을 추가해 `WAYLAND_DISPLAY`가 비어 있으면 `-sdlvideodriver=x11`을 자동으로 붙이게 했으므로, 이제 `./titan_example.sh`만으로 Wayland/X11 어느 세션이든 뜨고 래퍼 스크립트(`titan_example_x11_fallback.sh` / `run_titan_example.sh`)를 복사할 필요가 없다(파일은 레거시로 남김). "생성 스크립트는 패키징마다 덮어써지니 손대지 않는다"는 아래 판단은 여전히 맞다 — 손대는 게 아니라 엔진이 제공하는 프리앰블 훅으로 넣는 것. 상세: `packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §2-4/§2-5(패키징 쪽), `packaging/kadex_0915_패키징_실행가이드.md` §3(받는 쪽).
+
 ## 아직 안 한 것 / 남은 확인 사항
 
 - **순수 X11(Xorg) 세션 테스트**: 지금까지는 "Xwayland 경유 X11"이 느리다는 것만 확인됨. Wayland 없이 완전히 X11로만 붙는 세션(로그인 화면에서 "Ubuntu on Xorg")에서도 정상 속도가 나오는지 확인해서, 문제가 "Xwayland 번역 계층" 자체인지 "X11 백엔드 자체"인지 한 번 더 구분해두면 좋음. `titan_example_x11_fallback.sh`로 재현/확인 가능.
