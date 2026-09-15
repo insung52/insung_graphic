@@ -61,9 +61,11 @@ devlog 폴더가 "시스템 하나당 폴더 하나" 축으로 통일됨(아래 
 - `TitanTruck`: 이동 기능은 미구현, 4방향 감시 카메라(CCTV) + 자체방호용 RCWS 장착(탄약 600발).
 - `UAV`(드론, `ADronePawn`): 2026-08-27부로 로터별 추력→강체운동 정통 물리로 재구현되고,
   2026-09-01에 구 `BP_UAV`를 대체 완료(`vehicle/drone/drone_flight_dev_guide.md`) — 수동 조종,
-  스플라인 경로 자율비행, 짐벌 카메라+자동 정찰, 프로펠러 사운드, 바람 반응, 단계별 탐지,
-  시나리오 연동, RTSP 송출까지. **드론의 낙하산 관측이 UGV 출발 트리거**다. 리플리케이션은
-  자체방호축 클라이언트 권위(`replication/2026-09-01_drone_client_authoritative.md`).
+  스플라인 경로 자율비행, 짐벌 카메라(2축 안정화)+자동 정찰, 프로펠러 사운드, 바람 반응,
+  단계별 탐지, 시나리오 연동, RTSP 송출까지. **드론의 낙하산 관측이 UGV 출발 트리거**다.
+  리플리케이션은 풀 시스템=자체방호축 클라이언트 권위, 데모=리슨서버 권위
+  (`replication/2026-09-01_drone_client_authoritative.md`), 2대 PC 실환경 검증 2026-09-15 완료
+  (`replication/2026-09-15_drone_two_pc_validation.md`).
 
 **오른쪽 모니터(UGV축)** — UGV(무인 전차): 대기/원격(수동)/자동주행 3모드, 목적지 수신 시
 자동 경로 주행(NavMesh 기반, `vehicle/ugv/` 최신 문서 참고). 4방향 CCTV + RCWS 장착(탄약

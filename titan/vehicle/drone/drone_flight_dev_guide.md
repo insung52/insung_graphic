@@ -1,19 +1,21 @@
 # 드론(UAV) 비행 시스템 레퍼런스
 
-2026-09-10 / 완료 / `ADronePawn`이 구 `AUAVPawn`/`BP_UAV`를 대체 — 로터별 물리 비행 + 자율비행 + 교전 관측 이동 + 수동 조종(비행/짐벌 분리) + 짐벌 + 사운드 + 바람 + 탐지단계 + 시나리오 + 리플리케이션 전부 구현·실동작 확인됨.
+2026-09-15 / 완료 / `ADronePawn`이 구 `AUAVPawn`/`BP_UAV`를 대체 — 로터별 물리 비행 + 자율비행 + 교전 관측 이동 + 수동 조종(비행/짐벌 분리) + 짐벌(2축 안정화) + 사운드 + 바람 + 탐지단계 + 시나리오 + 리플리케이션 전부 구현·실동작 확인됨. **2대 PC 실환경 검증 완료(풀/데모 양쪽).**
 
 > **이 문서는 "드론이 지금 어떻게 동작하는가"를 다루는 에버그린 레퍼런스다**(`CLAUDE.md`
 > guide/ 갱신 규칙 참고 — 드론 시스템 동작이 바뀌면 여기를 같이 고칠 것). 시간순 작업 기록은
 > 같은 폴더의 날짜 접두 devlog를 볼 것:
 > - `2026-09-01_drone_replaces_bp_uav.md` — 자율비행~BP_UAV 대체까지의 작업 경과·함정
-> - 리플리케이션 설계 배경: `replication/2026-09-01_drone_client_authoritative.md`
+> - `2026-09-15_drone_gimbal_stabilization.md` — 짐벌 2축 안정화 + 니어플레인 캡쳐 동기화
+> - 리플리케이션 설계 배경: `replication/2026-09-01_drone_client_authoritative.md`,
+>   2 PC 실환경 검증·버그 3건: `replication/2026-09-15_drone_two_pc_validation.md`
 
 멀티로터 비행 역학을 **물리 원칙(로터별 추력 → 토크 → 강체 운동)** 으로 새로 구현한 것.
 기존 `AUAVPawn`의 비행 로직과는 코드/에셋 모두 완전히 분리된 별개 구현이다.
 
-**현재 상태**: 구동계·수동 조종·자율비행·짐벌·프로펠러 사운드·바람 반응·단계별 탐지·시나리오
-연동·리플리케이션 전부 구현 완료. 실기 조종 검증 완료(Logitech Extreme 3D Pro), 단일 프로세스
-시나리오 검증 완료. **2프로세스(2대 PC) 실환경 검증만 남음**(10.5절).
+**현재 상태**: 구동계·수동 조종·자율비행·짐벌(2축 안정화)·프로펠러 사운드·바람 반응·단계별
+탐지·시나리오 연동·리플리케이션 전부 구현 완료. 실기 조종 검증 완료(Logitech Extreme 3D Pro),
+단일 프로세스 시나리오 검증 완료, **2대 PC 실환경 검증 완료(2026-09-15, 풀/데모 양쪽 — 10.5절)**.
 
 구 `AUAVPawn`/`BP_UAV`는 아직 코드에 남아 있다 — 시나리오 연동 지점들이 "드론 우선, 없으면 구
 UAV" 폴백 구조라 둘이 공존한다. 2프로세스 검증이 끝나면 폴백과 구 클래스를 함께 걷어낸다.
@@ -587,11 +589,12 @@ UGV도 영원히 출발하지 않는다(그 관측이 출발 트리거이므로)
 낙하산은 PlayerStart 스폰이 아니라 **레벨에 직접 배치된 액터**라, 레벨을 새로 만들거나 낙하산을
 교체하면 이 참조가 끊긴다.
 
-### 10.5 2프로세스 실환경 미검증
+### 10.5 2프로세스 실환경 — 검증 완료 (2026-09-15)
 
-리플리케이션(15절)은 단일 프로세스와 PIE 2클라이언트까지만 확인했다. 실제 2대 PC(서버=UGV축,
-클라=자체방호축) 환경에서 트랜스폼 동기화 품질, 소유권(`SetOwner`) 확보 타이밍, 보간 자연스러움
-검증이 남아 있다.
+리플리케이션(15절)을 실제 2대 PC(서버=UGV축, 클라=자체방호축)에서 풀/데모 양쪽 확인했다. 첫
+검증에서 버그 3건(데모 이중 주체, AI 자동 빙의로 Server RPC 조용히 폐기, 서버 주체일 때 Rep*
+미게시)이 나와 고쳤다 — `replication/2026-09-15_drone_two_pc_validation.md`. 남은 건
+`RemoteInterpSpeed`(12/s) 보간 품질 튜닝 정도인데 아직 문제 보고 없음.
 
 ### 10.6 프로펠러 왜건휠 현상
 
@@ -615,8 +618,8 @@ UGV도 영원히 출발하지 않는다(그 관측이 출발 트리거이므로)
 
 - 지형 회피 미구현. 스플라인을 지형 위로 그리는 것으로 대체하고 있다 — 교전 관측 이동이
   자유비행이 아니라 스플라인 위로만 움직이는 이유이기도 하다(16절).
-- 짐벌 안정화(기체 자세 상쇄) 미적용 — 짐벌 본은 기체 자세를 물려받는다. 온보드 카메라도
-  마찬가지이며, 실제 드론 영상의 "이동 방향으로 기울어지는" 느낌이 여기서 나오므로 의도된 것.
+- 짐벌 안정화는 **2축(요·피치)만**이다(12.4절, 2026-09-15). 롤은 리그에 본이 없어 상쇄하지
+  않는다 — 기체 롤이 그대로 보인다. 온보드 카메라는 안정화 없이 기체 자세를 물려받는다(의도).
 
 ---
 
@@ -797,8 +800,9 @@ BP에 배치된 `UCineCameraComponent`가 그 본 소켓에 붙어 있고, 코�
 엔진이 내부에서 부모의 현재 CS로 나눈다. 그래서 정답은 이렇다:
 
 ```cpp
-const FQuat Yaw(FVector::ZAxisVector,  FMath::DegreesToRadians(GimbalYawDeg));
-const FQuat Pitch(FVector::YAxisVector, -FMath::DegreesToRadians(GimbalPitchDeg));
+// BoneYawDeg/BonePitchDeg = 수평 프레임 각도를 기체 좌표로 역변환한 값 (12.4절). 기체가 수평이면 GimbalYawDeg/PitchDeg와 같다.
+const FQuat Yaw(FVector::ZAxisVector,  FMath::DegreesToRadians(BoneYawDeg));
+const FQuat Pitch(FVector::YAxisVector, -FMath::DegreesToRadians(BonePitchDeg));
 BodyMesh->SetBoneRotationByName(GimbalYawBoneName,   (Yaw * GimbalYawRestCS).Rotator(),         EBoneSpaces::ComponentSpace);
 BodyMesh->SetBoneRotationByName(GimbalPitchBoneName, (Yaw * Pitch * GimbalPitchRestCS).Rotator(), EBoneSpaces::ComponentSpace);
 ```
@@ -826,6 +830,43 @@ BodyMesh->SetBoneRotationByName(GimbalPitchBoneName, (Yaw * Pitch * GimbalPitchR
 | `WideEngagementView` | 교전 시작 후 — 아군/UGV/적군이 전부 한 화면에 들어오도록 조준과 FOV를 매 틱 다시 계산(`ComputeFramingForPoints`) |
 
 경로 끝 도착 시 `bAutoStartReconOnArrival`로 자동 시작된다.
+
+### 12.4 2축 안정화 — 짐벌 각도의 기준은 수평 프레임 (2026-09-15)
+
+`GimbalYawDeg`/`GimbalPitchDeg`는 **기체가 아니라 수평 프레임 기준**이다: 기체 요만 남기고
+피치/롤을 뺀 회전(`GetGimbalReferenceQuat()`). 요 0 = 기체 진행 방향, 피치 0 = 수평선. 실제
+짐벌의 "yaw follow" 모드와 같다.
+
+```
+수평 프레임 (GimbalYawDeg, GimbalPitchDeg) → 방향 벡터
+  → 기체 좌표로 역변환 (GetActorQuat().UnrotateVector)
+  → BoneYawDeg = atan2, BonePitchDeg = asin   → 12.2절의 본 회전
+```
+
+- `ApplyGimbalRotation()`이 **매 틱** 이걸 다시 계산한다(주체 Tick의 `RefreshBoneTransforms()` 직전,
+  원격은 `TickRemoteInterpolation`). 명령 각도가 안 바뀌어도 기체 자세가 바뀌면 본이 갱신돼야
+  하기 때문 — 가감속으로 기체가 기울어도 카메라 전방은 수평선 기준 각도를 유지한다.
+- **축이 둘이라 롤은 상쇄 안 한다.** 카메라 전방 벡터만 정확히 맞추고 기체 롤은 그대로 보인다
+  (실제 2축 짐벌과 동일). `CamYaw` 본은 기체에 얹힌 채, `CamPitch` 본만 역보정된다.
+- 항상 켜짐. 토글 없음.
+
+> ⚠ **짐벌 각도를 만들거나 쓰는 코드는 전부 같은 프레임이어야 한다.** 자동 추적
+> (`SlewGimbalTowardWorldLocation`)과 스윕(`TickGimbalCosmeticSweep`)의 목표각도
+> `GetGimbalReferenceQuat()`로 변환한다. 여기에 `GetActorQuat()`를 쓰면 추적기가 기울기만큼의
+> **존재하지 않는 오차를 쫓아** 오히려 더 떨린다. 반대로 맞춰두면 기체가 기울어도 목표각이 안
+> 변하므로 추적기 부하가 줄어든다(안정화 이전엔 슬루 속도 제한 안에서 기울기를 뒤쫓다 화면이
+> 출렁였다).
+
+이에 따라 **수평선 기준**이 된 값: `GimbalHomePitchDeg`(-15), `Min/MaxGimbalPitchDegrees`
+(-80/45), `GimbalReconMaxPitchDegrees`("수평선 위는 안 본다"가 진짜 수평선이 됨).
+
+근수직(-80°)을 볼 때 기체가 크게 기울면 본 요가 수학적으로 크게 돌 수 있다(2축 짐벌락). 화면은
+맞고 모델 헤드만 홱 도는 정도이며 현재 비행 프로파일에선 안 걸린다.
+
+**니어플레인**: BP `GimbalCineCamera ▸ Current Camera Settings ▸ (Advanced) Custom Near Clipping
+Plane` 하나로 뷰포트·위젯·RTSP 캡쳐가 전부 조절된다 — `SyncGimbalLensFromCineCamera()`가
+`PerspectiveNearClipPlane`을 씬캡쳐의 `bOverride_CustomNearClippingPlane`으로 복사한다(2026-09-15
+이전엔 뷰포트에만 먹었다). 체크 안 하면 프로젝트 전역값.
 
 ---
 
@@ -935,13 +976,28 @@ BodyMesh->SetBoneRotationByName(GimbalPitchBoneName, (Yaw * Pitch * GimbalPitchR
 **전시 구성은 2대 PC 2프로세스다: 서버=UGV축, 클라이언트=자체방호축. 그리고 드론을 조종하는
 쪽이 클라이언트다.** 그래서 서버 권위로 하면 입력 지연이 그대로 드러난다.
 
-**시뮬 주체 판정은 `ADronePawn::ResolveShouldSimulateDrone()` 3단계**(2026-09-01 개정):
-① 단독 실행(`NM_Standalone`)이면 무조건 이 프로세스 → ② `SelfDefense`/`Unspecified` →
-③ **데모 실행 모드(`ScenarioConfig::RunMode == Demo`)의 리슨서버면 서버**.
+**시뮬 주체 판정은 `ADronePawn::ResolveShouldSimulateDrone()` 3단계**(2026-09-15 순서 개정):
+① 단독 실행(`NM_Standalone`)이면 무조건 이 프로세스 → ② **데모 모드면 리슨서버만**(클라는 원격)
+→ ③ 풀 시스템: `SelfDefense`/`Unspecified`.
 
-> ③이 없으면 자체방호 클라이언트가 안 붙는 데모 구성(전시용 1 PC, UGV축 호스트 단독)에서
-> 시뮬 주체가 아예 없어 **드론이 안 날고, 낙하산 관측 → UGV 1차 목적지 출발 체인이 멈춘다**
-> (2026-09-01 실사용 버그). 배경은 `replication/2026-09-01_drone_client_authoritative.md` §3.1.
+| 구성 | 주체 | 이유 | Rep* 채우는 곳 |
+|---|---|---|---|
+| 풀 (`Demo=0`) | **자체방호 클라** | 클라가 수동 조종한다 — 서버 권위면 조종 지연 | `Server_ReportState` RPC → 서버 |
+| 데모 (`Demo=1`) | **리슨서버** | 자체방호 클라가 없는 1 PC 구성이 정상 상태. 전 구간 자율비행이라 지연 문제 없음 | 서버 Tick에서 Rep*에 직접 |
+
+주체는 세상에 **정확히 하나**여야 한다. "클라가 붙어 있느냐"가 아니라 "데모냐"로 판정하는 이유는
+접속 여부로 바꾸면 물리 주체를 실시간으로 넘기는 핸드오버가 필요해지기 때문 — 모드는 세션 시작 때
+고정된 값이라 양쪽이 항상 같은 답을 낸다. 클라의 데모 판정은 GameState의 `bDemoRunMode`를 보므로
+`ResolveSimulationAuthorityForAxis`가 GameState 도착을 잠깐(0.1초×최대 50회) 기다린 뒤 판정한다.
+
+> ②가 없으면 데모 구성(전시용 1 PC, UGV축 호스트 단독)에서 시뮬 주체가 아예 없어 **드론이 안
+> 날고, 낙하산 관측 → UGV 1차 목적지 출발 체인이 멈춘다**(2026-09-01 실사용 버그). 그리고 ②가
+> ③ **뒤**에 있으면 데모 서버에 클라가 붙었을 때 둘 다 주체가 돼 각자 물리를 돌린다(2026-09-15
+> 2 PC 버그). 배경은 `replication/2026-09-01_drone_client_authoritative.md` §3.1,
+> `replication/2026-09-15_drone_two_pc_validation.md` §2·§6.
+
+늦게 붙은 클라: 서버가 이미 명령한 `CommandedPathId`의 OnRep이 축 판정보다 먼저 올 수 있어서,
+`ApplySimulationAuthority`가 주체 확정 시점에 대기 중인 경로 명령을 집행한다.
 
 ### 15.1 왜 Chaos Resimulation을 안 썼나
 
@@ -959,9 +1015,13 @@ BodyMesh->SetBoneRotationByName(GimbalPitchBoneName, (Yaw * Pitch * GimbalPitchR
 ```
 시뮬 클라(자체방호) → 서버 : Server_ReportState (Unreliable, WithValidation)
                               위치/회전/속도/짐벌각/줌 — 30Hz(StateReportHz)
+서버 자신이 주체(데모)     : RPC 없이 Tick에서 같은 Rep* 프로퍼티에 30Hz로 직접 씀 (2026-09-15)
 서버 → 전원                : 위 값을 Replicated 프로퍼티로 재전파
                               + 시나리오 명령(CommandedPathId, DetectionPhase, 교전 프레이밍 지점)
 ```
+
+> 2026-09-15 이전엔 Rep*를 채우는 곳이 RPC 구현 하나뿐이라, 데모 서버에 클라가 붙으면 클라 드론이
+> 출발 위치에 굳었다(속도/고도 숫자만 변함). 원격 프로세스의 상태 패널은 `RepVelocity`로 채운다.
 
 - **비신뢰 RPC**를 쓰는 이유: 매 프레임 최신값만 의미 있고 유실돼도 다음 패킷이 덮으므로,
   신뢰 전송의 재전송 비용이 낭비다.
@@ -983,6 +1043,19 @@ BodyMesh->SetBoneRotationByName(GimbalPitchBoneName, (Yaw * Pitch * GimbalPitchR
 ```
 PostLogin: 레벨에서 ADronePawn을 못 찾아 소유권을 못 넘겼습니다 — 드론 상태가 서버로 전달되지 않습니다.
 ```
+
+> ⚠ **폰은 Owner보다 Controller가 먼저다 (2026-09-15, 2 PC 실환경 버그).** `APawn::GetNetConnection()`
+> 은 Controller가 있으면 그쪽 연결을 돌려준다. 레벨에 놓인 폰은 `AutoPossessAI=PlacedInWorld`(엔진
+> 기본)라 서버가 `AAIController`를 붙여 빙의시키고, AI는 연결이 없으니 null → 서버가
+> `ShouldCallRemoteFunction`의 `bNetOwner` 불일치로 `Server_ReportState`를 **로그 없이**(`LogRep
+> Verbose`) 전부 폐기했다. `SetOwner`는 멀쩡히 됐는데도. 수정: 생성자 `AutoPossessAI=Disabled` +
+> `ADronePawn::GetNetConnection()` 오버라이드(Owner 사슬만 봄). PC 자신의 Server RPC는 통과하고
+> 폰의 RPC만 죽는 게 이 함정의 특징이다.
+
+진단 로그: 시뮬 클라가 첫 송신 때 `Server_ReportState 첫 송신 — Owner=…, NetConnection=…,
+액터채널=…`(엔진이 조용히 버리는 두 조건)를, 서버가 `Server_ReportState 수신 N회 — …
+시뮬주체=…`(첫 도착 + 5초마다)를 찍는다. 서버에 `수신` 줄이 없으면 송신 단계, `이중 시뮬`이면
+판정 문제.
 
 ### 15.4 RTSP
 
@@ -1278,8 +1351,8 @@ Extreme 3D Pro `Axis_1`은 **앞으로 밀면 -1**, IMC Negate 없음 기준:
 | 프로퍼티 | 기본값 |
 |---|---|
 | `bAutoReturnGimbalToHome` | true |
-| `GimbalHomeYawDeg` | 0 (짐벌 각도가 기체 상대값이라 0 = 진행 방향) |
-| `GimbalHomePitchDeg` | -15 (온보드 카메라와 동일) |
+| `GimbalHomeYawDeg` | 0 (요는 기체 헤딩을 따르므로 0 = 진행 방향) |
+| `GimbalHomePitchDeg` | -15 (온보드 카메라와 동일. **수평선 기준** — 12.4절 안정화 이후 기체가 기울어도 유지) |
 | `GimbalHomeReturnRateDegPerSec` | 20 |
 
 **정찰 단계가 `Idle`일 때만 돈다** — 자율비행 중이고 아무도 짐벌을 안 잡는 구간이 거기 하나뿐이다.
@@ -1314,3 +1387,5 @@ Extreme 3D Pro `Axis_1`은 **앞으로 밀면 -1**, IMC Negate 없음 기준:
 | 2026-09-05 | 기수/카메라 분리(16.5절), 도주 중인 적 트래킹 제외, 3차 전환 상태 게이트. **실동작 확인 완료** |
 | 2026-09-10 | **수동 조종을 비행/짐벌 두 축으로 분리**(17절) — "카메라만 수동" 모드 신설. 짐벌 기본 자세 복귀(17.5절) |
 | 2026-09-10 | 수동 해제 시 출발 위치로 576km/h 역주행하던 버그 + 교전 관측 상태 유실 버그(17.4절). **실동작 확인 완료** |
+| 2026-09-15 | **짐벌 2축 안정화**(12.4절) — 짐벌 각도 기준을 기체 → 수평 프레임으로, 자동 추적 목표각도 같은 프레임으로 통일. CineCamera 니어플레인을 씬캡쳐에 복사 |
+| 2026-09-15 | **2대 PC 실환경 첫 검증**(15절, 10.5절) — 데모 이중 주체(판정 순서), AI 자동 빙의로 Server RPC 조용히 폐기(`AutoPossessAI`/`GetNetConnection`), 서버 주체일 때 Rep* 미게시 버그 3건 수정. 풀/데모 양쪽 **실동작 확인 완료** |

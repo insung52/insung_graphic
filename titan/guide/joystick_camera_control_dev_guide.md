@@ -89,6 +89,11 @@ void DoCameraLook(const FInputActionValue& Value)
 > 반대라, `BP_TestPlayerController → Input|Drone`에 전용 반전 노브가 둘 있다
 > (`bInvertDroneManualCyclicPitch` / `bInvertDroneGimbalOnlyTilt`). **IMC에 Negate를
 > 추가·제거하면 둘 다 같이 뒤집어야 한다.** 상세는 드론 가이드 17절.
+>
+> **[2026-09-15 갱신] 드론 짐벌 각도는 이제 수평선 기준이다(2축 안정화).** 스틱으로 더하는
+> `GimbalPitchDeg`와 클램프 `Min/MaxGimbalPitchDegrees`(-80/45)는 기체 자세가 아니라 **수평선**
+> 기준 — 기체가 가감속으로 기울어도 카메라가 보던 방향이 유지된다. 요는 기체 헤딩을 따른다
+> (0 = 진행 방향). 롤은 리그에 본이 없어 상쇄 안 함. 상세는 드론 가이드 12.4절.
 
 바인딩은 `Atitan_examplePlayerController::SetupInputComponent`에서 하고(possess
 여부 무관하게 항상 활성 — UGV 수동조작과 같은 이유, 11.3절 참고), `Triggered`

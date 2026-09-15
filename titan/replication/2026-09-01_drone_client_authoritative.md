@@ -1,6 +1,18 @@
 # 드론 리플리케이션 — 클라이언트 권위 시뮬레이션
 
-2026-09-01 / 완료(2프로세스 실환경 검증 대기) / 새 드론(`ADronePawn`)은 서버가 아니라 자체방호축 클라이언트가 시뮬레이션한다. Chaos Resimulation은 RTSP 지연·UGV 거동 영향 때문에 기각.
+2026-09-01 / 완료(2 PC 실환경 검증 2026-09-15 완료) / 새 드론(`ADronePawn`)은 서버가 아니라 자체방호축 클라이언트가 시뮬레이션한다. Chaos Resimulation은 RTSP 지연·UGV 거동 영향 때문에 기각.
+
+> **2026-09-15 갱신** — 2대 PC 실환경 검증을 마쳤고, 그 과정에서 이 문서의 세 부분이 바뀌었다.
+> 상세는 `2026-09-15_drone_two_pc_validation.md`:
+> - **§3.1 판정 규칙 순서 변경**: 데모 검사가 자체방호 검사보다 **먼저** 온다(① 단독 → ② 데모면
+>   서버만 → ③ 풀이면 자체방호). 아래 §3.1 인용문의 "나중에 클라가 붙어도 판정이 갈리지 않는다"는
+>   코드가 그렇게 돼 있지 않아 실제로는 **둘 다 주체**가 됐었다.
+> - **§4 소유권 함정에 한 겹 더**: 폰은 Owner보다 Controller가 먼저다. 엔진 기본
+>   `AutoPossessAI=PlacedInWorld`로 AI 컨트롤러가 빙의해 있어서 `SetOwner`를 해줘도
+>   `Server_ReportState`가 로그 없이 전부 폐기됐다 → `AutoPossessAI=Disabled` +
+>   `GetNetConnection()` 오버라이드.
+> - **서버가 주체인 경우(데모)의 게시 경로 신설**: RPC 없이 Tick에서 Rep*에 직접 쓴다. 전엔 이
+>   경로가 없어 데모 서버에 붙은 클라 드론이 출발 위치에 굳었다.
 
 구 `AUAVPawn`의 리플리케이션(`replication_audit.md` §8 "UAV, 2026-08-13 구현 완료")은 서버
 권위였다. 새 드론은 조종 주체가 달라서 방향을 뒤집었다 — 이 문서는 그 결정 근거와 배선 기록.
@@ -168,10 +180,11 @@ PostLogin: 레벨에서 ADronePawn을 못 찾아 소유권을 못 넘겼습니�
 |---|---|
 | 단일 프로세스 시나리오 전체 흐름 | ✅ 확인 |
 | PIE 2클라이언트 | ✅ 확인 |
-| **2대 PC 실환경** | ❌ **미검증** |
+| **2대 PC 실환경 (풀 / 데모)** | ✅ **2026-09-15 확인** — 버그 3건 수정 후. `2026-09-15_drone_two_pc_validation.md` |
 
-2대 PC에서 확인할 것:
-- 트랜스폼 동기화 품질(`RemoteInterpSpeed` 튜닝 필요 여부)
-- `SetOwner` 타이밍 — 드론이 `PostLogin` 시점에 레벨에 이미 있는지
-- `OnRep_CommandedPath` / `OnRep_EngagementFocus` / `OnRep_DetectionPhase` 실제 전달
-- UGV축 화면에서 본 드론의 움직임이 자체방호축과 어긋나지 않는지
+2대 PC에서 확인한 것:
+- `SetOwner` 타이밍 — `PostLogin` 시점에 레벨에 있어서 정상 지정됨(로그 확인). 다만 소유권만으론
+  부족했다(AI 자동 빙의, 위 배너)
+- `OnRep_CommandedPath` 실제 전달 — 됨. 늦게 붙는 클라의 OnRep↔축 판정 레이스는 별도 보강
+- UGV축 화면의 드론이 자체방호축 조종을 따라감 — 서버 `Server_ReportState 수신 191회`
+- 남은 것: 트랜스폼 보간 품질(`RemoteInterpSpeed`) 튜닝 — 아직 문제 보고 없음

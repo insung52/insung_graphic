@@ -124,7 +124,7 @@ Input 탭 완료(`ui/ingame_settings_input_system.md`).
 지형/바위/나무/PCG 전체 재질별 피격 이펙트(파티클/사운드/데칼) 배선 완료. 상세:
 `sfx_vfx/hit_effects_update_2026-08-26.md`.
 
-## 9. 드론(UAV) 물리 재구현 + 교전 관측 이동 — 완료, 2프로세스 검증만 남음
+## 9. 드론(UAV) 물리 재구현 + 교전 관측 이동 — 완료, 2대 PC 실환경 검증 완료(2026-09-15)
 
 기존 운동학 근사 비행을 로터별 추력→토크→강체 운동 정통 모델로 전면 재구현
 (`ADronePawn`). **2026-09-01 기준 구 `BP_UAV` 대체 작업까지 전부 완료** — 구동계·수동 조종
@@ -136,9 +136,10 @@ Input 탭 완료(`ui/ingame_settings_input_system.md`).
 적 탐색 단계와 아군 집결 대기는 제거됨. `DT_ScenarioSteps_ThreeStage`에 `DroneSeeEnemies`/
 `DroneWideView` 행 신설.
 
-리플리케이션은 **클라이언트(자체방호축) 권위** — 조종 주체가 그쪽이기 때문. Chaos
-Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
-(`replication/2026-09-01_drone_client_authoritative.md`).
+리플리케이션은 **풀 시스템에선 클라이언트(자체방호축) 권위, 데모 모드에선 리슨서버 권위** —
+풀은 조종 주체가 클라라 지연 때문이고, 데모는 자체방호 클라가 없는 1 PC 구성이 정상이라서.
+주체는 접속 여부가 아니라 모드로 판정한다(핸드오버 회피). Chaos Resimulation은 RTSP 지연 +33ms와
+UGV 거동 변화 때문에 기각(`replication/2026-09-01_drone_client_authoritative.md`).
 
 **2026-09-03~05 — 교전 관측 이동 추가, 실동작 확인 완료.** 교전이 시작되면 드론이 **활성 경로
 스플라인 위에서 "전황을 가장 잘 보여주는 지점"으로 스스로 이동**한다(짐벌은 각도만 바꿀 뿐
@@ -161,12 +162,24 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
 시작"으로 오판해 이륙 단계로 들어가던 것)과, 교전 관측 중 수동을 껐다 켜면 **관측 상태를 잃고
 경로 끝까지 주행**하던 것.
 
-남은 것: **2대 PC 실환경 검증**, 그 후 구 `AUAVPawn`/`BP_UAV`와 폴백 분기 제거, 경로 고도
-상향(부감이 선호 범위 -45~-60°를 못 채움 — 교전 반경 R 대비 R×1.0~1.25 위가 기준), 도주 시작
-장면 프레이밍 개선(4단계 대상이 33개라 도주하는 적이 점으로 보임). 상세:
-`vehicle/drone/drone_flight_dev_guide.md`(레퍼런스),
-`vehicle/drone/2026-09-01_drone_replaces_bp_uav.md`·`2026-09-05_drone_engagement_observation.md`
-(작업 경과).
+**2026-09-15 — 짐벌 2축 안정화 + 2대 PC 실환경 검증 완료.** 짐벌 각도의 기준을 기체 → 수평
+프레임으로 바꿔 낙하산 순항 가감속 기울기가 카메라에 안 실린다(요·피치만, 롤은 리그에 본이
+없어 상쇄 안 함). 자동 추적 목표각을 같은 프레임으로 통일한 게 핵심. CineCamera 니어플레인이
+씬캡쳐(위젯/RTSP)에 복사 안 되던 것도 수정.
+
+2대 PC(서버=UGV축, 클라=자체방호축) 첫 실환경 검증에서 "전혀 리플리케이션 안 됨" → 버그 3건
+수정 후 풀/데모 양쪽 정상: (a) 데모 모드에서 서버·클라 **둘 다** 주체(판정 순서), (b) 풀
+시스템에서 `Server_ReportState`가 **로그 없이** 폐기 — 엔진 기본 `AutoPossessAI`로 AI 컨트롤러가
+빙의해 `APawn::GetNetConnection`이 null, `SetOwner`만으론 부족했음(`AutoPossessAI=Disabled` +
+`GetNetConnection` 오버라이드), (c) 서버가 주체일 때 Rep*를 아무도 안 채워 데모 클라 드론이
+출발점에 굳음(서버 Tick에서 직접 게시). 상세 `replication/2026-09-15_drone_two_pc_validation.md`.
+
+남은 것: 구 `AUAVPawn`/`BP_UAV`와 폴백 분기 제거, 경로 고도 상향(부감이 선호 범위 -45~-60°를
+못 채움 — 교전 반경 R 대비 R×1.0~1.25 위가 기준), 도주 시작 장면 프레이밍 개선(4단계 대상이
+33개라 도주하는 적이 점으로 보임), 원격 보간(`RemoteInterpSpeed`) 품질 튜닝(문제 보고 없음).
+상세: `vehicle/drone/drone_flight_dev_guide.md`(레퍼런스),
+`vehicle/drone/2026-09-01_drone_replaces_bp_uav.md`·`2026-09-05_drone_engagement_observation.md`·
+`2026-09-15_drone_gimbal_stabilization.md`(작업 경과).
 
 ## 10. 문서 관리 — 2026-08-31, 1단계 완료
 
@@ -187,8 +200,8 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
 - 자체방호축 PC 고정 IP 미확정(LIG 확인 필요).
 - `RC_MotionMode` 용도 불명(LIG도 "차후 논의", 급하지 않음).
 - 자율주행 목적지 명령(`HQ_MissionMoveToEngage`)이 LIG 정식 스펙 아님, 확정 대기 중.
-- 드론 2프로세스(2대 PC) 실환경 검증 대기 — 코드 완료, 단일 프로세스/PIE까지만 확인(§9).
-- 구 `AUAVPawn`/`BP_UAV` 및 시나리오 폴백 분기 제거 — 위 검증 후 착수(§9).
+- 구 `AUAVPawn`/`BP_UAV` 및 시나리오 폴백 분기 제거 — 2대 PC 검증(2026-09-15 완료)이 끝났으니
+  착수 가능(§9).
 - 살아있는 적이 이동 중 피격되면 몸이 회전하는 현상 — 재현 실패로 보류
   (`ai_combat/2026-09-01_enemy_spin_on_hit_investigation.md`).
 - 버스트 사격 중 사격선(아군 관통) 재검사 없음 — 사격 시작 시점에만 검사
