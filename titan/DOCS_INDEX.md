@@ -242,6 +242,10 @@
   주행/조준), 조이스틱 매핑, 탐지 bbox 색.
 - `2026-09-02_linux_package_ugv_host_rc_test_guide.md` — 위 문서들의 **내부용 상세판**. 패키징 절차,
   데모/풀 시스템 스위치 배경, 코드 근거, 로그 확인 포인트까지 포함.
+- `2026-09-15_new_laptop_linux_packaging_setup.md` — **빌드 PC 쪽 환경 구성.** 아무것도 안 깔린
+  머신에서 RTSP까지 살아있는 리눅스 패키지를 뽑기까지: 크로스컴파일 툴체인(v26_clang-20.1.8-rockylinux8),
+  Video Codec SDK 13.0.37(13.1.15 아님 — 드라이버 하한), Linux GStreamer/CUDA 벤더링 번들 생성
+  스크립트, Build.cs soft-fail 때문에 조용히 RTSP가 빠지는 걸 잡아내는 검증 절차.
 
 ## `infra_architecture/`
 
