@@ -26,8 +26,10 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 | 지금 뭘 해야 하나 | `CURRENT_STATE.md` |
 | 미해결 항목이 뭐가 있나 | `OPEN_ITEMS.md` |
 | 전체 설계가 궁금 | `design/2026-09-01_architecture.md` |
-| 애니메이션 작업 | `animation/` 명세 두 문서 **둘 다** + `animation/prototypes/` 에서 해당 주제 |
-| AI 작업 | **`ai/2026-09-13_perception_stack.md`** → **`ai/2026-09-13_engagement_and_cover.md`** → **`ai/2026-09-13_objective_and_position_cost.md`** → **★ `ai/2026-09-14_exposure_ladder_and_corrections.md`**(앞 둘의 후속·정정 — **값이 바뀜 자리는 이쪽이 최신이다**) → `ai/2026-09-13_ai_bridge_and_scene.md`. 계획 문서는 `ai/2026-09-02_upper_layer_plan.md`, **`ai/drafts/` 는 여전히 미반영이다** |
+| 애니메이션 작업 | `animation/` 명세 두 문서 **둘 다** + `animation/prototypes/` 에서 해당 주제. **머리 추종·1인칭 눈 정렬은 `animation/2026-09-14_sight_alignment_plan.md`**(0' 절이 최종 — 0~0.11 절은 열한 번 고친 기록, 어긋나면 0' 이 맞다. 원칙 P104~P113 · P119~P120). **메시 교체·무기 소켓·급선회·BF 머리 스케일·총내림 결론은 `animation/prototypes/2026-09-15_sharp_turn_pop_bf_head_scale_and_weapon_socket.md`**(원칙 P121~P126) |
+| 관전 · 1인칭 · 조작키 | `ai/2026-09-14_cover_frame_fix_and_observer.md` 0' 절(최종 상태) · 디자이너용 조작표는 `assets/2026-09-14_designer_guide_draft.md` 4.3절 |
+| AI 작업 | **`ai/2026-09-13_perception_stack.md`** → **`ai/2026-09-13_engagement_and_cover.md`** → **`ai/2026-09-13_objective_and_position_cost.md`** → **★ `ai/2026-09-14_exposure_ladder_and_corrections.md`**(앞 둘의 후속·정정 — **값이 바뀜 자리는 이쪽이 최신이다**) → **★ `ai/2026-09-14_cover_frame_fix_and_observer.md`**([C-95] 원인 = 높이 기준면 · 관전 폰 C++) → **★★ `ai/2026-09-14_danger_map_and_position_commitment.md`**(위험 지도 · 모든 눈 · 머무름 · 표적 잠금 — 14절 정정 필독) → **★★ `ai/2026-09-15_exposure_cycle_and_muzzle_learning.md`**(로그 실측 6라운드 · **노출 회계 사이클** · 실제 총구 · 포즈별 총구 학습 — **값이 바뀐 자리는 이쪽이 최신**, 원칙 P114~P118) → `ai/2026-09-13_ai_bridge_and_scene.md`(관전 폰 7절은 **폐기됨**). **체력·피격·사망은 `ai/2026-09-15_health_hit_death_implementation.md`**(조사·추천은 `ai/2026-09-14_hit_death_health_recommendation.md`, 원칙 P127~P129 — P121~P126 은 같은 날 급선회/총내림 세션 몫). 계획 문서는 `ai/2026-09-02_upper_layer_plan.md`, **`ai/drafts/` 는 여전히 미반영이다**(인지·위협평가 초안 — 피격/사망 추천 문서는 09-15 에 `ai/` 로 올라갔다) |
+| 체력 · 피격 · 사망 | `ai/2026-09-15_health_hit_death_implementation.md` 1절(컴포넌트 API) · 3절(데이터 흐름) → `IMPLEMENTED.md` 0 · 3 · 4절 |
 | 분대 작업 | `squad/drafts/` |
 | 엄폐 작업 | `cover/drafts/` |
 | 무기·투사체 작업 | `weapons/2026-09-12_projectile_port.md` → `IMPLEMENTED.md` 3.1절 |
@@ -198,7 +200,7 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 | P52 | **예고와 경고는 *확인한 뒤에* 한다. 가정에서 나온 경고는 받는 쪽의 순서와 설계를 왜곡한다** | 투사체 이식 전에 **"두 프로젝트의 콜리전 채널 인덱스가 충돌할 것"** 이라고 경고했다. 실제로 열어 보니 **`titan_example`은 커스텀 채널을 하나도 쓰지 않는다** — 충돌은 애초에 없었고, 우리 `Cover`/`Sight`는 GASP가 갖고 있던 채널 1~3 뒤에 그냥 이어 붙으면 됐다. **파일을 한 번 여는 것이 경고 한 줄보다 싸다.** 3.2절("추정과 사실을 섞지 않는다")의 실패 사례이고, P41("이름과 위치는 근거가 아니다")과 같은 계열이다 — 저쪽이 *추천*이라면 이쪽은 *경고*다 |
 | P53 | **⚠⚠ `ObjectTools.set_properties` 는 이 환경에서 *쓰기를 못 한다*. 읽기만 된다** | 2026-09-13에 **컴포넌트 템플릿 · 배치 인스턴스의 컴포넌트 · CDO** 전부에 대해, **float·FName·enum 을 가리지 않고** `false` 를 반환했다. 값이 안 들어갔는데 에러도 없다. **기본값을 바꿔야 하면 (가) 사용자가 에디터에서 직접 넣거나 (나) 그래프 편집으로 우회한다** — `GM_SoldierObserver` 가 `DefaultPawnClass` 대신 **`GetDefaultPawnClassForController` 오버라이드**를 쓰는 이유가 이것이다. `ai/2026-09-13_ai_bridge_and_scene.md` 7.1절 ★ **정정 (2026-09-13, 메시 교체 세션)**: **범위를 좁혀야 한다.** 같은 날 다른 세션에서 `set_properties` 가 **AnimGraph 노드의 `node.*`**(`TwoBoneIK_0.effectorTarget` · `LayeredBoneBlend_0.blendMode/blendMasks/layerSetup`)와 **AnimSequence 의 애디티브 프로퍼티**(`additiveAnimType` 등)에 대해 `true` 를 반환했고 **되읽기로 실제 반영을 확인**했다(그 뒤 PIE 거동도 바뀌었다). 못 쓰는 것으로 확인된 범위는 **컴포넌트 템플릿 · 배치 인스턴스의 컴포넌트 · CDO** 다. 즉 "이 환경에서 쓰기를 못 한다"가 아니라 **"컴포넌트/CDO 에는 못 쓴다"** 로 읽을 것 |
 | P54 | **`find_node_types` 는 `context_pins` 없이는 아무것도 주지 않는다** | 빈 결과를 **도구가 불안정한 것으로 오독했다.** 맞는 타입의 **출력 핀**을 넘기는 것이 컨텍스트 노드를 꺼내는 방법이다. "안 나온다"는 **없다는 뜻이 아니라 안 물어봤다는 뜻**이다 |
-| P55 | **발견되는 노드가 전부 생성되는 것은 아니다. 그리고 exec 입력 핀은 연결을 여러 개 받는다** | `CallFunction\|Shoot` 과 **다른 블루프린트의 변수 게터**는 `find_node_types` 에 나오지만 `create_node` 가 못 만든다. 우회는 **기존 호출 노드를 두 호출자가 공유**하는 것 — exec 입력은 다중 연결을 받으므로 새로 만들 필요가 없다. 그리고 **만들 수 없다는 사실이 설계를 바꾼다**: 라이플의 탄약을 캐릭터가 읽을 수 없으니 **무기가 밀어 넣는다** |
+| P55 | **발견되는 노드가 전부 생성되는 것은 아니다. 그리고 exec 입력 핀은 연결을 여러 개 받는다** | `CallFunction\|Shoot` 과 **다른 블루프린트의 변수 게터**는 `find_node_types` 에 나오지만 `create_node` 가 못 만든다. 우회는 **기존 호출 노드를 두 호출자가 공유**하는 것 — exec 입력은 다중 연결을 받으므로 새로 만들 필요가 없다. 그리고 **만들 수 없다는 사실이 설계를 바꾼다**: 라이플의 탄약을 캐릭터가 읽을 수 없으니 **무기가 밀어 넣는다**. ★ **정정 (2026-09-15)**: "다른 블루프린트의 변수 게터/세터를 못 만든다"는 **범위를 좁혀야 한다** — 최소한 **`Class\|<BP>\|Set<Var>` 형태의 세터는 `create_node` 로 만들어진다**(`Class\|SoldierCharacterABP\|SetLeftHandGripOffset`, `BP_SoldierCharacter` 에서 실측 · 6.1 참고). 못 만든 것은 09-13 의 `Variables\|...\|Get` 형 게터였고, 세터까지 같은 판정으로 묶은 것이 틀렸다 |
 | P56 | **`get_node_type_pins` 는 트랜지언트 노드를 만들고 호출이 끝나면 부순다 — 반환된 참조를 재사용하지 말 것** | 재사용은 **조용히 실패하고 끊긴 가지를 남긴다.** 증상은 엉뚱한 곳에서 터지는 컴파일 ICE (`SetVariableOnPersistentFrame - No property found. Delta Seconds`) — **에러 메시지가 가리키는 곳에 원인이 없다** |
 | P57 | **`UCLASS()` 매크로와 클래스 선언 사이에 아무것도 끼우지 말 것** | UHT가 매크로를 **끼어든 쪽에** 적용한다 → `Found ';' when expecting '{'`. 주석 블록을 옮기다 만난다 |
 | P58 | **같은 이름의 함수가 두 클래스에 있으면 `declaring_class` 로 못박는다** | `Pawn\|GetControlRotation` 은 **APawn 에도 AController 에도** 있다. `create_node` 는 Controller 쪽을 고르고 블루프린트는 `This blueprint (self) is not a Controller` 로 죽는다. P47과 같은 계열 — **보고된 이름이 곧 대상은 아니다** |
@@ -243,6 +245,33 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
 | **P102** | **플러그인을 이름으로 수작업 검색해 켤 때는 켠 목록을 원본과 대조한다** | UE 에는 `MovieSceneAnimMixer`/`MovieScenePoseSearchTracks`, `StateTree`/`GameplayStateTree`/`StateTreeToolset` 처럼 **접두가 겹치는 형제 플러그인**이 많다. 2026-09-14 이관에서 21개를 수작업으로 켜며 **1건을 오인**했다(`MovieScenePoseSearchTracks`). **잘못 켜도 에러가 나지 않아** 발견되지 않는다 — 안 쓰는 모듈이 하나 더 로드될 뿐이다. 대조는 `.uproject` 두 개의 `Plugins` 집합 차집합으로 끝난다 |
 | **P101** | **이관 규모를 `get_dependencies` 재귀로 재지 않는다 — 소프트/클래스 참조를 빠뜨린다** | 2026-09-14 에 그 방법으로 934개/920 MB 로 예측한 이관이 실제로는 **3622개/5.5 GB** 였다. 같은 시점 바이트 스캔은 3613개로 거의 맞혔는데 "과다 보고"로 치부해 버렸다 — **과다 보고는 하지만 누락은 하지 않는다.** 두 방법이 크게 어긋나면 **큰 쪽을 믿고**, 확정은 **Migrate 확인 대화상자의 파일 목록**으로 한다. `migration/2026-09-14_titan_example_migration.md` 4.2a |
 | **P100** | **없는 모듈을 참조하는 에셋은, 모듈을 들여와 고치지 않고 참조를 끊어 고친다** | 이식으로 딸려온 참조는 *기능이 필요해서* 가 아니라 *에셋이 그 자리에 있었기 때문에* 생긴다. `AN_PlayWeaponMontage` 하나가 `/Script/LyraGame`(= GAS 기반 프레임워크 한 벌)을 요구했는데, 그 노티파이가 하려던 일(무기 메시 몽타주)은 **`SK_AR4_X` 에 ABP 가 없어 애초에 동작할 수 없었다.** 되물을 질문은 "그 기능을 우리가 쓰고 있었나" 다. `migration/2026-09-14_titan_example_migration.md` 3.4 |
+| **P103** | **AI 층의 높이는 전부 *발*에서 잰다 — `USoldierIdentityComponent::GetFeetLocation()` 위에 더한다. 액터 원점은 기준면이 아니다** (같은 날 P100 으로 등록됐다가 이관 세션의 P100 과 충돌해 개명) | 원점은 캡슐 중심(선 채 +90, 웅크리면 +40)이고 네비메시 후보는 지면이다. 엄폐가 후보는 발로, 서 있는 자리는 원점으로 재서 **같은 담이 후보일 땐 가리고 도착하면 안 가렸다** — [C-95] "수비수가 정착 못 함"의 원인이자, 총구가 웅크리면 45 cm 로 떨어지던 원인. 두 라운드의 추측이 빗나간 것은 **자를 의심하지 않아서**다. 그리고 **기록 위치(spine_03·총구)는 이미 가슴 높이**라 그 위에 또 가슴 높이를 더하면 안 된다. `ai/2026-09-14_cover_frame_fix_and_observer.md` 1절 |
+| **P104** | **조준은 `Controller->GetControlRotation()` 으로 읽는다. `APawn::GetBaseAimRotation()` 은 카메라 매니저의 *뷰* 회전이다** | 3인칭에선 뷰 = 마우스라 구분이 안 나지만, 1인칭에서 뷰 = 머리 소켓이 되는 순간 **머리가 자기 자신을 목표로 삼는 되먹임 루프**가 됐다 — 마우스와 끊기고 몸이 끌 때만 돌았다. `animation/2026-09-14_sight_alignment_plan.md` · `ai/2026-09-14_cover_frame_fix_and_observer.md` 3d절 |
+| **P105** | **본을 조준에 맞출 때 Modify Bone `Replace` 는 답이 아니다 — 애니메이션의 그 본 회전(린 롤·블라인드파이어·걸음 흔들림)을 통째로 지운다. 답은 총구 보정(2.5c)과 같은 *닫힌 루프 + 월드 Additive*** | "정확히 정렬"과 "스타일을 남김"은 같은 자유도를 두고 싸운다. 지난 프레임 최종 포즈의 실제 방향과 목표의 오차를 게인만큼만 **더해** 누적하면, 느린 오차(AO 잔여·조준)는 잡히고 빠른 흔들림은 통과하고 롤은 손대지 않는다. 눈 *위치*도 같은 루프로 **목 굽힘**(레버 직교 성분의 각도)으로 푼다 — 머리 본 이동은 목에서 떨어져 "띠용띠용" 거린다. 정확히 정렬돼야 하는 것은 점이 아니라 **선** — 목표를 조준선 위 최근접점으로 두면 레버가 못 가는 방향의 잔여가 사라진다 |
+| **P106** | **swing 을 쿼터니언으로 누적하면 twist(롤)가 부산물로 생긴다. 시선축 twist 를 매 프레임 `ToSwingTwist` 로 떼어내라** | 서로 다른 축의 yaw·pitch 회전을 연달아 곱하면 시선축 둘레 비틀림이 남고, 그 롤은 측정에서 빼놓았으니 **영영 원복이 안 된다** — 1인칭에서 좌우로 돌릴수록 머리가 기울어 갔다. 오차는 `FindBetweenNormals`(순수 swing)로, 누적값은 애니메이션 시선축 기준 twist 제거로 |
+| **P107** | **GASP 의 `GameplayCamera` 컴포넌트는 `Deactivate()` 하지 말 것. 다른 시점이 필요하면 뷰타겟만 바꿔라** | 자체 카메라 시스템(평가 컨텍스트·호스트)을 갖고 있어 재활성화가 원상태로 안 돌아온다(머리 위에 떠 있는 채로 복귀). 별도 뷰타겟 액터의 `CalcCamera` 로 시점을 만들고 `SetViewTarget` 으로 오가면 GASP 카메라는 계속 평가되므로 **떠난 적 없는 상태로** 돌아온다. `CalcCamera` 는 그 프레임 애니메이션 확정 후 불리므로 본↔눈 틱 순서 지연도 없다 |
+| **P108** | **애님 그래프 노드의 프로퍼티(`Node.boneToModify`·`rotationMode`·`rotationSpace`)는 `set_properties` 로 못 쓴다 — 점 경로·중첩 객체·PascalCase 전부 `false`** (P53 재확인) | 노드 생성·핀 연결·변수 추가·컴파일·저장은 전부 도구로 되고 **세 필드만 사용자가 에디터에서** 넣는다. 배선을 다 해 두고 "어느 노드의 어느 필드를 무엇으로"만 표로 넘기면 1분이다. 2026-09-14 저녁 Modify Bone 3개에서 반복 |
+| **P109** | ★ **몸 기준으로 클램프한 델타를 되돌릴 때는 몸의 *모든* 축에 더한다 — 기준을 피치 없는 캡슐에서 피치 있는 본으로 바꾸는 순간, 옛 재조립 수식이 버그가 된다** | `FRotator(Delta.Pitch, Body.Yaw + Delta.Yaw, 0)` — 야우만 몸에 더하고 피치는 델타 그대로. 캡슐(피치 0)일 땐 맞았고, 척추 본(급선회 시 −20° 숙임)으로 바꾸자 머리 목표가 조준보다 **정확히 상체가 숙인 만큼 위**로 갔다. 그 위아래 왕복이 "용수철"이었고, **같은 날 세 차례(가중치·래치·프레임 이전)가 이 한 줄을 가리는 데 쓰였다.** 증상이 "기준을 바꾼 뒤" 생겼으면 기준을 쓰는 모든 수식을 먼저 훑을 것. `animation/2026-09-14_sight_alignment_plan.md` 0.10절 |
+| **P110** | **몸에 대한 보정은 몸 프레임에 저장한다 — 월드에 두면 몸이 돌 때 피치가 롤이 된다** | "턱 아래로 15°" 를 월드 축으로 들고 있으면 몸이 90° 돌자마자 몸 기준 롤이 된다. 루프가 다시 잡기 전까지 목이 옆으로 꺾인다. 프레임 사이엔 몸 프레임(`q_local`), 틱 시작에 `M·q_local·M⁻¹`, 끝에 되돌림. 머리 회전·목 굽힘·스트레치·학습된 조준선 넷 다. 같은 문서 0.8·0.9절 |
+| **P111** | **`OffsetRootBone` 은 루트 *본*을 돌린다 — 메시 컴포넌트 회전은 캡슐과 같다. "몸 방향" 은 척추 본(`spine_03`)의 실제 회전 × 레퍼런스 상대회전으로 읽는다** | 급선회 시 GASP 가 메시를 캡슐에서 최대 90° 벗어나게 두는데, 그건 컴포넌트가 아니라 루트 본이다. `GetComponentQuat()` 로 "메시 facing" 을 잡은 8차는 캡슐과 같은 값이라 아무것도 안 고쳤다. 목 클램프(±75)를 캡슐 기준으로 재면 척추 기준 160° 를 요구한다. 같은 문서 0.9절 |
+| **P112** | **방향을 유지한 채 위치를 회전만으로 맞추면, 도달 영역은 피벗 반지름의 구면이다 — 스트레치 없는 IK 의 한계** | 머리 시선을 조준선과 평행하게 잡아둔 채 목을 굽히면 머리 회전분이 상쇄돼 눈은 **목 길이(~10 cm) 반지름 구면** 위에서만 움직인다(60° 에 5 cm). 실측 `bend=60/60 · eye-res=2.7cm`. 회전 상한을 올려도 안 되고 **이동(스트레치)** 이거나 **목표를 눈 가까이(포즈·조준경 높이)** 가져와야 한다. 같은 문서 0.5절 · [W49] |
+| **P113** | **이진 게이트는 켜지는 프레임이 보인다 — 진입은 물리량으로 연속 가중치, 유지는 래치** | "총이 조준선 8° 안" 스위치는 어디 두든 그 프레임에 머리가 출발하는 게 보였다. 정렬 가중치를 각도의 smoothstep(**올라오기 시작하는 35° 부터**, 마지막 몇 도만 열면 0.1 s 라 여전히 스위치)으로 두면 총과 같은 리듬으로 붙는다. 붙은 뒤 잠깐 벗어나는 것(급선회 dip·반동)은 가중치가 다시 떨어지면 왕복이 되므로 **래치**(0.5 s 무시)로 유지한다. 가중치는 출력에 곱하지 말고 **목표를 블렌드**한다 — 출력에 곱하면 닫힌 루프가 감아올린다(P36 계열). 같은 문서 0.7·0.9절 |
+| **P114** | **예산은 속도지 허가가 아니다 — 예산 루프에는 "최소 한 개"의 하한을 둔다** | 엄폐 후보 하나가 눈 3명일 때 37발인데 틱 예산이 36이라 `while (Budget >= SamplesPerCandidate)`가 **한 번도 참이 안 됐다.** 후보 0개 평가 · 스윕 0회 · `[Cover] sweep` 로그 0줄 · 병사 전원 부동 — 그런데 적이 2명일 땐 멀쩡히 돌았다. 오버레이의 `cand 0 (fan 0)`이 서명. `Budget = max(MaxTracesPerTick, SamplesPerCandidate)`. P69("0 비용 반복은 횟수로 막는다")의 반대편 실수 — 저쪽은 안 멈추는 루프, 이쪽은 **안 시작하는** 루프. `ai/2026-09-15_exposure_cycle_and_muzzle_learning.md` 1절 |
+| **P115** | **자를 상수로 두지 말고 몸에서 잰다. 그리고 판정 높이는 "누가 무엇을 보나"별로 다르다** | 가슴 소켓이 상수 135가 아니라 **96~105 cm**, 웅크림은 80이 아니라 **50~57**, 눈은 160이 아니라 **140~150**이었다. 40 cm 틀린 자로 1 m 담이 전부 "숨지만 못 쏨"으로 읽혔다. 재는 법은 P77(메시별 실측)과 같되 **런타임에 축 양 끝에서 자동으로**(`ObserveStance`·`ObservePose`). 그리고 질문이 둘이다 — 적이 시험하는 건 **내 가슴**(숨었나), 내가 시험하는 건 **내 눈·총구 중 낮은 쪽**(쏠 수 있나). 눈으로만 재니 총구가 못 넘는 담을 사격 위치로 골라 `blocked` 30 s. 같은 문서 2·4절 |
+| **P116** | **격자 기억은 실시간 트레이스를 덮지 못한다 — 눈이 있으면 기억은 물러난다** | 위험 지도가 2 m 격자라 "상자 뒤"와 "상자 옆"이 같은 칸. 다른 각도에서 한 번 공터로 찍히면 30 s간 그 칸의 **엄폐까지** 0.55~0.8 벌점 → 공격수가 7 m 앞 엄폐를 못 갔다(이득 0.43). 실시간 스윕이 정확한데 기억이 이겼다. 자리의 공터 기억은 **눈이 0일 때만** 적용. 기억은 잊은 것을 채우는 것이지 보고 있는 것을 고치는 것이 아니다. 같은 문서 5절 |
+| **P117** | **보이는 것의 값은 쏘는 총에 비례한다 — 눈이 아니라 총이 위험이다** | 건너는 위험이 "적 눈에 보이나"로만 매겨져 총성이 멎어도 비용이 그대로였고, 기억 속 적은 20 s 넘게 남으니 **소강 상태에 아무도 안 움직였다.** 사람은 "사격 멎었다, 지금 뛰어"를 한다. 기록에 마지막 총성 시각을 두고 눈마다 활동도(최근 3 s 1.0 → 5 s에 걸쳐 0.3)를 곱한다 — 실시간 노출과 "보였던 기억"에만. **총알이 지나간 기억과 공터에 서 있는 값은 그대로**(그건 총이 아니라 땅의 사실). 같은 문서 5절 |
+| **P118** | ★ **노출은 회계다. 엄폐↔사격 사이클은 규칙이 아니라 계정 잔고에서 나온다 — 그리고 매 틱 사선을 다시 물어 자세를 정하면 담 꼭대기가 진동 축이 된다** | 있던 것은 사이클이 아니라 **래치**(Over가 stance 0, 되돌리는 건 제압 0.45뿐). 사용자가 본 "몸이 왔다갔다"는 리듬이 아니라 **버그**였다 — 숙임→막힘→Over(일어서라)→일어서면 Direct가 뚫림→Direct는 자세를 안 건드려 엄폐의 "숙여라"가 이김→내려감→막힘→… 해법은 "N초 쏘고 M초 숨어라"가 아니라 **양 하나**: 몸이 보이면 오르고(속도 ∝ 표적 활동도×(1+제압)) 숨으면 내리는 `ExposureAccount`, 낮으면 내밀고 높으면 숨는 히스테리시스, **내미는 동안은 자세를 다시 묻지 않는다.** 시간상수는 물리 — 적이 나타난 몸에 총을 정착시키는 시간 / 적의 내 위치 기억이 낡는 시간. 제압도(P36 계열의 인과·연속 모델링)와 같은 꼴이고 P89(규칙이 아니라 선호)의 시간 축 판본. 같은 문서 6절 |
+| **P119** | **GASP 의 회전은 CMC 플래그다 — idle 비조준에서 캡슐은 아무도 안 쓰니 우리가 돌려도 되고, 이동 입력이 오면 물러난다** | `UpdateRotation_PreCMC` 실측: GASP 는 액터 회전을 직접 쓰지 않는다. 조준/스트레이프 = `bUseControllerDesiredRotation`(RotationRate −1, 즉시), 그 외 = `bOrientRotationToMovement`(**가속이 있을 때만** 회전). 그래서 비조준 idle 에서 `SetActorRotation` 으로 캡슐 yaw 만 돌리면 CMC 가 되돌리지 않고, 메시는 OffsetRootBone 이 붙잡고 MM 이 turn-in-place 를 고른다 — 조준 모드에서 마우스를 홱 돌릴 때와 **같은 경로**라 애니메이션·그래프 작업이 0 이다. 조건에 "정지(가속 0)" 를 넣으면 WASD 가 들어오는 순간 CMC 에 자리를 내준다. `animation/2026-09-14_sight_alignment_plan.md` 0.11절 |
+| **P120** | **GASP Strafe/Aim 은 회전 모드이자 견착 상태다 — 몸만 돌리려고 켜면 총도 올라온다** | `WantsToStrafe` 를 켜서 turn-in-place 를 얻으려 했더니 우클릭 없이 항상 조준 자세가 됐다. GASP 에서 "카메라를 따라 몸이 도는 것" 과 "총을 견착한 것" 은 같은 입력 상태 한 비트에서 갈라진다. 몸 회전만 원하면 P119 의 캡슐 회전. 같은 문서 0.11절 |
+| **P121** | **`ModifyBone` 의 스케일 Replace 를 `BCS_BoneSpace` 로 걸면 *no-op* 다 — 스케일을 강제로 되돌리려면 `BCS_ComponentSpace`** | 본 자기 기준 공간에서 스케일 (1,1,1) 은 항등이라, 변환해 들어가 항등을 곱하고 그대로 나온다. 에러도 경고도 없고 "안 바뀐다"만 보인다. 2026-09-15 BF 머리 부풀기(P122)를 상쇄하려다 BoneSpace 로 한 번 헛돌았다. **컴포넌트 공간으로 걸면 한 번에 됐다.** 회전/이동 Additive 는 BoneSpace 가 뜻이 있지만 **스케일 Replace 는 그렇지 않다** — 기준 공간이 곧 값의 의미인 프로퍼티는 공간부터 묻는다. `animation/prototypes/2026-09-15_sharp_turn_pop_bf_head_scale_and_weapon_socket.md` 2절 |
+| **P122** | **시퀀서 Bake Animation Sequence 는 *포스트프로세스 ABP 결과까지* 굽는다 — 마네킹으로 베이크하기 전에 메시 컴포넌트의 `Disable Post Process Blueprint` 를 켠다** | `ABP_UEFN_Mannequin_PostProcess` 가 head 1.15 · thigh 1.12 를 Replace 하는데, 그 결과가 BF 포즈 3장에 들어갔다. 기준 클립(`MM_Rifle_Idle_ADS` f0)은 1.0 이라 **메시 공간 애디티브 델타에 head ×1.15 가 남았고**, 마네킹에선 PP 가 뒤에서 다시 덮어 **안 보이다가** PP 없는 `soldier_T`/`new_enemy_T` 에서 머리가 커졌다. P80("베이크는 마네킹으로")의 짝 — 마네킹으로 하되 **PP 는 끈다.** 이미 구운 클립은 [W65], 지금은 `ModifyBone_8` 로 상쇄 중(`IMPLEMENTED.md` 2.5e-7) |
+| **P123** | **메시 공간 애디티브는 *작은 델타*일 때만 다른 베이스 위에서 자연스럽다 — 베이스가 다른 포즈를 델타로 옮기려 하지 말 것** | 총내림을 두 번 시험했다(09-13 메시 공간 · 09-15 로컬 공간) — 둘 다 걷기 위에서 팔이 깨졌다. 되는 것은 힙파이어 델타 `AO_CD − AO_CC` 인데 **어깨 피치뿐이고 팔꿈치/손은 ≈ 항등**이라서다. 저작 포즈(팔꿈치·손까지 바뀜)는 어느 공간에서 빼도 "idle 기준 델타" 라 로코모션 베이스와 합성되면 두 포즈의 차이가 팔에 그대로 얹힌다. **이동 중 총내림은 총 내린 로코모션 클립 없이는 델타뿐이고, 델타는 작을 때만 자연스럽다** → 답은 그래프가 아니라 **클립 요청**([W66]). 6.3.4("시작 포즈는 정확성에 무관")는 *기준 위에 다시 얹을 때* 얘기다 — 다른 베이스 위에서는 성립하지 않는다. 같은 문서 5절 |
+| **P124** | **증상 대책으로 넣은 값은, 뒤에 들어온 다른 대책이 그 증상을 이미 막고 있는지 *다시 확인하고 걷어낸다* — 값 하나가 다른 경로에서 부작용을 낸다** | `OffsetRootBone.maxRotationError` 를 09-11 에 조준 중 뒤집힘 대책으로 −1 → 90 으로 넣었다. 09-12 에 유한 몸통 각속도(2.5d)가 들어와 **그 증상을 이미 막았는데 90 은 남았고**, 비조준 경로(캡슐 즉시 회전)에서만 **메시–캡슐 각도차가 90 을 넘는 순간 스냅**을 냈다. −1 로 되돌리자 스냅이 사라지고 뒤집힘도 재발하지 않았다 — 즉 90 은 그 시점에 이미 죽은 값이었다([C-80]). P36("패치는 원인을 찾은 뒤 걷어낸다")의 시간 축 판본 — 걷어낼 시점은 *원인을 찾았을 때*뿐 아니라 **다른 대책이 들어왔을 때**도다. 결합 쌍([C-74])을 적어 둔 것이 여기서 값을 했다 — 하나를 바꾸면 쌍을 다시 본다. 같은 문서 1절 |
+| **P125** | **같은 ABP 를 두 세션이 동시에 편집할 때는 남의 노드에 얹지 말고 *자기 노드*를 만든다** | 09-15 에 머리 추종 세션(`ModifyBone_6/7/9`, 회전 Additive)과 애니메이션 세션(head 스케일)이 `SoldierCharacter_ABP` 를 동시에 열고 있었다. 처음에 `ModifyBone_7`(남의 것) 에 스케일을 얹었다가 원복하고 `_8` 을 따로 썼다. 한 노드의 프로퍼티를 두 세션이 나눠 쓰면 **한쪽의 되읽기가 다른 쪽의 쓰기를 덮고**, 문서에는 "누가 이 값을 넣었나"가 안 남는다. 노드 하나 = 기능 하나 = 세션 하나. 그리고 남이 "삭제 권고"로 적어 둔 노드([W54])를 재사용했으면 **그 항목을 철회해 둔다** — 안 그러면 다음 사람이 지운다 |
+| **P126** | **GASP 게임모드는 `DefaultPawnClass` 가 아니라 `PawnClasses_Soft[0]` 을 스폰한다 — `GetDefaultPawnClassForController` 오버라이드가 `DefaultPawnClass` 를 폴백으로 밀어낸다** | `GM_SoldierLab` 의 `PawnClasses_Soft` 를 [W36] 에서 "비웠다"고 적었는데 **실제로 안 비워져 있었고**(`[BP_SoldierCharacter, SandboxCharacter_CMC, SandboxCharacter_Mover]`), 그래서 `DefaultPawnClass` 를 바꿔도 0번이 스폰됐다. "누구로 들어갈지는 Default Pawn Class 로 고른다"는 안내(디자이너 가이드 4.2)는 이 배열이 비어 있을 때만 맞다. 사용자가 09-15 에 고침(비움/교체 방식 미확인 [C]). P53 의 `GM_SoldierObserver` 가 같은 오버라이드를 쓰는 이유가 이것이기도 하다 — **GASP GM 을 복제했으면 `PawnClasses_Soft` 부터 본다** |
+| **P127** | **BP 의 컴포넌트 템플릿은 C++ CDO 의 배열 기본값을 물려받지 않는다 — 생성자에서 `RF_ClassDefaultObject` 가드 안에 넣은 기본값은 템플릿에 없다. 기본값은 무조건 채우거나 템플릿에 직접 쓴다** | 2026-09-15 `USoldierHealthComponent`: `BodyParts`(무조건 채움)는 `BP_SoldierCharacter_C:AC_SoldierHealth_GEN_VARIABLE` 에 들어왔는데, `HasAnyFlags(RF_ClassDefaultObject)` 가드 안에서 `FObjectFinder` 로 채운 **몽타주 배열 19개는 전부 비어** 있었다 — 템플릿은 자기 생성자로 새로 만들어지는 객체라 가드가 막고, CDO 값을 복사해 오지도 않는다(관측 [A], 엔진 소스 미확인). 가드를 빼면 해결(다음 빌드). 그때까지는 `set_properties` 로 템플릿에 직접 썼다(P128). `ai/2026-09-15_health_hit_death_implementation.md` 5.1절 |
+| **P128** | **P53 정정 #2 — `ObjectTools.set_properties` 는 컴포넌트 템플릿에 *쓸 수 있다*(오브젝트 참조 배열 · bool, 2026-09-15 실측). "컴포넌트 템플릿에 못 쓴다"는 일반 명제가 아니다. 다만 *자식 BP 의 상속 컴포넌트 오버라이드*는 여전히 못 쓴다 — 쓰면 부모 템플릿에 들어간다** | `BP_SoldierCharacter_C:AC_SoldierHealth_GEN_VARIABLE` 에 `TArray<TObjectPtr<UAnimMontage>>` 19개(중첩 구조체 `HitReactFront.Light` 포함)와 `bool` 이 `true` 로 들어가 되읽기·PIE 로 확인됐다. 09-13 에 실패한 것은 float·FName·enum 이었으니 **타입이나 대상에 따라 갈리는 것**으로 보인다 [B] — 쓰고 나서 **반드시 되읽는다**(P53 원문의 "에러 없이 안 들어간다"는 그대로 유효). 자식 BP `BP_Soldier_Friendly` 의 `AC_SoldierHealth.bInvincible` 을 쓰자 **부모 템플릿이 바뀌어 전원 무적**이 됐고 되돌렸다 — 자식 오버라이드는 사용자가 에디터에서. 같은 문서 5.2절 |
+| **P129** | **`Math\|Boolean\|ANDBoolean` · `NOTBoolean` 은 `create_node` 로 만들어진다 — P33·P91 의 "산술 노드가 안 만들어진다"는 *산술*에 한한 얘기다** | 2026-09-15 `BP_SoldierCharacter` Tick 의 총구 보정 게이트를 `AND(InRange, NOT(AC_SoldierHealth.IsHitReacting))` 로 바꾸며 둘 다 생성·연결·컴파일 통과. 컴포넌트 함수 노드(`SoldierLab\|Health\|IsHitReacting`)는 `declaring_class = /Script/SoldierLab.SoldierHealthComponent` 를 명시할 것(P58). 컴포넌트 게터는 `Variables\|Default\|GetACSoldierHealth`(카테고리를 안 붙였으니 `Default` — P60). 같은 문서 2.2절 |
 | **P99** | **두 프로젝트를 합칠 때는 빌드하기 전에 심볼을 대조한다** | 이식으로 생긴 코드는 **원본과 이름을 공유한 채로** 돌아오고, 각자의 프로젝트 안에서는 완벽히 정상이다. 대조 셋 — ① `IMPLEMENT_PRIMARY_GAME_MODULE` ② `UCLASS`/`USTRUCT`/`UENUM` 이름(**모듈이 달라도 전역 유일**) ③ 콘솔 변수 이름. 2026-09-14 SoldierLab→titan_example 편입에서 **셋 다 걸렸다.** ③은 컴파일이 아니라 **에디터가 안 뜨는 것**으로 나타난다. UENUM/USTRUCT 개명은 `[CoreRedirects]` 없이 하면 저장된 BP 프로퍼티가 타입을 잃는다. `migration/2026-09-14_titan_example_migration.md` 3.1 |
 | **P98** | **폴더 크기는 상한이지 이관 비용이 아니다 — 폐포를 재기 전에 숫자를 말하지 않는다** | `UEFN_Mannequin/Animations` 가 2.7 GB 라서 "3 GB 를 얹을 것인가"를 사용자 결정 항목([Q43])으로 올렸는데, 실제 참조 폐포는 **524 MB** 였고 전체 이관량은 **922 MB** 였다. `Migrate` 는 폴더가 아니라 **참조된 것만** 가져간다. `AssetTools.get_dependencies` 를 재귀로 돌리면 에디터를 열지 않고도 정확히 나온다. `migration/2026-09-14_titan_example_migration.md` 4절 |
 | **P97** | **에셋을 복제하는 것과 의존을 끊는 것은 다른 일이다** | 나이아가라 시스템을 복사해도 **이미터·머티리얼·메시는 원본을 그대로 가리킨다** — `SoldierLab` 사본과 `NiagaraExamples` 원본의 의존성 목록이 **110개로 완전히 동일**했다. 머티리얼 인스턴스·블루프린트도 같다. **컨테이너를 복사하면 껍데기만 우리 것이 된다.** 재귀 폐포로 확인하기 전에는 "우리 폴더로 가져왔다"고 말할 수 없다. `migration/2026-09-14_asset_cleanup.md` 2.5a |
@@ -334,6 +363,18 @@ UE5.8, GASP 기반)에서 진행하는 고사실감 병사 AI/애니메이션 R&
   바꿔도 저장 전에는 옛 참조가 나온다. 에디터의 애니메이션 선택창 필터도 같은 레지스트리를 본다 (2026-09-13)
 - `BlueprintTools.create(folder_path, asset_name, asset_type)` 가 **존재한다** — 위 "AssetTools 에 생성 함수가 없다"의 보완.
   무엇을 만들 수 있는지는 미검증 [C] (2026-09-13)
+- ★ **`ActorTools.add_component` 는 블루프린트 *에셋*을 owner 로 받아 SCS 컴포넌트를 추가한다** (2026-09-15).
+  `BP_SoldierCharacter` 에 `AC_SoldierHealth`(`USoldierHealthComponent`)를 이걸로 넣었고, 템플릿
+  `BP_SoldierCharacter_C:AC_SoldierHealth_GEN_VARIABLE` 이 생겨 `set_properties` 로 값을 쓸 수 있었다(P128).
+  ⚠ 새 `UCLASS` 는 에디터를 닫고 빌드한 뒤라야 `search_subclasses` 에 나온다(P13) — 안 나오면 add_component 도 실패한다
+- ★ **다른 블루프린트의 변수 *세터*는 `Class|<BP>|Set<Var>` 로 `create_node` 가 만든다** (2026-09-15, P55 정정).
+  `BP_SoldierCharacter` EventGraph 에서 `Class|SoldierCharacterABP|SetLeftHandGripOffset` 를 만들어 Cast 결과를 Target 에 물렸다
+  (`K2Node_VariableSet_16`). 09-13 에 "다른 BP 의 변수 게터를 못 만든다"에서 세터까지 묶어 판정한 것이 틀렸다.
+  게터 쪽(`Variables|...|Get`)이 여전히 안 되는지는 재확인 안 함 [C]
+- ★ **`find_node_types` 는 네이티브(C++) 프로퍼티 게터도 낸다** — `Variables|Character|GetMesh` 처럼 `Variables|<네이티브 클래스>|Get<Prop>`
+  형태로 잡히고 `create_node` 로 만들어진다(`K2Node_VariableGet_32`, 2026-09-15). "변수" 가 BP 변수만이 아니다 — `Mesh` · `CharacterMovement`
+  같은 컴포넌트 프로퍼티는 이 경로로 꺼낸다. 소켓 기준 로컬 위치는 `GetSocketTransform(RTS_World)` +
+  `InverseTransformLocation` 조합(`K2Node_CallFunction_71~74`)으로 얻었다 — 정확한 `type_id` 는 `find_node_types` 로 다시 뽑을 것
 - ⚠⚠ **`EditorAppToolset.StartPIE` 를 쓰지 말 것** — 컴파일 에러 모달에 걸려 서버가 응답 불능이 된다 → **P79**
 - ★ 반대로 **컨트롤 리그 에셋은 블루프린트로 열린다** — `BlueprintTools.list_variables` ·
   `list_graphs`가 그대로 동작한다. 리그의 IK/FK 모드 변수를 이걸로 찾았다 (**P43**, 6.3절)
@@ -652,6 +693,44 @@ slomo 1                                            원복
 재선택되고 있으면 그것은 곧 이동 속도 불일치다** (P30·P31). 소스는
 `AnimNode_MotionMatching.cpp:121-139` · `AnimNode_OrientationWarping.cpp:20-32` ·
 `AnimNode_FootPlacement.cpp:20-24`.
+
+### 6.2c ★ 자작 디버그 CVar 와 조작키 (2026-09-14 저녁 기준)
+
+```
+AI 전투 (Source/SoldierLab/AI/)
+SoldierLab.Debug.Cover 1            엄폐 후보(주황=부채꼴 · 회색=링)·눈(빨강)·신체/경로 표본 + 2줄:
+                                      exp st hide/OPEN +fight/+BLIND | HERE f o d s =tot | eyes N act X (name Xm)
+                                      #N best f r o d =tot @Xm cand N (fan M) -> stay|MOVE|MOVING|discard +m.. dwell ..s (moving)
+                                    (f 싸움 / r 길 / o 목표 / d 기억 / s 제압 · 2줄째는 마지막 완료 스윕의 래치)
+SoldierLab.Debug.Cover.Log 1        스윕마다 LogSoldierAI 1줄 `[Cover] …` — MCP LogsToolset 으로 읽어 병사별 시간순 표를 만든다 (2026-09-15)
+SoldierLab.Debug.Engagement 1       실제 총구 소켓에서 사선·조리개/자세·방아쇠 숫자 + 2줄째
+                                      tgt <name> aimErr .. c .. switches N (..s ago) acct 0.xx PEEK|PEEK(look)|hidden
+SoldierLab.Debug.Engagement.Log 1   사격 의도가 바뀔 때만 `[Engage] … believed worth aperture onTarget reloading ammo … peek obs acct act` — "왜 안 쏘나"는 이 줄로
+SoldierLab.Debug.Danger 1           진영 위험 지도 셀 (테두리 = 길 위험 · 점 = 자리 위험, 30 s 반감)
+SoldierLab.Debug.Perception 1|2     적 기록 원(1) / +텍스트(2)   색: 초록 seen · 주황 heard · 시안 told
+SoldierLab.Debug.Sight 1 · .Comms 1 · .Suppression 1 · .Objective 1 · .Impact 1
+SoldierLab.Debug.AI.Self 0          ★ 관전 시 필수 — 기본 1 은 "로컬 조종 병사만" 이라 아무것도 안 뜬다
+SoldierLab.Debug.AI.Filter <문자열>  액터 이름에 포함된 병사만 (Self 보다 우선)
+
+애니메이션·자세
+SoldierLab.Debug.Axes 1 (+ .Axes.All 1)   병사별 축 값 HUD
+SoldierLab.Debug.HeadAim 1          머리 추종: 초록 목표 · 빨강 실제 머리 · 흰 조준 · 시안 목표 눈 · 마젠타 실제 눈
+                                    글자 a(알파) on ai onaim(학습 게이트) weld=x.xx(L=래치) sight(STILL|moving/held|none)
+                                         bend=x/max(목 굽힘°) stretch=x/max(cm) eye-res(cm) look-res(°)
+                                    ★ 정착 시 eye-res ≈ 0 · look-res ≈ 0 이면 정렬. bend 가 max 에 붙어 있으면 기하 한계(P112)
+
+조작키 — 병사 직접 조작 (GM_SoldierLab)          관전 (GM_SoldierObserver, L_SoldierTest 기본)
+  T   1인칭 ↔ 3인칭                              F    조준선 아래 병사 추적 / 해제 (AI 는 그대로)
+  H   머리 조준 추종 on/off (기본 OFF)            T    추적 중 1인칭 ↔ 3인칭 (그 병사의 1인칭 컴포넌트에 뷰 위임, 2026-09-15 확인)
+      + 켜져 있고 비조준·정지면 카메라 60° 밖에서   H    추적 중인 병사의 머리 추종 on/off (AI 는 bApplyToAI 필요, 2026-09-15 확인)
+        몸(캡슐)이 따라 돈다 → GASP TIP (P119)
+  V/B 앉기  Q/E 린  1/3/2/4 맹목사격
+  휠  GASP 카메라 Close/Medium/Far               Tab  다음 병사      휠  3인칭 거리
+                                                 WASD/QE/마우스  자유 비행 (벽 통과, 충돌 없음)
+```
+
+두 컴포넌트(`AC_SoldierFirstPerson` · `AC_SoldierHeadAim`)와 관전 폰의 키·문턱값은 전부 **`FKey`/float UPROPERTY** 라 BP Details 에서 바꾼다.
+관전 폰의 `PickConeDegrees`(15) 가 "F 판정이 빡세다" 의 다이얼이다.
 
 ---
 

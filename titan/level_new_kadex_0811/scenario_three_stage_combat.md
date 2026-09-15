@@ -27,6 +27,11 @@
 > - 이펙트 `MoveDroneToPath` 신설 — 2·3차 전투지로 도주하는 적을 드론이 따라가는 용도.
 >   코드는 준비됐고 스플라인 추가만 남음.
 
+> ⚠️ **[2026-09-15] 데모 모드의 UGV RCWS 자동사격(탐색 스윕) 시작 시점이 레벨 시작 → 1차 목적지
+> 도착으로 옮겨졌다.** 새 이펙트 `SetDemoUGVAutoFire`(데모 게이트 내장) + 새 DT 행 `UGVArriveZone1`
+> (Prereq `UAVSpotted`, `ActorStopped`). 이동형지휘소는 여전히 레벨 시작 시. 빌드 후 그 행의
+> EffectType 설정이 남아 있음 — `2026-09-15_demo_ugv_autofire_on_zone1_arrival.md`.
+
 ---
 
 ## 1. 시스템 구조 요약

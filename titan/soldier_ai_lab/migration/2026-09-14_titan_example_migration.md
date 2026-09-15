@@ -529,7 +529,7 @@ Source/SoldierLabEditor/ →  titan_example/Source/SoldierLabEditor/
 | 문서 | 절 | 어떻게 |
 |---|---|---|
 | `README.md` | 문서 지도 | `migration/` 추가 |
-| `CURRENT_STATE.md` | 머리글 · 다음 할 일 | titan_example 편입 결정 · 이관 대기 |
+| `CURRENT_STATE.md` | 머리글 · 다음 할 일 | titan_example 편입 결정 · ~~이관 대기~~ → 이관 완료(4.2절 · 10절 정정) |
 | `OPEN_ITEMS.md` | [W33] [W34] [W35] [C-98] [Q43] | 아래 |
 | `IMPLEMENTED.md` | 6절 | 이관 후 경로가 `/Game/SoldierLab/...` 그대로인지 기록 |
 
@@ -547,3 +547,18 @@ Source/SoldierLabEditor/ →  titan_example/Source/SoldierLabEditor/
 - **[W34]** `Mover`/`ChaosMover`/`NetworkPrediction`/`RigLogic`/`HairStrands`/`LiveLink` 가 실제로 필요한지 — 4절 절단 여부에 따라 달라진다
 - **[W35]** [W6] 계측 잔해 게이트 — 45명 전원이 `DrawDebugCoordinateSystem` 을 그린다. 이관 전에 처리하는 편이 낫다 (옮기고 나면 titan 쪽 성능 문제로 보인다)
 - **미확인**: `IMC_Sandbox` 의 `IA_Fire`/`IA_Reload`/`IA_Lean`/`IA_BlindFire*` 실제 키 — 에디터에서 눈으로 읽어 6.5절 표를 채울 것
+- ⚠ **6.1절이 놓친 Config 2건 (2026-09-14 15:00 발견·수정)**: `[/Script/Engine.DataDrivenConsoleVariableSettings]` 의
+  GASP `DDCvar.*` 27줄과 `[/Script/PoseSearch.PoseSearchSettings] AvailabilitiesBufferSize=230`. 빠지면 에러 없이
+  **모든 DDCvar 가 0 으로 읽히고** 로그가 매 틱 경고로 도배된다. titan `DefaultEngine.ini` 에 추가함 → [W40].
+  또 SoldierLab 원본 프로젝트는 이 PC 의 `C:\working\works\kadex\anim_test\SoldierLab` 에 **아직 있다**(6절 서두의 "`works\` 가 빠졌다"는 이 PC 기준으론 틀림)
+
+---
+
+## 10. 정정 (2026-09-15, 문서 정리 세션)
+
+- **상태**: 헤더는 이미 "✅ 이관 완료" 다(4.2 · 4.4절). 다만 **8절의 표(`CURRENT_STATE.md` 행 "이관 대기")와 체크박스 셋은 이관 *전*에 쓴 채 남아 있었다** — 셋 다 2026-09-14 에 실제로 반영됐다(README 문서 지도 · `CURRENT_STATE.md` "2026-09-14 편입 완료" 블록 · `OPEN_ITEMS.md` [W33][W34][C-98][Q43] 해결 표시 · `IMPLEMENTED.md` 머리글). 8절은 판단 이력으로 두고 여기서 완료 처리한다.
+  - [x] 원 문서에 결과 반영 (이관 후) → 4.2 · 4.4절
+  - [x] `OPEN_ITEMS.md` 등록 → [W33] [W34] [C-98] [Q43] 해결, [W35] [W38] [W39] [W43] [W44] [W45] 는 열림
+  - [x] `CURRENT_STATE.md` 갱신 → "★ 2026-09-14 — `titan_example` 편입 완료" 절
+- **[W36] 관련 후속**: 4.3절이 "`GM_SoldierLab` 의 캐릭터 목록을 비웠다"고 적은 것은 **실제로 안 비워져 있었다** — `PawnClasses_Soft` 에 `[BP_SoldierCharacter, SandboxCharacter_CMC, SandboxCharacter_Mover]` 가 2026-09-15 까지 남아 있었고, GASP GM 은 `GetDefaultPawnClassForController` 오버라이드로 그 0번을 스폰한다(`CLAUDE.md` P126). 이관 폐포 절단 자체는 `AC_VisualOverrideManager` · `PC_Sandbox` 절단으로 이미 성립했으므로 용량 결과(3511 MB)는 그대로다. 사용자가 09-15 에 고침(방식 미확인 [C]). `OPEN_ITEMS.md` [W36] 정정 참고.
+- **[W34] 관련 후속**: "Mover 계열 5개는 끌 수 없다(GASP 초이서 2개가 `SandboxCharacter_Mover` 참조)" 에 더해, `/MoverExamples/Characters/Mannequins/Rigs/CR_Mannequin_Body` 가 에디터 기동마다 컴파일 에러를 낸다. `/Game` 쪽 참조는 `/Game/NewLevelSequence`([W38]) 하나. 처분은 **[Q48]** (미결정).

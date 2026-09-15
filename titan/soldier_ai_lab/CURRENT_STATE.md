@@ -1,6 +1,54 @@
 # 현재 상태 — soldier_ai_lab
 
-2026-09-14 / **★ `titan_example` 편입 완료 · AI 층 동작 확인 · 아군 메시 교체 완료** / 병사가 스스로 보고·듣고·전달받고·제압당하고·쏘고·엄폐한다.
+2026-09-15 저녁 / **★ 체력·피격·사망 완료 · ★ 적군 메시(`new_enemy_T`) 교체 완료 · 왼손 IK 토글(기본 OFF) + 그립 런타임 산출 · 급선회 스냅/BF 머리 부풀기 해결 · 디자이너 가이드 완성** / 병사가 맞으면 움찔하고 죽으면 쓰러지며(아군 무적), 아군·적군 외형이 전부 교체됐고 애니메이션 층은 디자인팀 FK 검수 대기 상태. AI 는 2라운드 거동(위험 지도 · 노출 회계), 사용자 평가 "지금까지는 가장 좋네". 값은 전부 [C].
+
+★ **2026-09-14~15 — 애니메이션 정리 라운드** (`animation/prototypes/2026-09-15_sharp_turn_pop_bf_head_scale_and_weapon_socket.md` · `animation/prototypes/2026-09-14_enemy_mesh_on_mannequin_skeleton.md`, 같은 날 체력 세션과 **같은 ABP/BP 를 동시에 편집**했다 — P125).
+① **적군 메시** — 디자인팀 재납품 세 번(첫째 스켈레톤 문제 · 둘째 Auto-Rig Pro 명명 기각 · 셋째 `new_enemy_T` 채택). Assign Skeleton 본 추가 0 · 머티리얼 WorldGridMaterial → MI 할당 · `BP_Soldier_Hostile` 교체, 사용자 PIE "플레이 잘 됨, 총 붙음". ~~[Q42]~~ 해결. `StanceStandZ/CrouchZ` 는 **미실측** → [C-119].
+② **왼손 IK 토글** `LeftHandIKEnabled`(ABP, 기본 **false** — 디자인팀이 왼손을 FK 로 맞추는 동안) + **그립 오프셋을 BeginPlay 에서 총 메시 `LeftHandGrip` 소켓으로 산출**(상수 (−30,8,4) 폐기). 총 부착 오프셋은 컴포넌트가 아니라 **세 메시의 `weapon_r` 메시 소켓**으로 흡수(`WeaponMesh` 상대 0) — 애님 에디터 프리뷰 = 런타임.
+③ **급선회 스냅(비조준 A↔D 반전)** — `OffsetRootBone.maxRotationError 90` 이 원인, **−1(GASP 원본) 복귀**. 조준 중 뒤집힘은 09-12 유한 각속도가 이미 막고 있었다. ~~[C-80]~~ 확정 · [C-74] 는 70/65 쌍만 남음.
+④ **BF 시 아군/적군 머리 부풀기** — BF 포즈 3장에 마네킹 PP ABP 의 head ×1.15 가 **구워져 있었다**(P122). `ModifyBone_8(head, 스케일 Replace 1, ComponentSpace)` 로 상쇄(~~[W54]~~ "삭제 권고" 철회). 재베이크는 [W65].
+⑤ **총내림 전용 클립 2차 시험(로컬 애디티브) 실패·원복** — 결론: 총 내린 로코모션 클립 없이는 델타뿐, 델타는 작을 때만 자연스럽다(P123). [C-90] → 클립 요청 **[W66]**.
+⑥ **디자이너 가이드 완성** `assets/2026-09-14_designer_guide.html`(실사용 시퀀스 **103개** 전체 경로 부록, 디스크 검증) · 핸드오프 md 갱신. 조작 확정: Ctrl 걷기/조깅 · 우클릭 조준 · 좌클릭 사격 · R 재장전 · V/B 앉기 · Q/E 린 · 1/3/2/4 BF · T 1·3인칭 · 휠 거리 · 관전 F/Tab. C 앉기 토글은 무력.
+⑦ 발견: `GM_SoldierLab.PawnClasses_Soft` 가 실제로 안 비워져 있었고 GASP GM 은 그 0번을 스폰한다(P126, [W36] 정정, 사용자가 고침) · `/MoverExamples/.../CR_Mannequin_Body` 컴파일 에러 + `/Game/NewLevelSequence` 처분 **[Q48]** · `LogAbilitySystem ReloadDone` 로그 노이즈 **[W64]** · 총기 분기 시 `WeaponMesh`/소켓 규약 **[W67]** · `CHT_Soldier_CharacterAnimations` 실사용 확인 **[C-120]**. 새 원칙 **P121~P126**.
+⚠ **미저장 자산(사용자 저장/체크아웃)**: `SoldierCharacter_ABP` · `BP_SoldierCharacter` · `new_enemy_T` · `enemy_T`(옛것 — 저장 불필요) · `MM_Rifle_LowReady`(값 원복, dirty 만). 옛 적군 에셋 삭제는 [W29] ④~⑨.
+⚠ 사용자 작업 원칙(2026-09-15): **세션 중 긴 문서 작성으로 소통을 끊지 말고, 문서 정리는 작업 후 서브에이전트에 위임한다.**
+
+★ **2026-09-15 저녁 — 체력 · 피격 · 사망** (`ai/2026-09-15_health_hit_death_implementation.md`, 조사·추천은 `ai/2026-09-14_hit_death_health_recommendation.md` — `drafts/` 에서 올라옴).
+C++ `USoldierHealthComponent`(`AI/SoldierHealth`) 하나가 표준 `OnTakePointDamage` 로 데미지를 받고(투사체 무변경) · 부위 배율 · HitReact 애디티브 몽타주 13(`bStopAllMontages=false` 라 재장전 안 끊김, 슬롯 그룹 안 가름) · Death 몽타주 6 → 끝 0.1 s 전 래그돌 · 등록부/AI 컴포넌트/CMC/컨트롤러/Tick 을 한 곳에서 정지 · `Health/bDead/LastHit` 복제. ABP 에 `AdditiveHitReact` 슬롯 경로 3노드, BP Tick 총구 보정 게이트에 `NOT IsHitReacting` AND. **아군은 `BP_Soldier_Friendly` 의 `Invincible (무적)` 체크로 안 죽는다**(사용자 결정, 맞으면 움찔만). 사용자 PIE **"잘됨"**. ~~[W18]~~ 해결. 새 원칙 **P127~P129**(템플릿이 CDO 배열을 안 물려받음 · P53 정정 #2 · ANDBoolean 생성 가능).
+⚠ **수치는 0개** — 본 None 빈도 · Death 루트모션 · 정착 프레임 스냅 · 임펄스 1500 · 45구 비용 · 피격 게이트 실효 → **[C-110]~[C-118]**. 사용자 결정 대기 **[Q46]**(시체 유지·엄폐화) · **[Q47]**(아군 사격). 관측 **[R8]** `ApplyAdditive_1`(재장전 애디티브) 알파 0.
+⚠ **다음 빌드 필요**: 생성자의 `RF_ClassDefaultObject` 가드를 뺀 소스는 **미빌드** — 그때까지 BP 템플릿의 몽타주 배열은 MCP 로 직접 써 둔 값. Perforce: `AI/SoldierHealth.{h,cpp}` add + `BP_SoldierCharacter`/`SoldierCharacter_ABP`/`BP_Soldier_Friendly`/`_Hostile` 편집, 제출 여부 [C].
+
+★ **2026-09-14 밤 ~ 09-15 새벽 — AI 거동 라운드** (`ai/2026-09-14_danger_map_and_position_commitment.md` → **`ai/2026-09-15_exposure_cycle_and_muzzle_learning.md`**).
+사용자 관측 ①공격수 저돌 ②수비수 안절부절 ③꼬리물기 → 코드에서 읽은 **구조적 결핍**(위험 구역 개념 없음 · 뚫린 공간이 쌈 · 엄폐물 못 찾음 · 후퇴 없음 · primary contact 틱마다 교체 · 머무름 없음 · 판정 높이 상수) → 위험 지도(`USoldierDangerMapSubsystem`) · 모든 눈 · 머무름 · 표적 잠금 빌드 → **로그 실측 6라운드**(R1 예산 게이트 잠김 → R2 높이 실측·부채꼴 후보 → R3 가치 게이트 분리 → R4 경로 상한 제거 → R5 사격 활동도 → R6 **노출 회계 사이클 + 실제 총구 + 포즈별 총구 학습 + 코너 판정**). 새 원칙 **P114~P118**.
+⚠ 수치 판정(리듬·코너 린·소강 전진·총구 학습)은 미완 → 후속 문서 12절. Perforce: `Source/SoldierLab/AI/` 12파일 체크아웃(신규 `SoldierDangerMap.{h,cpp}` add), **미제출**.
+
+### 남은 일 (2026-09-15 기준, 우선순위)
+
+```
+1. [W53]  "노는 병사" 원인 확정 — [Engage] 전이 로그의 게이트 0 항목(believed/worth/aperture/onTarget/reloading/ammo)으로. 추측 금지(P10)
+2. [W51]  엄폐 자리 예약 — 같은 후보를 둘 이상이 고름(수비수), MASKED 8~11 s의 원인
+3. [W52]  분대 통신·화망 — 사각 없는 위치에서의 제압(적 예상 위치 사격), 엄호/이동 분담, 위험 지도 공유 여부
+4. ~~[W18]  사망/대가 — 없으니 공격수가 수비수 코앞까지 걸어옴~~ → ✅ 09-15 저녁 해결. 남은 것: 다음 빌드(생성자 가드 제거분) · [Q46][Q47] 결정 · [C-110]~[C-118] 실측
+5. [C-102]~[C-107] 값 실측 — 위험지도·머무름·활동도·노출 회계·총구 오프셋·벽 높이
+6. Perforce 제출 — AI/ 12파일 + Camera/·Pose/·Observer/ 6파일(1인칭·머리 추종 세션분, CL 469 이후) + AI/SoldierHealth.{h,cpp}(add) + BP/ABP 4개
+   + 애니메이션 정리분: SoldierCharacter_ABP · BP_SoldierCharacter · new_enemy_T (+ 소켓 바뀐 soldier_T · SKM_UEFN_Mannequin)
+7. 애니메이션 쪽 — [C-119] 적군 StanceZ 실측(PIE HUD PelvOff 한 번) · [W29] 옛 적군 에셋 4벌 삭제 · [Q48] NewLevelSequence/CR 처분 결정
+   · [W66] 총내림 로코 클립 요청 시점 · 디자인팀 왼손 FK 검수 결과 오면 LeftHandIKEnabled 재검토
+```
+
+> **2026-09-15 새벽, 1인칭·머리 추종 세션 마무리(다른 세션)**: [W50] 관전 폰 1인칭 위임 + 관전 H 확인 ✅ · **몸 회전** 추가(H 켜짐·비조준·정지 시 카메라 60° 밖이면 캡슐 yaw 만 돌려 GASP TIP, P119 · Strafe 우회는 항상 견착이라 폐기 P120) · ABP `ModifyBone_9`(neck_02) 수동 완료(그전엔 Bone None) · ~~잔여 `ModifyBone_8` 삭제 권고 [W54]~~(→ 같은 날 오후 BF 머리 스케일 상쇄용으로 **사용 중**, 철회). 사용자 "잘됨". 상세 `animation/2026-09-14_sight_alignment_plan.md` 0'·0.11절.
+
+<details>
+<summary>2026-09-14 밤 시점의 머리글 (접힘)</summary>
+
+2026-09-14 밤 / **★ `titan_example` 편입 완료 · [C-95] 기준면 수정 빌드됨(정착 미확인) · 관전 폰 C++ · 1인칭(T) · 머리 조준 추종 + 눈–조준선 정렬(H, 기본 OFF) 사용자 확인 "완벽" · AI 층 동작 확인 · 아군 메시 교체 완료** / 병사가 스스로 보고·듣고·전달받고·제압당하고·쏘고·엄폐한다. 플레이어는 1인칭으로 들어가 조준경 뒤에서 본다 — 눈이 조준선 위에 온다.
+
+★ **2026-09-14 밤 — 관전 · 1인칭 · 머리 추종 3종 완성, 사용자 최종 확인 "성공. 이제 모든게 완벽해" (21:30)** (`ai/2026-09-14_cover_frame_fix_and_observer.md` 0' 절 · **`animation/2026-09-14_sight_alignment_plan.md` 0' 절**).
+`Observer/SoldierObserverPawn`(F 추적 · T 1/3인칭 · Tab · 휠, 픽 15°) · `Camera/SoldierFirstPersonComponent`(T, 뷰타겟 교환, `eyes` 소켓, 니어플레인 2 cm) ·
+`Pose/SoldierHeadAimComponent`(H, **기본 OFF**, 닫힌 루프 Additive, 몸 프레임 = spine_03, 2단 둘러보기/weld 가중치+래치, 목 굽힘 60° + 스트레치 5 cm 로 눈을 조준선 위에, 맹목사격 시 off).
+머리 추종은 같은 날 **열 번** 고쳤다 — 그 절반은 **몸 피치를 델타 재조립에서 빠뜨린 한 줄**(P109)이 만든 "용수철"을 다른 장치로 가리던 것. 원칙 P103~P113(`CLAUDE.md` 5절).
+⚠ **[C-95] 는 빌드만 됐다** — 수비수가 정착하는지 아무도 안 봤다. 1.6절 기준으로 확인이 다음 세션 첫 일.
+Perforce: 사용자 CL 469 제출, 그 뒤 변경분(`Camera/` 2 · `Pose/` 2) 미제출.
 **아군은 이제 `soldier_T` 외형이다** — `Assign Skeleton` 으로 `SK_UEFN_Mannequin` 에 올려 애니메이션·PSD·ABP 를
 **하나도 안 고치고** 돈다 (`IMPLEMENTED.md` 3.2절). 적군 외형은 **결정 대기 [Q42]** — 지금은 마네킹 그대로이고 AI 작업을 막지 않는다.
 ⚠ 메시를 바꾸면 `StanceStandZ/CrouchZ` 같은 **실측값을 메시별로 다시 재야 한다**(P77). 사용자가 원하는 다음 시험은
@@ -12,6 +60,15 @@
 ⚠⚠ **그러나 수비수가 정착해 쓰지 못하는 문제는 두 번의 시도로도 해결되지 않았다.**
 **다음 세션의 첫 일은 세 번째 추측이 아니라 진단이다** → **[C-95]** · `ai/2026-09-14_exposure_ladder_and_corrections.md` 12절.
 
+★ **2026-09-14 오후 — [C-95] 진단 완료, 수정 빌드 대기** (`ai/2026-09-14_cover_frame_fix_and_observer.md`).
+사용자 관측 `HERE ≈ 1.0` 으로 갈라졌다: 12절의 세 갈래가 아니라 **후보(발)와 HERE(캡슐 중심, +90 cm)를 다른
+높이에서 재고 있었다.** 같은 버그가 `RequiredStance` 를 0 으로 눌러 **제압 없이는 웅크리지 않던** 원인이기도 하다.
+발 기준 통일(`GetFeetLocation`, **P100**) · 위협 눈 2.6 m → 기록+20 · 아군 몸 무시 · 총구 발 기준.
+**관전 폰도 C++ `ASoldierObserverPawn` 으로 재작성** — 옛 BP 는 Visibility 트레이스라 병사를 못 맞혔고 F 가 `Possess` 라
+AI 를 멈췄다. 이제 F 추적(AI 계속) · T 1/3인칭(병사 조작과 같은 키) · Tab 다음 · 휠 거리. **빌드 후 `BP_ObserverPawn` 부모를
+`SoldierObserverPawn` 으로 바꿔야 한다**(그래프는 비워 둠). 직접 조작 모드 1인칭은 여전히 없다([W30]).
+
+</details>
 
 ---
 
@@ -45,14 +102,19 @@ C++ 는 `Source/SoldierLab/`(Runtime) + `Source/SoldierLabEditor/`(Editor) 두 �
 ### 남은 일 (우선순위)
 
 ```
-1. [C-95]  ★ 수비수가 정착해 쓰지 못한다 — 이관과 무관하게 그대로다. 세 갈래 진단
-2. 디자인팀 핸드오프
+(2026-09-14 밤 갱신)
+1. [C-95]  ★ 수비수 정착 — 원인은 잡았고(기준면, P103) 빌드도 됐다. **정착하는지 보는 것**이 남았다.
+           SoldierLab.Debug.Cover 1 + AI.Filter Friendly 로 `HERE 0.00 hide+fight → stay` 유지되는가 (1.6절)
+   ~~[W50]  관전 폰 1인칭 → 병사 1인칭 컴포넌트 위임 + 관전 H 키~~ ✅ 2026-09-15 확인
+2. 디자인팀 핸드오프 — `assets/2026-09-14_designer_guide_draft.md` 조작표는 채워졌다(조준/사격/재장전 키만 확인 필요)
      · 적군 스켈레톤 규격서 — "soldier_T 와 같은 규격" 한 줄이면 된다 [Q42]
-     · 애님 시퀀스 목록 (손대도 되는 것 / 건드리면 커브가 깨지는 것 구분)
-     · 기능 사용법 (레벨 · 콘솔 변수 · 조작키)
+     · [W45] weapon_r 소켓 없는 병사 3명
+     · [W49] 견착 포즈 뺨 높이·조준경 높이 — 머리 추종이 닫을 수 있는 거리(굽힘 60° + 스트레치 5 cm)의 나머지는 포즈·소켓 몫
 3. [W35]  계측 잔해 게이트 — 45명이 전부 DrawDebugCoordinateSystem 을 그린다
 4. [C-99] 재질별 명중이 실제로 갈리는가 · [C-100] FootstepEffectTagModifier
-5. [W30]  1인칭 카메라 (요청됐고 미구현)
+5. Perforce 제출 — CL 469 이후 변경분(`Camera/SoldierFirstPersonComponent.{h,cpp}` · `Pose/SoldierHeadAimComponent.{h,cpp}`)
+~~6. [W30]  1인칭 카메라~~ ✅ 구현됨   ~~[W46] 맹목사격 게이트~~ ✅ BF_Alpha* 로 전체 off   ~~[W47] 머리 추종 검증~~ ✅ 10차 확인
+   (작은 것) [W48] 세션 첫 조준은 정착 후 weld 시작 — 눈에 띄면
 ```
 
 <details>

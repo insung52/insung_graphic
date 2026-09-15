@@ -34,7 +34,7 @@
 | 필드 | 기본 | 의미 |
 |---|---|---|
 | `RunMode` | `FullSystem` | `Demo`로 두면 아래 3가지가 한꺼번에 켜짐 |
-| `bDemoForceUGVAutoFire` | true | UGV RCWS를 레벨 시작 직후 ARM+AutoFire로 |
+| `bDemoForceUGVAutoFire` | true | UGV RCWS를 ARM+AutoFire로 — **2026-09-15부터 시점은 1차 목적지 도착 시(DT `UGVArriveZone1` 행)**, 이 플래그는 on/off 게이트만 |
 | `bDemoForceCommandPostAutoFire` | true | 이동형지휘소(트럭) RCWS도 동일하게 |
 | `bDemoAutoStartScenario` | true | 콘솔 `BeginScenarioEnemyContact` 없이 자동 시작 |
 | `DemoAutoStartDelaySeconds` | 3.0 | 레벨 시작 기준 자동 시작까지의 대기 |
@@ -69,6 +69,11 @@ FireControl->SetControlMode(ERCWSControlMode::AutoFire);
 ```
 
 조종간 안전 풀기/장전 같은 수동 절차 없이 적을 발견하면 바로 락온·사격한다.
+
+> ⚠️ 2026-09-15 — 위 레벨 시작 시 강제는 이제 **이동형지휘소만** 해당한다. UGV 쪽은 출발 전부터
+> 탐색 스윕(자동정찰)이 도는 게 어색해서, 새 이펙트 `SetDemoUGVAutoFire`(데모 게이트 내장)를 쓰는
+> DT 행 `UGVArriveZone1`(Prereq `UAVSpotted`, `ActorStopped`)이 **1차 목적지 도착 시** 켜도록 옮겼다.
+> 상세는 `2026-09-15_demo_ugv_autofire_on_zone1_arrival.md`.
 
 **너무 일찍 쏘지 않는 이유**: 적군은 `RevealEnemies` 스텝 전까지 `bIsRevealed=false`이고,
 `UTargetDetectionComponent::ScanTargets`가 그런 대상은 **스캔 자체를 건너뛴다**. 그래서 RCWS를

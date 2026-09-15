@@ -63,6 +63,13 @@ __x64_sys_writev (68.40%)
 
 ## 권장 조치 (2026-08-19 갱신 — 실제 적용된 방식)
 
+> **[2026-09-15 추기]** 아래에서 "생성 스크립트가 매번 덮어써져서" 기각했던 `WAYLAND_DISPLAY`
+> 조건부 분기는 결국 **`Config/BootstrapPreamble.sh`**로 구현됐다 — UAT가 리눅스 스테이징 때 이
+> 파일을 `titan_example.sh` 맨 앞에 자동으로 끼워 넣는 엔진 훅(`LinuxPlatform.Automation.cs`
+> `StageBootstrapExecutable`)이 있어서, 스크립트를 직접 고치지 않고도 패키징마다 반영된다. 따라서
+> 아래 2번의 `titan_example_x11_fallback.sh` 수동 복사는 더 이상 필요 없다(파일은 레거시로 남김).
+> INI의 `VideoDriver=wayland` 기본값(1번)은 그대로다. 상세: `packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §2-4.
+
 애초 아이디어였던 "실행 스크립트에서 `WAYLAND_DISPLAY` 조건부 분기"는 채택 안 함 — UE 패키징이
 `titan_example.sh`를 매번 새로 생성해서 덮어쓰므로, 그 파일을 직접 고치는 방식은 패키징할 때마다
 다시 손봐야 하는 문제가 있었음. 대신 UE 엔진이 이미 제공하는 정식 오버라이드 메커니즘을 씀

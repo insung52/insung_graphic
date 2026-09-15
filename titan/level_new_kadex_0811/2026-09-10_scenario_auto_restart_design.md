@@ -37,7 +37,15 @@
 |---|---|---|
 | `ScenarioConfig_1.RunMode` | **Demo** | 데모 게이트가 바로 동작 |
 | `DemoAutoStartDelaySeconds` | **3.0** | 위 타임라인의 3초 |
-| `bDemoAutoStartScenario` / `bDemoForceUGVAutoFire` / `bDemoForceCommandPostAutoFire` | 전부 true | 재시작 후 `ApplyDemoRunModeSetup()` 재실행만 하면 RCWS 복구 |
+| `bDemoAutoStartScenario` / `bDemoForceUGVAutoFire` / `bDemoForceCommandPostAutoFire` | 전부 true | 재시작 후 `ApplyDemoRunModeSetup()` 재실행만 하면 RCWS 복구 (⚠️ 2026-09-15 이후엔 **지휘소만** — 아래 메모) |
+
+> ⚠️ **2026-09-15 메모** — UGV RCWS 자동사격 강제가 `ApplyDemoRunModeSetup()`에서 빠지고 DT 행
+> `UGVArriveZone1`(1차 목적지 도착 시, 이펙트 `SetDemoUGVAutoFire`)로 옮겨졌다
+> (`2026-09-15_demo_ugv_autofire_on_zone1_arrival.md`). 재시작 관점에서:
+> - 지휘소 절반은 여전히 §6-9의 재실행으로 복구된다.
+> - UGV 절반은 `FiredScenarioSteps` 리셋으로 다음 사이클에 `UGVArriveZone1`이 다시 발동하므로
+>   따로 할 일은 없다. **단, §4(d) UGV 리셋에 "RCWS 모드를 `Remote`로 되돌림"을 반드시 넣을 것** —
+>   안 넣으면 이전 사이클의 AutoFire가 남아 2회차엔 출발 전부터 스윕한다(1회차와 다른 연출).
 | `DemoFireMode` | Burst | 재시작 시 같이 재적용 |
 | `ScenarioStepTable` | `DT_ScenarioSteps_ThreeStage` | 재시작 행을 여기에 추가 |
 | `UGVZone3Destination` | **None** (+ `UGVMoveZone3` 행 `bEnabled=false`) | 3차에서 UGV는 안 움직임 — 리셋 대상에서 빠짐 |
@@ -182,7 +190,8 @@
   UGV RCWS에 켜두는 플래그. 안 되돌리면 2회차부터 UGV가 일부 적을 영영 안 쏜다
 - Chaos 차량: `SetActorTransform(..., ETeleportType::TeleportPhysics)`, 선/각속도 0,
   스로틀·브레이크 입력 0
-- RCWS: 포탑 방위/고각 원위치, 락온 게이지·배럴 스핀·줌 램프 리셋, 모드 재적용
+- RCWS: 포탑 방위/고각 원위치, 락온 게이지·배럴 스핀·줌 램프 리셋, **모드를 `Remote`로**
+  (2026-09-15 — AutoFire는 재시작이 아니라 `UGVArriveZone1` 행이 도착 시 다시 켠다)
 - **탄약**: `CurrentData.AmmoCurrent = AmmoMax`. 600발이라 2~3사이클이면 마르고, 마르면 UGV가
   못 쏴서 `EnemyEngage`가 영영 안 걸린다(=§3.3의 정지). `CurrentData`가 private이므로
   `URCWSComponent`에 리필 함수 신설 필요
@@ -287,7 +296,7 @@ bool RequestScenarioRestart(bool bForce = false);   // 유일한 진입점
 | 6 | **한 틱 대기** | 텔레포트한 Chaos 차량/캐릭터가 같은 프레임에 명령을 받으면 물리가 튄다 |
 | 7 | `ResetScenarioRuntimeState()` | §4(a) |
 | 8 | 부활 검증: `CountAliveEnemies() == 기대치`인지 로그, 0이면 중단+에러 | §3.2-2 |
-| 9 | `ApplyDemoRunModeSetup()` 재실행 | RCWS ARM+AutoFire+Burst 복구 |
+| 9 | `ApplyDemoRunModeSetup()` 재실행 | **지휘소** RCWS ARM+AutoFire+Burst 복구 (UGV는 2026-09-15부터 `UGVArriveZone1` 행 담당 — §1 메모) |
 | 10 | 페이드 인 + `DemoAutoStartDelaySeconds`(3초) 타이머 | |
 | 11 | `BeginEnemyContactScenario()` → EnemyContact 토스트 + 스텝 평가 시작 | 기존 경로 재사용 |
 | 12 | `bRestartInProgress = false`, 사이클 카운터 +1, 요약 로그 | |

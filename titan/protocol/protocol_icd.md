@@ -180,8 +180,11 @@ ICD 원문은 0~100 Int% — §3.2 참고, 필드별로 ICD 값 우선), 시간 
 URL: `rtsp://192.168.10.10:8554/ugv/<stream>` — 포트(8554)는 `RtspServerSubsystem` 기본값
 그대로 유지. 인코딩 방식은 §7.
 
-**전송/지연(2026-08-19 확정)** — RTP는 **TCP interleaved만 지원(UDP 미지원)**, gst-rtsp-server
-설정상 그렇게 고정됨(§0의 "영상=RTSP" 전송계층 표에 이 세부가 빠져있었는데 실측으로 확정).
+**전송/지연(2026-08-19 확정)** — RTP는 ~~**TCP interleaved만 지원(UDP 미지원)**, gst-rtsp-server
+설정상 그렇게 고정됨~~ → **(2026-09-15 정정) TCP interleaved / UDP 둘 다 됨.** 서버 코드에 프로토콜
+제한 호출(`gst_rtsp_media_factory_set_protocols`)이 없어 gst-rtsp-server 기본값이 그대로 적용된다.
+저지연 튜닝·검증은 TCP 기준이고, UDP는 RTP/RTCP 포트가 접속 시 동적 협상이라 방화벽 환경에선
+8554만 열면 되는 TCP를 권장(수신 가이드 §1.1). (§0의 "영상=RTSP" 전송계층 표에 이 세부가 빠져있었음.)
 종단(glass-to-glass) 지연은 최초 441~484ms에서 서버(NVENC 버퍼 최소화)+수신측(GStreamer
 저지연 옵션) 튜닝으로 **68ms(30~100ms 변동)**까지 개선됨 — 수신 구현 가이드/실측 수치는
 `rtsp/rtsp_client_reception_guide.md`, 조사 전체 기록은 `rtsp/rtsp_latency_investigation.md`
@@ -222,7 +225,7 @@ URL: `rtsp://<selfdefense-pc-ip>:8554/selfdefense/<stream>` — 포트(8554)는 
 확인 필요, §6) — mount 이름/포트만 이번에 확정됨.
 
 **검증 상태(2026-08-19)**: 인코더/서버 코드가 UGV축과 완전히 공유되는 구조라 전송 방식(TCP
-interleaved만, UDP 미지원)과 저지연 튜닝(§3.3 참고)은 동일하게 적용됨. 6개 마운트(환경카메라
+interleaved 권장 — 2026-09-15 정정: UDP도 됨, §3.3 참고)과 저지연 튜닝(§3.3 참고)은 동일하게 적용됨. 6개 마운트(환경카메라
 제외 — 상위체계로는 부가 스트림) 전부 GStreamer+NVDEC 파이프라인으로 접속·하드웨어 디코드까지
 확인됨. 단 정밀 지연 재측정(§3.3의 68ms 실측 같은 스크린샷 방식)은 아직 안 함 — UGV축과 동등
 수준으로 기대만 하는 상태, 확정치 아님. 상세는 `rtsp/rtsp_client_reception_guide.md` §1.2.

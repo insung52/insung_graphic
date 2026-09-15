@@ -27,7 +27,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 프로토콜 | RTSP, **TCP interleaved만 지원**(UDP 미지원) |
+| 프로토콜 | RTSP, TCP interleaved / UDP **둘 다 지원** (2026-09-15 정정: 종전 "TCP만/UDP 미지원" 표기는 오류 — 서버 코드에 프로토콜 제한 호출이 없어 gst-rtsp-server 기본값이 적용됨. 아래 저지연 파이프라인은 TCP(`protocols=tcp`) 기준으로 검증했으므로 **TCP 권장**. UDP를 고르면 RTP/RTCP 포트가 접속 시 동적으로 협상되므로 방화벽이 있는 환경에서는 8554만 열면 되는 TCP가 안전함) |
 | 비디오 코덱 | H.264, High Profile |
 | B프레임 | 없음(`frameIntervalP=1`) — 재정렬(reorder) 불필요 |
 | VUI 시그널링 | `bitstream_restriction_flag=1`, `max_num_reorder_frames=0`, `max_dec_frame_buffering=3` — 스트림 자체에 "재정렬 대기 불필요"가 명시되어 있음(아래 §3.2 참고) |
@@ -39,7 +39,7 @@
 
 | 항목 | 값 |
 |---|---|
-| 프로토콜 | RTSP, **TCP interleaved만 지원**(UDP 미지원) — UGV축과 동일 |
+| 프로토콜 | RTSP, TCP interleaved / UDP 둘 다 지원 — UGV축과 동일(2026-09-15 정정, §1.1 참고; TCP 권장) |
 | 비디오 코덱 | H.264, High Profile — 인코더 설정 자체가 UGV축과 완전히 공유되는 코드라 VUI/B프레임 특성도 동일(§1.1 참고) |
 | 스트림 개수 | CCTV 4개 + RCWS(조준경) 1개 + UAV 짐벌 1개(+환경 카메라 1개, 상위체계로는 안 보내도 되는 부가 스트림), 마운트 경로: `/selfdefense/front_cctv`, `/selfdefense/rear_cctv`, `/selfdefense/left_cctv`, `/selfdefense/right_cctv`, `/selfdefense/rcws`, `/selfdefense/uav_gimbal` (`/selfdefense/env_camera`는 부가) |
 | 해상도/fps | CCTV 4개 240×136 @ 30fps, RCWS 1116×622 @ 30fps, UAV 짐벌 640×360 @ 30fps (전부 SDP로 재확인 가능, 가변) |
@@ -101,6 +101,10 @@ gst-launch-1.0 rtspsrc location=rtsp://<host>:8554/selfdefense/rcws latency=0 dr
 - VUI에 재정렬 불필요(`max_num_reorder_frames=0`) 명시 — **디코더가 이 스펙을 신뢰하고 불필요한
   보수적 버퍼링을 하지 않아야 함**(§3.2에서 이걸 안 지키는 디코더의 문제를 다룸)
 - GStreamer 서버(gst-rtsp-server) 쪽 미디어 latency=0, rate-control 비활성화
+- **서버(송출) PC 드라이버 요구사항**: NVIDIA 드라이버 **570 이상**(NVENC SDK 13.0 기준, 2026-09-15
+  빌드부터). 미달이면 인코더 초기화가 실패해 해당 마운트가 등록되지 않고 클라이언트는 `404 Not
+  Found`를 받음(09-02 이전 빌드는 610 이상 필요 + 실패 시 20초 타임아웃 —
+  `2026-09-15_lig_rtsp_describe_timeout_analysis.md`)
 
 ### 2.5 하드웨어 요구사항
 

@@ -1,14 +1,9 @@
-# UGV 시뮬레이터 실행 가이드 (Ubuntu)
+# UGV 시뮬레이터 실행 가이드 (Ubuntu) — 2026-09-15판
 
-2026-09-15 / 폐기(대체됨) / 아무것도 설치되지 않은 Ubuntu에서 패키지 실행 → RC IP 입력 → UGV Host 시작까지. (09-15: NVIDIA 드라이버 최소 버전 570 명시 — 2026-09-15 빌드부터 적용)
-
-> ⚠️ **이 문서는 2026-09-15부로 `kadex_0915_패키징_실행가이드.md`로 대체되었습니다. 더 이상 외부에
-> 전달하지 마세요.** 09-15 빌드부터 세션 자동 판별이 `titan_example.sh`에 내장돼 아래 §2·§3의
-> `run_titan_example.sh` / `titan_example_x11_fallback.sh` 안내는 더 이상 맞지 않습니다(§5의 "TCP/UDP
-> 둘 다"는 맞는 내용). 이 파일은 09-02 패키지를 받은 쪽과의 대조용으로만 남겨둡니다.
+2026-09-15 / 완료 / 아무것도 설치되지 않은 Ubuntu에서 패키지 실행 → RC IP 입력 → UGV Host 시작까지. `kadex_0902_패키징_실행가이드.md`를 대체함 — 09-15 빌드 기준(`titan_example.sh`에 Wayland/X11 자동 판별 내장, NVIDIA 드라이버 최소 570, RTSP 전송 TCP/UDP 정정).
 
 UGV 시뮬레이션 SW를 실행해서 **원격통제기와 UDP 통신 / RTSP 영상**을 연동하기 위한 문서입니다.
-**설치가 전혀 안 된 새 Ubuntu 기준**으로, §1부터 순서대로 그대로 따라 하시면 됩니다.
+**설치가 전혀 안 된 새 Ubuntu 기준**으로, §0부터 순서대로 그대로 따라 하시면 됩니다.
 
 ---
 
@@ -18,20 +13,20 @@ UGV 시뮬레이션 SW를 실행해서 **원격통제기와 UDP 통신 / RTSP �
 |---|---|---|
 | OS | **Ubuntu 20.04 이상** (22.04 / 24.04 권장) | `lsb_release -d` |
 | GPU | **NVIDIA GPU 필수** (하드웨어 인코더 NVENC 탑재 모델 — GeForce/RTX/Quadro 계열은 전부 해당) | `lspci \| grep -i nvidia` |
-| NVIDIA 드라이버 | **570 이상** | `nvidia-smi` 상단 `Driver Version` |
-| 화면 | 모니터가 연결된 **데스크톱 세션**에서 실행 | — |
+| NVIDIA 드라이버 | **570 이상** (595.84로 실측 검증됨) | `nvidia-smi` 상단 `Driver Version` |
+| 화면 | 모니터가 연결된 **데스크톱 세션**에서 실행 (Wayland / X11 어느 쪽이든 됨) | — |
 
 > ⚠️ **NVIDIA GPU가 없으면 실행되지 않습니다.** 현재 빌드는 NVIDIA 전용 라이브러리
 > (`libnvidia-encode.so.1`, `libcuda.so.1`)를 필수로 요구합니다. AMD/Intel GPU, 또는 NVIDIA GPU라도
 > 기본 드라이버(nouveau)만 설치된 상태에서는 창이 뜨기 전에 종료됩니다.
 >
 > ⚠️ **드라이버는 570 이상이어야 RTSP 영상이 나옵니다.** 프로그램 자체는 더 낮은 버전에서도 뜨지만,
-> 영상 인코더(NVENC) 초기화가 실패해서 **RTSP 접속이 안 됩니다**(2026-09-15 빌드부터는 이 경우
-> 접속 시 즉시 `404 Not Found`, 그 이전 빌드는 20초 타임아웃). 이때 로그
+> 영상 인코더(NVENC) 초기화가 실패해서 **RTSP 접속이 안 됩니다**(이 빌드부터는 접속 시 즉시
+> `404 Not Found`, 09-02 빌드는 20초 타임아웃). 이때 로그
 > `titan_example/Saved/Logs/titan_example.log`에 `NVENC init failed: ... Current Driver Version does
 > not support this NvEncodeAPI version` 가 남습니다. 570~609 대 및 그 이상 어느 버전이든 됩니다
-> (2026-09-15 빌드 기준. 이전 09-02 빌드는 610 이상이 필요했음 — 그 빌드에서 영상이 안 나왔다면
-> 이 문제입니다).
+> (2026-09-15 빌드 기준, **595.84에서 5스트림 정상 동작 확인**. 이전 09-02 빌드는 610 이상이
+> 필요했음 — 그 빌드에서 영상이 안 나왔다면 이 문제입니다).
 >
 > ⚠️ **SSH 원격 접속만으로는 실행할 수 없습니다.** 화면 출력이 필요하므로 실제 모니터가 연결된
 > PC 앞에서(또는 물리 화면에 연결된 원격 데스크톱 세션에서) 실행해 주세요.
@@ -87,6 +82,25 @@ sudo reboot                        # 재부팅 필수
 > ⚠️ **`nvidia-smi`가 나온다고 Vulkan까지 되는 건 아닙니다.** `nvidia-smi`는 커널 모듈만 확인하는데,
 > 이 프로그램은 Vulkan으로 렌더링하므로 드라이버의 유저스페이스 부분(Vulkan ICD)도 필요합니다.
 > §1-3의 Vulkan 확인을 반드시 거치세요.
+
+<details>
+<summary>NVIDIA 공식 <code>.run</code> 설치본으로 특정 버전을 맞추는 경우 (예: 595.84)</summary>
+
+배포판 저장소에 원하는 버전이 없어 `NVIDIA-Linux-x86_64-<버전>.run`을 쓰실 때 걸리는 점만
+요약합니다(사내에서 595.84로 실증한 절차입니다).
+
+- **Secure Boot는 꺼야 합니다**(`mokutil --sb-state` → `SecureBoot disabled`). `.run`이 빌드하는
+  커널 모듈은 서명이 없어서 켜진 채로는 설치가 끝난 것처럼 보여도 `nvidia-smi`가 실패합니다.
+- **기존 apt 드라이버를 먼저 완전히 제거**하세요(`sudo apt purge 'nvidia-*' 'libnvidia-*'`).
+  섞이면 `libnvidia-encode.so`/`libcuda.so` 버전이 커널 모듈과 달라져 NVENC 초기화가 이상한
+  에러로 실패합니다.
+- nouveau 블랙리스트 + `update-initramfs -u` + 재부팅 후, **텍스트 콘솔**(Ctrl+Alt+F3 →
+  `sudo systemctl isolate multi-user.target`)에서 `sudo ./NVIDIA-Linux-x86_64-<버전>.run --dkms`.
+  설치기 질문은 proprietary 커널 모듈 / DKMS yes / 32-bit yes / `nvidia-xconfig` **no**.
+- `.run` 설치본은 Vulkan ICD를 `/etc/vulkan/icd.d/nvidia_icd.json`에 넣습니다
+  (`/usr/share/vulkan/icd.d/`는 비어 있어도 정상). §1-3의 확인은 두 경로를 다 봅니다.
+
+</details>
 
 ### 1-3. 설치 검증 (재부팅 후)
 
@@ -154,8 +168,12 @@ sudo reboot
 ```bash
 sudo ufw allow 8000/udp   # 통제기 → UGV (주기)
 sudo ufw allow 8001/udp   # 통제기 → UGV (비주기)
-sudo ufw allow 8554/tcp   # RTSP
+sudo ufw allow 8554/tcp   # RTSP (TCP 전송이면 이 포트 하나로 제어+영상이 다 나감)
 ```
+
+> RTSP 영상은 TCP(interleaved) / UDP 둘 다 받을 수 있지만, **수신측이 UDP를 고르면 영상(RTP/RTCP)용
+> UDP 포트가 접속할 때마다 동적으로 정해져서** 고정 포트로 열어둘 수 없습니다. 방화벽을 쓰신다면
+> 수신측에서 TCP 전송(`protocols=tcp`)을 지정해 주세요 — 그러면 위 8554/tcp만 열면 됩니다(§5).
 
 ---
 
@@ -164,17 +182,19 @@ sudo ufw allow 8554/tcp   # RTSP
 전달받은 압축을 풀면 아래 구조입니다.
 
 ```
-run_titan_example.sh              ← ★ 이걸로 실행하세요 (세션 자동 판별)
-titan_example.sh                  ← 엔진이 생성한 원본 실행 스크립트
-titan_example_x11_fallback.sh     ← X11 강제용 (run_titan_example.sh를 쓰면 불필요)
+titan_example.sh                  ← ★ 이걸로 실행하세요 (Wayland/X11 세션 자동 판별 내장)
 titan_example/                    ← 게임 데이터
 Engine/
 ```
 
+> 이전(09-02) 패키지에 있던 `run_titan_example.sh` / `titan_example_x11_fallback.sh`는 **더 이상
+> 필요 없습니다.** 세션 자동 판별이 `titan_example.sh` 자체에 들어갔습니다. 만약 폴더에 그 파일들이
+> 같이 들어 있더라도 그냥 `titan_example.sh`를 쓰시면 되고, 그 스크립트들로 실행해도 동작합니다.
+
 압축 방식에 따라 실행 권한이 사라지므로, 압축을 푼 폴더에서 아래를 실행해 주세요.
 
 ```bash
-chmod +x run_titan_example.sh titan_example.sh titan_example_x11_fallback.sh
+chmod +x titan_example.sh
 chmod +x titan_example/Binaries/Linux/titan_example
 ```
 
@@ -191,19 +211,20 @@ ldd titan_example/Binaries/Linux/titan_example | grep "not found"
 ## 3. 실행
 
 ```bash
-./run_titan_example.sh
+./titan_example.sh
 ```
 
 이 스크립트가 **현재 세션이 Wayland인지 X11인지 자동으로 판별해서** 알맞은 옵션으로 실행합니다.
-세션 종류를 미리 확인하실 필요 없습니다. 실행 시 어느 쪽으로 떴는지 한 줄 출력됩니다.
+세션 종류를 미리 확인하실 필요 없습니다. 실행하면 어느 쪽으로 뜨는지 한 줄이 먼저 출력됩니다.
 
-| 세션 | 스크립트 동작 | 결과 |
+| 세션 | 터미널 첫 줄 | 결과 |
 |---|---|---|
-| Wayland | 옵션 없이 실행 | 네이티브 Wayland |
-| X11(Xorg) 또는 Wayland 없는 PC | `-sdlvideodriver=x11` 추가 | 네이티브 X11 |
+| Wayland | `[titan_example] Wayland 세션 감지 — 네이티브 Wayland로 실행합니다.` | 네이티브 Wayland |
+| X11(Xorg) 또는 Wayland 없는 PC | `[titan_example] Wayland를 찾지 못했습니다 — X11로 실행합니다 (-sdlvideodriver=x11).` | 네이티브 X11 |
 
-**양쪽 모두 2026-09-04에 Ubuntu 22.04에서 실측 확인했습니다.** XWayland 경유로 잘못 뜨는 경우는
-없습니다(Wayland 세션이면 네이티브 Wayland로 보내기 때문).
+**양쪽 모두 Ubuntu 22.04에서 실측 확인했습니다**(2026-09-04 Wayland/Xorg 실행 검증, 2026-09-15
+내장 스크립트 검증). XWayland 경유로 잘못 뜨는 경우는 없습니다(Wayland 세션이면 네이티브 Wayland로
+보내기 때문).
 
 제대로 떴는지는 로그로도 확인할 수 있습니다.
 
@@ -216,20 +237,22 @@ grep "SDL video driver" titan_example/Saved/Logs/titan_example.log
 전체화면으로 띄우려면 뒤에 `-fullscreen`을 붙입니다(그 외 인자도 그대로 전달됩니다).
 
 ```bash
-./run_titan_example.sh -fullscreen
+./titan_example.sh -fullscreen
 ```
 
 <details>
 <summary>수동으로 지정하고 싶을 때</summary>
 
+`-sdlvideodriver=...`를 직접 주면 자동 판별을 건너뛰고 그 값을 그대로 씁니다.
+
 ```bash
-./titan_example.sh                        # Wayland 세션 전용 (기본 설정이 wayland 강제)
-./titan_example.sh -sdlvideodriver=x11    # X11 세션
+./titan_example.sh -sdlvideodriver=x11        # X11 강제
+./titan_example.sh -sdlvideodriver=wayland    # Wayland 강제
 ```
 
-⚠️ Wayland 컴포지터가 없는 PC에서 `./titan_example.sh`를 옵션 없이 실행하면
-`Could not initialize SDL: wayland not available`로 **즉시 종료**됩니다. 이 경우 위의
-`-sdlvideodriver=x11`을 주거나 `run_titan_example.sh`를 쓰세요.
+⚠️ Wayland 컴포지터가 없는 PC에서 `-sdlvideodriver=wayland`를 주면
+`Could not initialize SDL: wayland not available`로 **즉시 종료**됩니다. 옵션 없이 실행하면 자동
+판별이 X11로 보내므로 이 문제가 없습니다.
 
 </details>
 
@@ -315,7 +338,11 @@ grep "SDL video driver" titan_example/Saved/Logs/titan_example.log
 | 우측 CCTV | `rtsp://<UGV IP>:8554/ugv/right_cctv` |
 
 - 코덱은 H.264 High Profile, B프레임 없음. RTP 전송은 TCP(interleaved) / UDP 둘 다 됩니다.
+  **TCP를 권장합니다** — 저지연 수신 설정을 TCP 기준으로 검증했고, UDP는 영상 포트가 접속 시
+  동적으로 협상되어 방화벽이 있으면 막히기 쉽습니다(§1-4). GStreamer면 `rtspsrc`에 `protocols=tcp`.
 - 스트림은 UGV Host로 레벨에 진입한 뒤에 열립니다. 축 선택 화면 상태에서는 아직 접속되지 않습니다.
+- 각 스트림은 **영상 인코더가 정상 시작된 경우에만** 등록됩니다. 드라이버 버전 미달(§0) 등으로
+  인코더가 실패하면 해당 URL은 `404 Not Found`를 돌려줍니다.
 
 연결 확인용 예시입니다. 이 명령에만 필요한 패키지를 먼저 설치해 주세요
 (`avdec_h264`는 §1-1에서 설치한 패키지들에 들어있지 않고 `gstreamer1.0-libav`에 있습니다).
@@ -341,14 +368,14 @@ gst-launch-1.0 rtspsrc location=rtsp://<UGV IP>:8554/ugv/rcws latency=0 \
 | 터미널에 나오는 메시지 / 증상 | 원인과 조치 |
 |---|---|
 | **`Failed to load Vulkan Driver which is required to run the engine.`** | Vulkan ICD 없음. `nvidia-smi`가 되더라도 발생합니다 → §1-3의 Vulkan 확인 |
-| **`Could not initialize SDL: wayland not available`** + `InitSDL() failed` | Wayland가 없는 X11 전용 환경 → §3의 X11 실행 방법 |
+| **`Could not initialize SDL: wayland not available`** + `InitSDL() failed` | Wayland가 없는 환경인데 Wayland로 뜨려 한 것. 자동 판별을 건너뛰는 `-sdlvideodriver=wayland`를 주셨다면 빼고 실행. 옵션 없이 실행했는데도 이 메시지가 나오면 (`WAYLAND_DISPLAY` 변수가 남아 있거나) 스크립트에 자동 판별 블록이 빠진 패키지일 수 있습니다 → `./titan_example.sh -sdlvideodriver=x11`로 실행하고 알려주세요 |
 | `Vulkan Driver is required to run the engine.` (`-vulkan` 지정 시) | 위와 동일 원인 |
 | `Trying to force specific Vulkan feature level but it is not supported.` | `-sm5` 같은 RHI 인자를 준 경우 → §3 참고, 인자를 빼고 실행 |
 | `error while loading shared libraries: libnvidia-encode.so.1` 또는 `libcuda.so.1` | NVIDIA 독점 드라이버 미설치 → §1-2 |
 | `error while loading shared libraries: libgst...` / `libglib...` | GStreamer 미설치 → §1-1 (1) |
 | `Permission denied` | 실행 권한 없음 → §2의 `chmod +x` |
-| 창이 안 뜨고 SDL / video driver 관련 메시지 | 세션 종류 확인(§3). `x11`이면 `titan_example_x11_fallback.sh`로 실행. 그래도 안 되면 §1-1 (2) 설치 확인 |
-| Vulkan / RHI 관련 오류 | `libvulkan1`(§1-1)과 `nvidia-smi`(§1-2) 확인. `sudo apt install -y vulkan-tools` 후 `vulkaninfo \| head`로 NVIDIA 드라이버가 잡히는지 추가 확인 가능 |
+| 창이 안 뜨고 SDL / video driver 관련 메시지 | `./titan_example.sh -sdlvideodriver=x11`로 실행해 보세요. 그래도 안 되면 §1-1 (2) 설치 확인 |
+| Vulkan / RHI 관련 오류 | `libvulkan1`(§1-1)과 `nvidia-smi`(§1-2) 확인. `sudo apt install -y vulkan-tools` 후 `vulkaninfo --summary`로 NVIDIA 드라이버가 잡히는지 추가 확인 가능 |
 | 소리가 안 남 / 오디오 장치 오류 | §1-1 (2)의 `libasound2`, `libpulse0` 설치 확인 (실행 자체에는 지장 없음) |
 | 전체화면에서 프레임이 매우 낮음 | X11 세션에서는 정상입니다(알려진 제약). 창모드로 쓰시거나, Wayland 세션이 있는 PC라면 그쪽에서 실행하세요 |
 
@@ -370,4 +397,16 @@ gst-launch-1.0 rtspsrc location=rtsp://<UGV IP>:8554/ugv/rcws latency=0 \
 | 통제기 → UGV 방향만 안 옴 | 통제기가 `<UGV IP>`의 8000/8001로 보내고 있는지, 방화벽(§1-4) |
 | RTSP 접속 자체가 안 됨 (`Failed to connect`) | UGV Host로 레벨에 들어갔는지, `<UGV IP>`가 맞는지(`ip addr`), 8554 방화벽(§1-4) |
 | RTSP 접속은 되는데 `404 Not Found` | 인코더 초기화 실패 — 로그에서 `NVENC init failed` 확인, 거의 항상 드라이버 버전(§0, 570 이상) |
-| RTSP 접속 후 `Timeout while waiting for server response` | 09-02 빌드에서의 인코더 실패 증상(위와 같은 원인). 09-15 이후 빌드에선 대신 404가 나옴 |
+| RTSP 접속 후 `Timeout while waiting for server response` (약 20초) | 09-02 빌드에서의 인코더 실패 증상(위와 같은 원인 — 그 빌드는 드라이버 610 이상 필요). 09-15 이후 빌드에선 대신 404가 나옵니다. 09-15 빌드에서 이 증상이 나오면 알려주세요 |
+
+---
+
+## 변경 이력 (09-02 가이드 대비)
+
+| 날짜 | 변경 |
+|---|---|
+| 2026-09-15 | **실행 방법 단순화(§2·§3)**: Wayland/X11 세션 자동 판별이 `titan_example.sh` 자체에 들어감. `run_titan_example.sh` / `titan_example_x11_fallback.sh`는 더 이상 패키지에 포함되지 않음(들어 있어도 동작). 명시 지정은 `-sdlvideodriver=x11` / `=wayland` 그대로. |
+| 2026-09-15 | **NVIDIA 드라이버 최소 570 명시(§0·§1-2·§1-3·§6)**: 이 빌드부터 영상 인코더(NVENC) 요구 드라이버가 610+ → 570+로 낮아짐(595.84에서 실측 확인). 09-02 빌드에서 RTSP 접속이 20초 타임아웃으로 실패하던 원인이 이것이며, 이 빌드부터는 인코더 실패 시 즉시 404로 표시됨. |
+| 2026-09-15 | Vulkan ICD 확인을 `/usr/share/vulkan/icd.d/`·`/etc/vulkan/icd.d/` 두 경로로(`.run` 설치본은 후자). `.run`으로 특정 버전을 맞출 때의 주의사항을 §1-2에 접이식으로 추가. |
+| 2026-09-15 | **RTSP 전송 방식 정정(§1-4·§5)**: 09-02 가이드의 "TCP/UDP 둘 다"가 맞음(다른 내부 문서의 "TCP만" 표기가 오류). TCP 권장 이유(저지연 검증 기준, UDP는 영상 포트 동적 협상 → 방화벽)를 명시. |
+| 2026-09-04 | (09-02 가이드에 반영됐던 것) Wayland·Xorg 양쪽 실측 검증, Vulkan ICD 누락 증상, X11 전용 머신 즉시 종료 대응(당시는 래퍼 스크립트로). |

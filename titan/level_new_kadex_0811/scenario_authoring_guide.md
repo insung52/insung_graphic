@@ -89,6 +89,7 @@
 | `SetUGVAutoSurveillance` | UGV RCWS 자동 경계(탐색 스윕) | UGV RCWS |
 | `SetUGVAutoFire` | UGV RCWS 자동 조준+발사 | UGV RCWS |
 | `SetCommandPostAutoFire` | 지휘소 RCWS 자동 조준+발사 | `ScenarioConfig.CommandPost` |
+| `SetDemoUGVAutoFire` | (2026-09-15) **데모 전용** — `IsDemoMode() && bDemoForceUGVAutoFire`일 때만 UGV RCWS를 ARM + AutoFire + `DemoFireMode`로. 아니면 로그만 남기고 아무것도 안 함 → FullSystem과 DT를 공유해도 행을 켜둔 채 둘 수 있다(`SetUGVAutoFire`는 모드를 안 봐서 통제기와 충돌) | UGV RCWS, `RunMode=Demo` |
 | `BeginEnemyEngagementApproach` | 적 전원 **1차 전투지로 경계 이동 시작**(총 내림/저속/숙임/둘러보기, **사격 안 함**) | 적 `CombatZones[0]` 마커 |
 | `BeginEnemyEngage` | 적 전원 **교전 돌입**(총 들고 뛰어서 엄폐 + 사격 시작) | 적 `CombatZones[0]` |
 | `BeginEnemyFleeZone2` / `BeginEnemyFleeZone3` | 적 전원 2차/3차 전투지로 **단계적 도주**(개체별 랜덤 지연 후 순차 이탈) | 적 `CombatZones[1]` / `[2]` 마커. 비어 있는 개체는 그 자리 유지 |
@@ -191,7 +192,7 @@ UGV가 먼저 도착하도록 잡는다. 또 `UGVFiredNearEnemy`의 거리 임�
 | 필드 | 기본 | 의미 |
 |---|---|---|
 | `RunMode` | `FullSystem` | `Demo`면 아래 3가지가 한꺼번에 켜짐 |
-| `bDemoForceUGVAutoFire` | true | UGV RCWS를 레벨 시작 직후 ARM+AutoFire로 강제 |
+| `bDemoForceUGVAutoFire` | true | UGV RCWS를 ARM+AutoFire로 강제 — 시점은 DT 행 `UGVArriveZone1`(1차 목적지 도착 시, 2026-09-15). 이 플래그는 on/off만 |
 | `bDemoForceCommandPostAutoFire` | true | 이동형지휘소 RCWS도 동일 |
 | `bDemoAutoStartScenario` | true | 콘솔 `BeginScenarioEnemyContact` 없이 자동 시작 |
 | `DemoAutoStartDelaySeconds` | 3.0 | 자동 시작까지 대기 |
@@ -199,8 +200,13 @@ UGV가 먼저 도착하도록 잡는다. 또 `UGVFiredNearEnemy`의 거리 임�
 - **FullSystem**: 실제 납품 구성(PC 2대 + 통제기/상위체계). RCWS 조준·사격은 통제기 SW가 쥐고,
   시나리오 시스템은 적군 행동만 담당. 그래서 `UGVSurveillance`/`UGVAutoFire` 행은 꺼둔다.
 - **Demo**: 전시/데모용. 통제기 연동(`UUGVRemoteControlSubsystem`)을 **소켓째로 끄고**, RCWS를
-  처음부터 자동사격으로 켜두고, 시나리오를 자동 시작한다 — 언리얼 프로세스 하나만 켜도(PIE 포함)
+  자동사격으로 켜두고, 시나리오를 자동 시작한다 — 언리얼 프로세스 하나만 켜도(PIE 포함)
   전체 흐름이 끝까지 돈다.
+  - ⚠️ (2026-09-15) RCWS 자동사격 시점이 둘로 갈린다: **이동형지휘소는 레벨 시작 시**(코드
+    `ApplyDemoRCWSAutoFire`), **UGV는 1차 목적지 도착 시** — DT 행 `UGVArriveZone1`
+    (Prereq `UAVSpotted`, `ActorStopped`, 이펙트 `SetDemoUGVAutoFire`). 도착 전 UGV 포탑은
+    `Remote` 모드라 스윕도 사격도 안 한다. 예전처럼 시작 즉시 켜려면 그 행을 Prereq 없음 +
+    `TimerOnly` 0초로. 상세 `2026-09-15_demo_ugv_autofire_on_zone1_arrival.md`.
 **우선순위(서버 기준)**: 커맨드라인 `-demo`/`-fullsystem` > 접속 URL `?Demo=` > 액터 `RunMode`.
 **클라이언트는 무조건 서버 값을 따른다**(`GameState::bDemoRunMode`가 리플리케이트) — 2 PC에서
 한쪽만 데모로 켜지는 사고가 안 난다.
@@ -248,6 +254,7 @@ UGV가 먼저 도착하도록 잡는다. 또 `UGVFiredNearEnemy`의 거리 임�
 | `UAVDetectionOff` | UAVSpotted | TimerOnly | 2s | DisableUAVTargetDetection | UAV |
 | `UGVSurveillance` | UAVSpotted | TimerOnly | 0s | SetUGVAutoSurveillance | UGV RCWS |
 | `UGVAutoFire` | UGVSurveillance | EnemyDetected | — | SetUGVAutoFire | UGV RCWS |
+| `UGVArriveZone1` (2026-09-15) | UAVSpotted | **ActorStopped** | — | SetDemoUGVAutoFire (⚠️ 빌드 전엔 `None` — 빌드 후 설정 필요) | UGV + AI 컨트롤러, `RunMode=Demo`(아니면 no-op) |
 | `EnemyEngage` | **—** | **UGVFiredNearEnemy** | 6000 | BeginEnemyEngage | UGV가 적 60m 이내에서 사격 |
 | `EnemyFleeToZone2` | **—** | **EnemyCasualtyCountAtLeast** | **3** | BeginEnemyFleeZone2 | 적 `CombatZones[1]` |
 | `UGVMoveZone2` | EnemyFleeToZone2 | LeaderDistanceFromEnemyAtLeast | 5500 | MoveUGVToZone2Destination | `UGVZone2Destination` |

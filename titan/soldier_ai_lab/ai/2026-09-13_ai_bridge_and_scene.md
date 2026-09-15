@@ -248,3 +248,9 @@ GM_SoldierObserver   GetDefaultPawnClassForController 를 오버라이드
 | 총구 보정 속도 게이트가 AI 병사에서 실제로 도는가 | **[C-75]** |
 | 45명 규모 성능 · 시험 레벨의 성능 측정 절차 | **[C-83]** · [D3] |
 | 목표·임무 개념 — **다음 큰 조각** | **[D10]** |
+
+---
+
+## 11. 정정 (2026-09-14 저녁) — 7절의 관전 폰은 폐기됐다
+
+7절의 `BP_ObserverPawn` 그래프(Visibility 트레이스 + `Possess`)는 titan 편입 후 **병사를 못 맞혔고**(캡슐·메시가 Visibility 를 무시) **F 가 AI 를 멈췄다.** 그래프를 전부 비우고 C++ `Observer/SoldierObserverPawn` 으로 재작성 — F 는 빙의가 아니라 **추적**(AI 그대로), T 1/3인칭, Tab, 휠. 7.2절의 `FlyCam_*` 축 매핑은 titan 에 없어 애초에 죽어 있었고 이동은 `DefaultPawn` 엔진 정의 바인딩이 하고 있었다. → `2026-09-14_cover_frame_fix_and_observer.md` 2절·0' 절.

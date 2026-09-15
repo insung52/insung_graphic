@@ -1,7 +1,7 @@
 # 문서 전체 목록 (DOCS_INDEX)
 
-2026-08-31 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
-반영판.
+2026-09-15 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
+반영판(이후 세션별로 항목 추가 중).
 
 폴더는 "시스템 하나당 폴더 하나" 축으로 통일됨(`CLAUDE.md` 참고). `guide/`는 에버그린
 레퍼런스, 나머지는 전부 devlog(시간순 기록, 안 고침). 날짜는 문서 내용 기준, 없으면
@@ -96,6 +96,10 @@
 
 ## `rcws/` — RCWS 전용 devlog
 
+- `2026-09-15_search_sweep_hull_relative_elevation.md` (2026-09-15) — 자동정찰 탐색 스윕이
+  **내리막에서 하늘을 보던** 문제. 고각 목표가 월드 수평(`CurrentData.ElevationDegrees`) 기준이라
+  차체가 기울면 위로 들렸음 → 새 `SearchSweepElevationDegrees`(기본 -3°, 차체 기준)로 좌우와
+  기준 통일. **코드 완료, 빌드·실차 경사로 확인 대기.**
 - `2026-08-31_selfdefense_camera_shake_bugs.md` — 자체방호축 카메라 떨림 + UGV 발사 셰이크
   누출 버그 2건, 원인 확정+코드 수정 완료(`SceneCaptureViewParity`/`RCWSProjectile`).
   **2-PC 실환경 검증 대기.**
@@ -155,7 +159,11 @@
 
 ## `level_new_kadex_0811/` — 신규 레벨 디자인/시나리오
 
-- `scenario_authoring_guide.md`/`scenario_three_stage_combat.md` (2026-08-23) — 3단계 전투
+- `2026-09-15_demo_ugv_autofire_on_zone1_arrival.md` (2026-09-15) — **데모 모드 UGV RCWS
+  자동사격(탐색 스윕) 시작 시점을 레벨 시작 → 1차 목적지 도착으로.** 새 이펙트
+  `SetDemoUGVAutoFire`(데모 게이트 내장) + DT 행 `UGVArriveZone1`(`ActorStopped`), 레벨 시작
+  강제는 지휘소만 남김. **진행중 — 빌드 후 그 행의 EffectType 설정 + PIE 검증 대기.**
+- `scenario_authoring_guide.md`/`scenario_three_stage_combat.md` (2026-08-23, 09-15 갱신) — 3단계 전투
   시나리오 DataTable 구현. **완료.**
 - `scenario.md` (2026-08-22) — 위 시나리오 요구사항 정리판(구현 전).
 - `new_kadex_0811_forest_perf.md` (2026-08-22) — PIE 2.3→31fps 성능 폭락 수정. **완료.**
@@ -194,7 +202,8 @@
 
 ## `protocol/` — LIG 원격통제기 UDP/JSON 프로토콜
 
-- `protocol_icd.md` (최종 2026-08-31) — **필드 단위 명세, 가장 자주 참조되는 핵심 문서.**
+- `protocol_icd.md` (최종 2026-08-31, 09-15 §3.3/§4.1 RTSP 전송 "TCP만"→"TCP/UDP 둘 다, TCP 권장"
+  정정) — **필드 단위 명세, 가장 자주 참조되는 핵심 문서.**
 - `ugv_rc_feature_gap_analysis.md` (최종 2026-08-31) — UGV축 cmd별 구현 상태 대조표.
 - `selfdefense_rc_feature_gap_analysis.md` (2026-08-17) — 자체방호축 동일 성격 대조표.
 - `lig_questions_0816.md` (최종 2026-09-02) — **LIG 문의 통합본, 최신.** 1차 답변 반영 완료,
@@ -207,13 +216,20 @@
 
 ## `rtsp/` — RTSP 영상 송출
 
-- `rtsp_poc_findings.md` (2026-08-18 최종) — NVENC/GStreamer PoC 전체 기록(크로스플랫폼 포함).
+- `rtsp_poc_findings.md` (2026-08-18 최종, 09-15 추기) — NVENC/GStreamer PoC 전체 기록(크로스플랫폼
+  포함). SDK 13.1.15 언급은 당시 기록이고 09-15에 13.0.37로 내림(추기 주석만 붙임).
+- `2026-09-15_lig_rtsp_describe_timeout_analysis.md` (2026-09-15, 완료) — **LIG PC에서 RTSP DESCRIBE
+  20초 타임아웃 원인 분석.** IP 오인 → 스크린샷 대조로 "인코딩 프레임 0장" 확정 → 원인은 드라이버
+  595.84 vs NVENC SDK 13.1(610+ 필요). SDK 13.0.37로 내림 + 인코더 실패 시 마운트 미등록(즉시 404)
+  코드 수정, 사내 리눅스 PC를 595.84로 내려 실증. LIG 재발송만 남음.
 - `rtsp_integration_complete_0817.md` (2026-08-17) — 실 카메라 연결 완료, mount 확정.
 - `rtsp_integration_status_0817.md` (해소됨 — 위 문서로 대체).
-- `linux_wayland_x11_present_bottleneck.md` (2026-08-19) — Linux 풀스크린 프레임폭락 해결.
-- `rtsp_client_reception_guide.md` (2026-08-24) — **LIG 공유용 최종 수신 가이드.**
+- `linux_wayland_x11_present_bottleneck.md` (2026-08-19, 09-15 추기) — Linux 풀스크린 프레임폭락 해결.
+  09-15 추기: X11 폴백 래퍼 수동 복사는 `Config/BootstrapPreamble.sh` 자동 삽입으로 대체됨.
+- `rtsp_client_reception_guide.md` (2026-08-24, 09-15 §2.4에 서버 드라이버 요구 1줄 추가, §1.1/§1.2
+  프로토콜 행을 "TCP/UDP 둘 다, TCP 권장"으로 정정) — **LIG 공유용 최종 수신 가이드.**
 - `rtsp_latency_investigation.md` (2026-08-19 최종) — 지연 441ms→68ms 조사 전체.
-- `RTSP_Perf_Investigation.md` (2026-08-19) — 위 조사 원본 진행 로그.
+- `RTSP_Perf_Investigation.md` (2026-08-19, 09-15 추기) — 위 조사 원본 진행 로그.
 - `rtsp_resolution_customization_0820.md` (2026-08-20) — 해상도 커스터마이징+CCTV 잘림버그+
   RCWS 이중렌더링 해결. **완료.**
 
@@ -234,14 +250,32 @@
 
 ## `packaging/` — 패키징/배포 실행 절차
 
-- `kadex_0902_패키징_실행가이드.md` — **패키지와 함께 넘기는 실행 가이드(단독 배포용).** 우분투
-  환경 준비(필수 라이브러리·NVIDIA 드라이버·Vulkan ICD), 실행(`run_titan_example.sh`가 Wayland/X11
-  자동 판별), 축 선택 화면 입력값(RC IP 필수), 접속 정보(UDP 포트·RTSP URL). Wayland·X11 양쪽 실측 검증.
+- `kadex_0915_패키징_실행가이드.md` (2026-09-15, 완료) — **★ 현재 배포용 실행 가이드(패키지와 함께
+  받는 쪽에 넘기는 문서, Ubuntu 실행 절차만).** 파일명은 배포물 관례(`kadex_<빌드날짜>_…`)라 날짜 접두
+  규칙의 예외. 필수 라이브러리·NVIDIA 드라이버 **≥570**·Vulkan ICD 두 경로, `./titan_example.sh` 하나로
+  Wayland/X11 자동 판별, 축 선택 화면 입력값, 접속 정보(RTSP TCP/UDP 둘 다, 방화벽 시 TCP 권장),
+  증상표, 09-02 대비 변경 이력. **패키징(우리 쪽) 절차는 여기 없고 아래 내부 가이드 §2가 유일.**
+- `kadex_0902_패키징_실행가이드.md` (2026-09-02, 09-15 갱신, **폐기 — 위 0915 가이드로 대체**) — 09-02
+  패키지를 받은 쪽과의 대조용으로만 보관. `run_titan_example.sh`/`titan_example_x11_fallback.sh` 안내가
+  더 이상 맞지 않음(세션 판별이 `titan_example.sh`에 내장됨).
+- `2026-09-15_linux_nvidia_driver_595_run_install.md` (2026-09-15, 완료) — **고객 환경 재현용**: 리눅스
+  테스트 PC 드라이버를 특정 버전(595.84)으로 맞추는 NVIDIA 공식 `.run` 설치 절차, 검증 명령,
+  커널 hold, Secure Boot 주의, 원복(`--uninstall` → `ubuntu-drivers install`). `.run` 설치본은 Vulkan
+  ICD가 `/etc/vulkan/icd.d/`에 들어감.
 - `ugv_controller_demo_실행가이드.md` — **통제기 목업 GUI(`ugv_controller_demo`, 구 `ugv_rc_gui`)
   실행 가이드(단독 배포용).** Windows/Linux 설치, 실행 인자, 조작 순서(연결 → 제어권+REMOTE →
   주행/조준), 조이스틱 매핑, 탐지 bbox 색.
 - `2026-09-02_linux_package_ugv_host_rc_test_guide.md` — 위 문서들의 **내부용 상세판**. 패키징 절차,
-  데모/풀 시스템 스위치 배경, 코드 근거, 로그 확인 포인트까지 포함.
+  데모/풀 시스템 스위치 배경, 코드 근거, 로그 확인 포인트까지 포함. §2는 2026-09-15에 정정
+  (MCP 서버 켜진 상태에서는 커스텀 빌드로 패키징; §2-4 래퍼 스크립트 복사 절차는
+  `Config/BootstrapPreamble.sh` 자동 삽입으로 폐지; §2-5 성공 확인 체크리스트·§2-6 패키징 절차
+  변경 이력 신설 — **패키징 절차의 유일한 문서**), §3-1/§7-1에 드라이버 버전(≥570)·`.run` ICD
+  경로 추기, §3-2/§3-4/§7을 프리앰블 기준으로 수정, §1/§3-3/§5/§7의 RTSP "TCP만" 표기를 "TCP/UDP
+  둘 다, TCP 권장"으로 정정.
+- `2026-09-15_linux_cook_failed_mcp_port_clash.md` — 쿡이 `Done!`까지 돌고도 `Cook failed`로 끝나던
+  원인 조사. 커맨드릿은 Error 로그 1줄이면 실패하는데, 쿠커가 에디터와 같은 127.0.0.1:8000에 MCP
+  서버를 띄우려다 남긴 바인드 에러가 원인(CDO Constructor 에러는 오진, `AdditionalCookerOptions`
+  ini 키는 존재하지 않음). `ProjectCustomBuilds`로 쿠커 포트만 8001로 비켜 해결, 향후 진단 절차 포함.
 
 ## `infra_architecture/`
 

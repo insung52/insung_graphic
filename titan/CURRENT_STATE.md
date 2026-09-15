@@ -1,6 +1,6 @@
 # Titan (KADEX 전시회) — 현재 프로젝트 상태
 
-2026-09-10 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
+2026-09-15 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
 (최초 작성 2026-09-01, 이후 항목별로 날짜를 붙여 갱신 중.)
 
 이 문서는 "지금 뭐가 어디까지 되어 있는가"만 다룬다. 문서 자체의 목록(날짜/위치)은
@@ -27,15 +27,25 @@ UDP+JSON, LIG 정식 ICD(`protocol/lig_icd_ugv_rc_full.md`) 기준 구현 완료
 
 UGV 5스트림 + 자체방호 7스트림(부가 1개 포함) 전부 실 카메라 연결, mount 확정
 (`protocol/protocol_icd.md` §3.3/§4.1). 종단 지연 441~484ms → **68ms**로 최적화(수신측
-GStreamer+NVDEC). 전송은 TCP interleaved만(UDP 아님). Linux 패키지 빌드 풀스크린 프레임 폭락
+GStreamer+NVDEC). 전송은 TCP interleaved 권장(2026-09-15 정정: UDP도 됨 — 코드에 프로토콜 제한
+호출 없음, gst-rtsp-server 기본값; TCP는 저지연 검증 기준이고 UDP는 RTP 포트가 동적 협상이라 방화벽
+환경에선 TCP). Linux 패키지 빌드 풀스크린 프레임 폭락
 (11fps) 원인 규명·해결(Wayland/Xwayland 이슈). RTSP 스트림에 SSR/피격흔들림 안 나오던 문제
 (SceneCapture가 메인 뷰포트와 다른 카메라라 `ReflectionMethod=None` 강제되던 것) 원인 규명,
 해상도 커스터마이징+CCTV 잘림버그+RCWS 이중렌더링도 해결됨(2026-08-20,
 `camera_pipeline/rtsp_postprocess_parity_0820.md`/`rtsp_resolution_customization_0820.md`).
 상세: `rtsp/`, `camera_pipeline/`. **순수 Xorg 세션 검증 완료(2026-09-04)** — Wayland/Xorg 양쪽에서
 시뮬레이터 실행 + RTSP 수신 확인, 세션 자동 판별 런처(`run_titan_example.sh`) 신설
-(`packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §7-1). 남은 것: 자체방호축 6스트림
-정밀 지연 재측정. **[2026-08-31 원인 확정+코드 수정 완료]** 자체방호축에서 RCWS
+(`packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §7-1). **[2026-09-15] 그 자동 판별을
+`Config/BootstrapPreamble.sh`로 옮겨 `titan_example.sh`에 패키징마다 자동 삽입**(UAT
+`StageBootstrapExecutable` 훅) — 래퍼 스크립트 복사 절차 폐지, 받는 쪽은 `./titan_example.sh`만 실행.
+배포용 실행 가이드는 `packaging/kadex_0915_패키징_실행가이드.md`(받는 쪽 절차만, 0902판 폐기), 패키징
+절차는 내부 가이드 §2가 유일. 남은 것: 자체방호축 6스트림
+정밀 지연 재측정. **[2026-09-15] NVENC SDK 13.1.15 → 13.0.37로 내림** — 09-02 LIG 전달 패키지가
+LIG PC(드라이버 595.84, 업데이트 거부)에서 인코더 초기화 실패로 RTSP 불통이었음(13.1 = 드라이버
+610+, 13.0 = 570+). 함께 `RtspStreamComponent`를 인코더 성공 후에만 마운트 등록하도록 바꿔
+인코더 실패 시 20초 타임아웃 대신 즉시 404. 사내 리눅스 PC를 595.84로 내려 정상 동작 실증.
+**LIG 재발송 대기.** (`rtsp/2026-09-15_lig_rtsp_describe_timeout_analysis.md`) **[2026-08-31 원인 확정+코드 수정 완료]** 자체방호축에서 RCWS
 조준 이동 시 전장카메라/CCTV가 떨리는 버그, UGV 발사 반동이 자체방호축 카메라에도 리플리케이션
 되는 버그(2-PC 환경) — `SceneCaptureViewParity`/`RCWSProjectile` 수정 완료
 (`rcws/2026-08-31_selfdefense_camera_shake_bugs.md`), **2-PC 실환경 검증만 남음**.
@@ -190,7 +200,20 @@ Resimulation은 RTSP 지연 +33ms와 UGV 거동 변화 때문에 기각
   미착수 — `packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §3-1.
 - **Vulkan ICD 미설치 시 `Failed to load Vulkan Driver`로 실행 불가** — `nvidia-smi`가 되고
   `libvulkan1`이 있어도 발생한다(로더 ≠ 드라이버). 검증은 `vulkaninfo --summary`로 해야 함.
-  같은 문서 §7-1.
+  같은 문서 §7-1. ICD 위치는 apt 설치본 `/usr/share/vulkan/icd.d/`, NVIDIA `.run` 설치본
+  `/etc/vulkan/icd.d/`(2026-09-15 확인).
+- **NVIDIA 드라이버 570 미만이면 프로세스는 뜨지만 RTSP만 안 된다**(2026-09-15 확정) — NVENC SDK
+  13.0.37 기준. 실행 가이드 §0에 명시, 미달 시 클라이언트는 즉시 404(09-15 빌드부터).
+  고객 드라이버 버전 재현 절차는 `packaging/2026-09-15_linux_nvidia_driver_595_run_install.md`.
+- **에디터 MCP 서버(Auto Start Server, 8000)가 떠 있으면 기본 Package Project는 `Cook failed`로
+  끝난다**(2026-09-15 원인 규명·우회 완료) — 쿠커가 같은 포트에 MCP 서버를 띄우려다 남긴 Error 1줄
+  때문. 패키징은 Platforms ▸ Project Custom Builds ▸ "Package Linux (MCP 8000 회피)"로 할 것
+  (`packaging/2026-09-15_linux_cook_failed_mcp_port_clash.md`). 이 경로로 09-15 전체 패키징 성공 확인.
+- **리눅스 패키지 실행 스크립트의 Wayland/X11 자동 판별은 `Config/BootstrapPreamble.sh`에 의존**
+  (2026-09-15) — 이 파일이 체크아웃에 없으면 패키징은 조용히 성공하지만 `titan_example.sh`에 판별
+  블록이 빠져 순수 X11 머신에서 `wayland not available`로 죽는다. 결과물의 스크립트에 `### Added from
+  project Config BootstrapPreamble.sh` 마커가 있는지 확인할 것
+  (`packaging/2026-09-02_linux_package_ugv_host_rc_test_guide.md` §2-5 체크리스트).
 - **UGV에 안티롤바가 없다** — `RollbarScaling=0.15`가 설정돼 있지만 엔진이 축을 **휠 클래스
   기준**으로 묶는 탓에 6륜이 한 축이 되고, 롤바 코드가 `축당 휠 2개`만 처리해서 스킵된다.
   한쪽 바퀴만 장애물을 타면 차체가 복원력 없이 기운다. 살리려면 휠 클래스를 앞/중/뒤 3개로
