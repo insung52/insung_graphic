@@ -2,6 +2,14 @@
 
 2026-09-03 / 코드·DataTable 모두 반영 완료, 2차 빌드 후 PIE 재검증만 남음(1차 검증에서 3차 도주 3명 확인) / `BeginFlee`가 도주 중 개체의 다음 도주 명령을 버려서 3차 전투지가 통째로 안 열리던 버그를 고치고, 전투지별 인원을 정원제(2차 10명 / 3차 5명)로 채우는 동적 분대 재배정과 사상자 진단 로그를 추가.
 
+> ⚠️ **2026-09-21: New_kadex_0811 에서 이 문서의 `BeginEnemyFleeZone2/3` 정원제·`ExcludeFleeingEnemiesFromAllyTargeting`·
+> `HoldFleeingEnemyFire` 는 superseded 다** — 적군이 SoldierLab 병사로 바뀌어 `UEnemyCombatComponent` 대상이 0명. 같은 요구는
+> `IssueSquadOrder` 행의 `Quota`(`USoldierSquadSubsystem::ReinforceSquads` — `SquadId` 영구 편입) · `SetTargetable false`
+> (09-21 부터 UGV RCWS `bRespectEnemyTargetingExclusion` 도 켬 + SoldierLab 아군 보병이 직접 읽음) · `BreakContact` 동사로
+> 구현됐다. `[적 사상]` 로그·`EnemyCasualtyCountAtLeast` 는 브리지 덕에 그대로 동작. 현재 구조:
+> `../level_new_kadex_0811/2026-09-21_soldierlab_migration_new_kadex_0811.md` · `../soldier_ai_lab/squad/2026-09-21_break_contact_and_targeting_exclusion.md`.
+> 구 BP 병사를 쓰는 `kadex_test` 에서는 아래가 여전히 유효.
+
 선행 문서: `2026-08-31_enemy_squad_reorg.md`(분대 재편·`LastStandZoneIndex`·분대별 경로),
 `../level_new_kadex_0811/scenario_three_stage_combat.md`(스텝 테이블 구조),
 `../level_new_kadex_0811/2026-09-01_scenario_run_modes_demo_fullsystem.md`(데모 모드).

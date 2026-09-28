@@ -5,10 +5,23 @@
 > 이관 중 생긴 변경(타입 개명 · cvar 개명 · `AC_VisualOverrideManager` 편집)은
 > `migration/2026-09-14_titan_example_migration.md` 3.1 · 3.4 · 4.3 참고.
 
-2026-09-15 저녁 / 유지보수 / **애니메이션 층(L4) 완료 · 무기/투사체 배선 완료 · AI 층 동작 확인 · 아군 메시(soldier_T) · ★ 적군 메시(new_enemy_T) 교체 완료 · ★ AI 전투 거동 2라운드(위험 지도 → 노출 회계) 완료 · ★ 체력·피격·사망 완료(병사가 죽는다, 아군은 무적).**
+2026-09-22 / 유지보수 / **애니메이션 층(L4) 완료 · 무기/투사체 배선 완료 · AI 층 동작 확인 · 아군 메시(soldier_T) · ★ 적군 메시(new_enemy_T) 교체 완료 · ★ AI 전투 거동 2라운드(위험 지도 → 노출 회계) 완료 · ★ 체력·피격·사망 완료(병사가 죽는다, 아군은 무적) · ★★ 위험 지도 폐기 → 상황 필드(조명 모델) 3단계까지 PIE 확인 · ★ 09-18 필드 LOD(밉 + 퇴거) + 오버레이 v2 · ★ 09-18 오후 순찰(낡은 조망 비용) · 부채꼴 스캔 · 이동 강건성(solid/미지=열림/도달성/유예/Hold 기울기) PIE 확인, ~~저녁 얇은 엄폐 A/B/C 빌드 전~~ → ★ 09-18 밤 A/B/C PIE "잘됨" + 코너 멈춤 루프 수정 + **긴장도·걸음(`GetDesiredGait`) · 포즈 급박도(`GetPoseUrgency`)** 계약 → 포즈 층 3종이 소비, 전부 PIE 확인 · ★★ **09-21 분대 스코프 필드(PIE ✅) · 엣지 전진(코너 멈춤 대체, 빌드됨·PIE 대기) · AI 가 소유하는 사격 콘 + 버스트(PIE ✅, 무기 BP 미배선) · 섀도우 재캐스트 문턱 + riders(~~빌드 전~~ → 같은 날 빌드·PIE ✅) · ★ 09-21 늦게 **오버레이 노출 보정**(EV10 레벨에서 숯검정이던 오버레이 — `SoldierDebug::Bright` · `USoldierDebugMeshComponent` · cvar `Debug.ExposureScale`, PIE ✅; `Squad/`·`Pose/`·`Weapons/` 는 [W97]) · ★ **09-21 성능 계측 `stat SoldierLab` + off 스위치 7 → Cover Tick 8.92 → 1.92 ms(결정 보존 수정 넷), World Tick 28.5 → 22.6 — 남은 것은 다른 층([W98]~[W101])** · ★★ **09-21 분대 세션: New_kadex_0811 본 레벨이 SoldierLab 병사로 이관돼 첫 PIE 전 체인 완주("아주 잘됨") · 동사 `BreakContact` + 표적 제외 2소비자(2차 PIE 대기)** · ★ **09-22 titan 시나리오 재시작 리셋 계약 3종(`ResetForRestart` ×2 · `RecallAll`/`Park`) + `SoldierLab.ResetWorld`, L_SoldierScenario PIE ✅ (P187)** · ★ **09-23 `USoldierHealthComponent::EndPlay` 가 병사가 들고 있던 액터(소총)를 같이 파괴 — `bDestroyCarriedActorsOnDestroy`, 2-PC 실기 ✅ ([W116] 해결, P188)**.**
+★ **2026-09-22 — 시나리오 재시작 리셋 계약(titan 세션이 이 모듈에 추가, L_SoldierScenario PIE ✅)** → `../level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md`(구현) · `../level_new_kadex_0811/2026-09-10_scenario_auto_restart_design.md` 4a절(계약). titan 의 시나리오 재시작은 레벨 리로드가 아니라 **같은 월드의 인플레이스 리셋** — 병사(`USoldierHealthComponent` 보유 액터)는 titan `UScenarioRespawnSubsystem` 이 스냅샷(클래스·트랜스폼·인스턴스 저작 델타 `SquadId`/`bSquadLeader`/`bInvincible`)으로 Destroy → 재스폰하고, **살아남는 SoldierLab 월드 서브시스템은 이 모듈이 소유한 리셋 함수**로 되돌린다: `USoldierSquadSubsystem::ResetForRestart()` · `USoldierSituationFieldSubsystem::ResetForRestart()` · `USoldierProjectilePoolSubsystem::RecallAll()` + `ASoldierProjectile::Park()`. 콘솔 `SoldierLab.ResetWorld`(셋 한 번에, 시험 레벨 단독 검증). **원칙 P187** — 서브시스템에 새 상태를 두면 리셋에도 넣는다. 함정 둘(titan 쪽에서 해결): `BP_Soldier_*` 의 `AutoPossessAI=PlacedInWorld` 는 **스폰된** 폰에 컨트롤러를 안 붙인다(재스폰은 지연 스폰 중 `PlacedInWorldOrSpawned` 로 바꿈) · 병사만 Destroy 하면 병사가 스폰한 `BP_AR4Rifle` 액터가 남아 `OwningCharacter is not valid` 스팸 + 사이클마다 두 배(딸린 액터 동반 파괴). ~~평상시 사망 `DestroyAfterSeconds` 뒤 소총 잔존 여부는 **미확인 → [W116]**~~ → ↓
+
+★ **2026-09-23 — 병사가 스폰해 들고 있는 것은 병사가 치운다: `USoldierHealthComponent::EndPlay` + `bDestroyCarriedActorsOnDestroy` ([W116] 해결, 원칙 P188)** → `../level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md` §5. 소총 누수는 재시작만의 문제가 아니라 **평상시 사망 경로에도 있던 것**이었다 — 확정 근거 넷: ① `BP_SoldierCharacter` 가 BeginPlay 에서 소총을 `SpawnActor` 해 `Rifle` 에 들고 있는데 그 BP 에 `K2_DestroyActor` 노드도 `EndPlay` 핸들러도 **0개**(`BP_Soldier_Hostile/Friendly` 도 0) · ② `USoldierHealthComponent` 는 `DestroyAfterSeconds` 뒤 `Owner->Destroy()` 만 · ③ 엔진 `UWorld::DestroyActor` 는 **자기 Owner 만** 비우고(`Engine/Private/LevelActor.cpp`) 자기가 소유한 액터는 어태치만 끊고 살려 둠 · ④ `BP_AR4Rifle` 은 **`bReplicates=false`**(CDO 실측)라 프로세스마다 자기 것이 있어 서버가 치워도 클라 것은 남는다. **수정**: `EndPlay` 오버라이드가 `EEndPlayReason::Destroyed` 일 때만, 자기가 어태치(`GetAttachedActors` 재귀)하거나 소유(`Children`)한 액터를 같이 파괴(`bDestroyCarriedActorsOnDestroy`, EditAnywhere, 기본 true). **BP 수정 0건**으로 모든 파괴 경로·모든 프로세스를 덮는다. 예외 둘 — 풀링 투사체(`ASoldierProjectile`: 풀이 포인터를 쥐고 Owner 만 사수로 바꿔 쓴다) · 클라이언트의 **복제된** 액터(`ROLE_Authority` 인 것만). 순서상 안전: `DestroyActor` → `Destroyed()` → `RouteEndPlay` → 컴포넌트 `EndPlay` 가 어태치 해제·`SetOwner(NULL)` **이전**. titan 재시작 쪽 정리(`DestroySoldierAttachments`/`DestroyOrphanedChildActors`)는 **안전망**으로 남았다(낙하산 등 병사가 아닌 재스폰 대상용). New_kadex_0811 **2-PC 실기 검증 ✅**(사용자 "해결됨").
+★★ **2026-09-21 — New_kadex_0811 이관 · `BreakContact` · 표적 제외 (분대 세션)** → `../level_new_kadex_0811/2026-09-21_soldierlab_migration_new_kadex_0811.md` · `squad/2026-09-21_break_contact_and_targeting_exclusion.md`. 구 `BP_Enemy_kadex_1~15`/`BP_Ally_kadex_1~25` 삭제 → `BP_Soldier_Hostile_1~15`(분대 1/2/3)/`BP_Soldier_Friendly_1~25`(1~5) 같은 트랜스폼, 마커 113개·경로 스플라인·드론 경로·낙하산·트럭·UGV 유지 · **`ASoldierZone` 8개** 분대별(적 3+2+1 — 분대별 `NavQueryFilter_EnemySquad1/2/3` 를 존이 나른다, 아군 북/남) · `ScenarioConfig_1.SquadZones` · DT **`DT_ScenarioSteps_ThreeStage_SoldierLab` 26행**(`ThreeStage` − Retarget 2·HoldFleeingFire·AllyAmbush + AllyDefend·AllyEngage·Squad3Run·Squad3Stand; 적/아군 행 `IssueSquadOrder`, 드론·UGV·트럭 행 그대로). 첫 PIE(04:38 UTC): EnemyApproach +1 → UAVSpotted +82 → UGVArriveZone1 +170 → EnemyEngage +180 → Flee2 +210(`reinforce quota=10 living=7 needed=3 moved=3`) → AllyEngage +260 → UGVMoveZone2 +274 → Flee3 +350 → CommandPostFire → ExcludeFleeingEnemies. **문제**: 3분대 3차 "도주"(`Withdraw ReturnFireOnly`)가 엄폐 홉 후퇴 + UGV 가 제외 뒤에도 대타를 쏨 → 원인 셋(RCWS 스위치 반쪽 누락 · SoldierLab 아군이 제외 플래그 안 읽음 · Withdraw 는 전투 이동) → **`ESoldierOrderVerb::BreakContact`**(`IsBreakingContact()` 이면 `ScorePosition` 의 Fighting/Route/Danger/Suppression 0 · dwell 0 · 스프린트 · 자세 0, 존 안은 평소 Hold — 도주는 ROE 가 아니라 땅의 가격 P184) · **`IsContactExcluded`**(후보 제외·잠금 해제, 인지 불변 P185) · `IssueSquadOrderSpec` `SetTargetable(false)` → UGV `bRespectEnemyTargetingExclusion=true`(트럭 제외) · DT `Squad3Run`(Flee3 +6 s BreakContact HoldFire Rush) · `Squad3Stand`(트럭 80 m 사격 → Occupy z2 Free). `GM_SoldierLab` 에서도 시나리오는 돈다(GameInstance 서브시스템, PC CDO 폴백 — RTSP/HUD/토스트만 잃음). 1v1 `L_SoldierTest` DT 5행 기록. 값 [C-163]~[C-164], [Q51], [W104]~[W106]([W106] = 문서 세션 발견: RCWS 스티키 표적이 제외를 안 봐 물고 있던 한 명은 시야를 1 s 잃어야 놓는다), **[W70] 해결**. 빌드 함정: `UFUNCTION` 없는 private 헬퍼를 다른 컴포넌트에서 → C2248.
+★ **2026-09-21 — 성능 계측 · 엄폐 틱 비용** → `ai/2026-09-21_perf_instrumentation_and_cover_cost.md`. 35명(`L_SoldierScenario`)에서 World Tick 1.7 → 29 ms 인데 `stat game` 은 6 ms 만 이름을 댔다 → **`STATGROUP_SoldierLab`**(`AI/SoldierLabLog.h`, `stat SoldierLab` — 시스템 틱마다 사이클 카운터, Cover 하위 7 · Field 5, `Traces: Sight/Cover/Engagement/Field` · `Soldiers Ticked`) + **`SoldierLab.<Sight|Perception|Cover|Engagement|Suppression|Comms|Field>.Enabled`** off 스위치 + **`SoldierLab.Cover.Avoidance`**(RVO 런타임 A/B). 첫 계측 **Cover Tick 8.92 ms · 487 트레이스/프레임 = 프레임의 1/3**. 수정 넷(전부 결정 보존 — 같은 눈·후보·비용 함수): (a) **이동 중 스윕 정지 `bSweepSuspended`**(`FinishSweep` 의 `bAlreadyGoing` 과 같은 식 — 어차피 버리던 스윕, 정지하면 새 발·새 눈으로 새 스윕) + 볼 곳만 **`UpdateWatchPoint()`** 로 `WatchRefreshSeconds 0.25` 마다 (b) 발밑 HERE 재평가 매 틱(27 트레이스) → **`HereEvalIntervalSeconds 0.1`** ∨ 걸음 > `MicroStepCm` ∨ 새 스윕 (c) **경로 가지치기** — 경로 없이 best 에 지면 경로 트레이스 생략(경로 비용 ≥ 0 이라 정확) (d) 눈 0 스윕 **`CalmCandidatesPerTick 2`**(트레이스 0 이라 후보 전체가 매 틱 돌던 것). → **Cover 1.92 ms · 243 트레이스**(Candidate 1.29 / Score 0.51 / Begin 0.43 / Route 0.35 / Here 0.15), SoldierLab 합 ≈ 3.3, **World Tick 28.5 → 22.6**(프레임 31, GPU 6 — 게임 스레드 바운드). RVO A/B 0.3~0.5 ms → 켜 둠; "켬" 캡처의 **`DispatchBlockingHit` 58 ms 히치**는 별건(무기 `OnHit` 동기 로드 의심 [W101]). 남은 게임 스레드: 애니 ≈ 7.3(`BlueprintUpdateAnimation` 3.47 · 키네마틱 본 0.97 → [W98] 포즈) · 이동/트랜스폼 4~7(컴포넌트 ≈ 23/병사 · 오버랩 → [W99] 캐릭터 BP) · BP 틱 ≈ 2.5([W99]) · 투사체 스폰 0.65([W100]) · 이 층 다음 몫 ≈ 1 ms([W102], 다른 층 뒤) · 분대 스코프 [W103]. 워커 19.7 ms 는 병렬(대기 1.15 만). 원칙 **P182~P183**, 값 [C-162].
+★★ **2026-09-21 — 분대 스코프 필드 · 엣지 전진 · 사격 콘 · 섀도우 감축** → `ai/2026-09-21_per_squad_field_edge_advance_fire_model.md`. ① 상황 필드가 **분대 하나당 하나**(`FScope` = 진영 × 분대 슬롯, `USoldierFieldSettings::MaxSquadsPerFaction 3`, 슬롯은 처음 말하는 순서·넘치면 슬롯 0 공유 + 분대당 1회 경고, 공개 API 전부 `const USoldierIdentityComponent* Who`, 호라이즌만 세계 공유, 무전 `ReceiveSharedRecord` → 받는 분대 필드에 **관측 시각**으로 `ReportSighting`, **`bTakesSquadOrders=false`(UGV 표적 Identity)는 스코프·앵커·관찰 대상 아님** — 오버레이가 UGV 를 중심으로 잡던 원인, cvar `Debug.Field.Squad`/`.Centre`, 헤더 `HOSTILE/1`) · `L_SoldierScenario` 아군 4 → **3분대(7/7/6)**. ② **엣지 전진** — 09-18 코너 멈춤(`UpdateCornerPause`·`CornerStopCm`·`CornerPauseSeconds`) **삭제**, `USoldierSightComponent::GetSweepRays()`(콘 스윕 광선 보관)에서 엣지(옆 광선은 멀리 가는데 ≤ 10 m 에 멈춘 광선)를 읽고 `USoldierSituationFieldSubsystem::GetWedgePresence`(쐐기 안 경계도 × m², 구운 호라이즌으로 가림, **트레이스 0**)로 한 걸음이 여는 양을 값 매겨 `StepPresenceBudget 6` 안에서 가장 멀리 가는 걸음(60 cm × 1..4, ±105° 부채꼴)을 딛고 연 쐐기의 글로우가 `AnalyzedPresence 1` 아래로(또는 `MaxLookSeconds 3`) 내려가면 다음 — 호도 타이머도 없다(P176·P177). 접촉이면 그 자리 정지 + 걸어온 자리를 10 s 엄폐 후보로. 교전: `GetAdvanceView`(쐐기 조준 + 벽 쪽 린 0.7) · `bWantsToAim = 접촉 ∥ 전진` · 전진 = Walk · `UrgencyLookPeek`. **빌드됨(CL 500), PIE [W95]**. ③ **사격 콘을 AI 가 소유**(P178) — `GetShotSpreadDegrees()` = `WeaponSpreadDegrees 0.8`(← 3) × `(1 + MovementSpreadScale 6 × v/600)`(← 2) × 자세(`Lean 1.5`/`Blind 15`, ← 1.4/4 — 가치 사거리 보존) × (1+반동) + **`AimSettleDeg`**(선회 `AimSettleInitialDeg 2.5` → `exp(−dt/0.4)`, 발마다 `+RecoilKickDeg 0.6`, 이동 바닥 `MoveWobbleDeg 1.5`) · 조준 게이트 = 기록 반경 ≤ `TargetRadiusCm 45 × AimedHitTolerance 2` 이면 지금 콘 → `Aimed` / 정착 콘 → **`Settling`** / 예비 → `Suppressive` · **버스트** `BurstRoundsMin 2..Max 5`(제압은 Max) · `BurstPauseSeconds 0.5 × (1 ± RhythmJitter 0.35)` · `FRandomStream` 이름 시드 → **`Pacing`** · `[Engage]` 꼬리 `cone wobble burst next` · `KnowledgeToSpreadRatio` 삭제. PIE ✅. ⚠ **무기 BP 가 아직 고정 콘, `BP_SoldierCharacter` 는 `HasContact()` → [W93]**. ④ **섀도우 감축 [B]** — `FLight::ShadowEye/ShadowCastTime`, 따라가는 라이트는 `ShadowRecastMoveCm 0`(= 한 셀) ∧ `ShadowRecastSeconds 0.5` 뒤에만 재캐스트, 얼면 즉시, 반 셀 안 다른 분대 라이트는 **riders** 로 한 벌의 트레이스에 동승, 헤더 3줄째 **비용 줄**(감축 전 실측 `shadows 0.03 ms · 0 waiting · 96 alive` = **`MaxLights 16` 상한** [W92]). 원칙 **P176~P180**, 값 [C-157]~[C-161], 작업 [W92]~[W96], **[W74]·[W85] 해결**. ★ **같은 날 늦게**: ④ 정식 빌드 · PIE ✅ "아주 잘됨"(**[W96] 해결**, 재측정 동일 0.03 ms · 0 waiting · 96 alive — 96 은 alive 지 waiting 이 아니다) · `L_SoldierScenario` 3분대 재편 MCP 저장 확인 · ⑤ **오버레이 노출 보정** → `ai/2026-09-21_debug_overlay_exposure.md`: 디버그 프리미티브는 톤매퍼 앞이라 EV10 고정 레벨에서 선형 1.0 = 숯검정, `DrawDebug*`·배처 `DrawMesh` 는 8-bit → 레벨 무변경, **뷰 노출의 역수만큼 밝게** — `SoldierDebug::GetExposureScale`(씬 뷰 익스텐션이 `GetLastEyeAdaptationExposure` 읽음) · `Bright(FColor) → FLinearColor` · 래퍼 `Line/Point/Sphere/Circle` · 신규 **`USoldierDebugMeshComponent`**(`AI/SoldierDebugMesh`, 필드 사각형·링) · cvar `SoldierLab.Debug.ExposureScale`(0 자동) · `Build.cs` + `RenderCore`/`RHI` · `AI/` 24곳 교체. 원칙 **P181**, 작업 **[W97]**(`Squad/` 9 · `Pose/` 7 · `Weapons/` 1 — `Arrow` 래퍼 필요). 엔진 내비메시 `P` 뷰는 비목표.
+★ **2026-09-18 — 상황 필드 2일차**: 3단계(호라이즌/앰비언트) 빌드·PIE("딱 내가 원하는 그림이 이제 나옴") → **밉 + 다중 앵커 퇴거**(`LevelCount 3`, 거친 레벨은 레벨 0의 집계 `FCoarseCell`/`FCoarseHorizon`, 병사 아무나에게서 `DetailRadiusCm 8000 × 4^L` 밖 디테일은 부모에 **잔여물**로 접고 해제 — 메모리가 지나간 자리가 아니라 병사가 있는 자리에 묶임, `SoldierLab.Field.CellSizeCm` cvar) → **오버레이 v2**(자체 `ULineBatchComponent` 0.1 s flush+refill, 색별 메시, `Debug.Field.Level −1` 클립맵 링, 불투명도 = 신선도, 반경 12000, 대칭 캡 6000, 헤더 2줄, 라이트 색 = 출처, 볼 곳 화살표) → **라이트 부정 증거**(`ClearViewHalfLifeSeconds 4`). 섀도우 지면 아래 허용 −110 → `GroundSlackCm 40`. LOD 링·배처까지 PIE 확인, **대칭 캡·라이트 v2·부정 증거·헤더 2줄·파랑끼는 빌드 전 [B]**. → 시스템 문서 **16~18절**, 원칙 **P152~P157**, 값 [C-140]~[C-143], 작업 [W79]~[W83]([W83] = 들은 라이트 필터 주석·코드 불일치).
+★ **2026-09-17~18 — AI 포즈 층 3종 (포즈 세션) + 관전 폰 추기** → **`animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md`**. AI 세션이 발행한 계약의 **소비 측**이 들어갔다, 전부 `Source/SoldierLab/Pose/` · `BP_SoldierCharacter` 컴포넌트, **AI 전용**(`IsPlayerControlled()` 면 반환): **`SoldierScanTurnComponent`**(`AC_SoldierScanTurn` — 총 내림 ∧ 정지 ∧ `IsScanning()`/`HasContact()` 면 캡슐 yaw 를 `GetAimPoint()` 로 20°에서 시작 5°에서 멈춤 180°/s, 메시는 GASP OffsetRootBone+MM TIP) · **`SoldierGaitBridgeComponent`**(`AC_SoldierGaitBridge` — `GetDesiredGait()==Walk` → `CharacterInputState.WantsToWalk` 리플렉션 매 틱, GUID 접미사 P170, Sprint 는 BP 소유) · **`SoldierPoseSmootherComponent`**(`AC_SoldierPoseSmoother` — stance/lean/BF-H/BF-V 를 **사다리꼴 프로파일**(축별 `MaxSpeedUp/Down/Acceleration`, Stance 1.6/0.9/5 = 앉는 쪽이 빠름) × `GetPoseUrgency()` 로 `ScaleAtCalm 0.5`~`ScaleAtUrgent 1.6`, 목표 변경 시 속도 연속, BP 상태+AI 목표 변수 동시 쓰기 + 액터 틱 선행 P168, BP 램프 rate 는 **0.0001 로 얼림** — 0 이면 `RampAxisTo` 가 목표를 돌려줘 급할 때 1프레임 스냅 **P167**). cvar `SoldierLab.Debug.ScanTurn` · `.PoseSmooth`(`ext` 감사). **셋 다 사용자 PIE 확인**(ScanTurn 돎 · 걷기 나옴 · 스냅 해결 "해결완료"). **H 는 AI 에 자동으로 안 켜진다**(09-17 `bEnableForAI` 되돌림, P171). 관전 폰: 자유 비행 **휠 = 비행 속도**(`FlySpeedCms 1200` ×/÷1.25) · `bIgnoreTimeDilation`(slomo 무관) · **롤 잔류 수정**(컨트롤 회전은 yaw·pitch 만, P169). 값 [C-154], 작업 [W91], **[C-152] 포즈 측 확인**.
+★ **2026-09-18 오후~저녁 — 순찰 · 부채꼴 스캔 · 이동 강건성 · 얇은 엄폐** → `ai/2026-09-18_patrol_scan_and_move_robustness.md`. 사용자 보고("적이 죽은 뒤 아군이 가만히, 화살표가 몸과 반대")의 원인 넷: **섹터는 부채꼴**(필드가 arc 안에서 가장 안 훑은 방위, `GetMostExposedDirection` 편향/arc 파라미터) · 콘 스윕 **띠 넓히기**(16 m 밖 3셀 폭) · **볼 곳은 항상 계산**(눈 유무 무관, 쓸지는 교전 층) · 교전 층이 **`GetAimPoint()`/`IsScanning()` 발행** → 포즈 세션 `Pose/SoldierScanTurnComponent`가 몸을 돌림. **순찰 = 낡은 조망 비용**(`GetStaleVantage`, 존/목표 `PatrolWeight 1.0`·`PatrolStaleSeconds 30`, 눈 0일 때만 — 경로 없음). 로그로 잡은 이동 결함 셋: 큐브 꼭대기 셀(**`FHorizon::bSolid`** + `MoveTo` 전 **`FindPathSync` 부분 경로 불허** + `RejectCandidate 30 s` + **`MoveGraceSeconds 0.75`**) · 벽 꼭대기(**`GetExposureByStance` → bool, 미지 = 열림**) · 밴드 밖 평평한 Hold(**기울기 계속**). CQB `WatchTravelBias 1`·`WatchApproachBias 0.5`·`ScanDwellSeconds 2`. **`MinStance`**(배정/명령, Rush 무시 — titan DT 미연결). [W83] 해결. **오후 묶음 빌드·PIE — "잘 되는 거 같음. 이제 정상적이다."** 저녁 **A/B/C(활동도 가중 은폐 `HiddenGazeFraction 0.5` · 미세 위치 `MicroStepCm 30`/`CoverAcceptanceRadiusCm 20` · 코너 멈춤 `CornerPauseSeconds 0.8` + 굽이 너머 미리 보기)는 ~~빌드 전 [B]~~ → 밤 빌드·PIE "잘됨"** — 진짜 파이 자르기(경로 모양)는 아님. ★ **밤 4차**(같은 문서 12~17절): 첫 빌드 로그의 **코너 멈춤 루프**(스폰 옆 굽이에서 0.82 s 마다 `MOVE` 60 s — 굽이 기억이 경로 인덱스 + 재개 뒤 유예 만료 → `LastPausedCornerLocation` 자리 기억 + 재개 시 `LastMoveIssuedSeconds = Now`, P173·P174) · 눈 나타나면 즉시 재개 · `RejectedCandidates` 만료 정리([W90]) · `IsScanning()` 섹터만 있어도 true([W89]) · `GetExposure` 미지 = `UnknownPresence × AmbientWeight`(0 아님) · **긴장도 `GetTension()`**(알람 = 접촉 ∥ 제압 ∥ 사선 거부 ∥ 1 s 안 총성, `TensionHalfLifeSeconds 20`) + **걸음 `GetDesiredGait()`** Walk/Jog/Sprint(Jog = 접촉 ∨ 긴장 ≥ `JogTension 0.3`, Cautious 무접촉 = Walk — "조용한 경비는 걷는다", P175) · **포즈 급박도 `GetPoseUrgency()`**(`Urgency*` 7값 max + 제압 — "AI 는 목표 + 숫자 하나, 움직임은 포즈 층", P172) · `[Engage]` 로그 끝 `tension gait urg`. 원칙 **P158~P166 · P172~P175**, 값 [C-148]~[C-153] · **[C-155]~[C-156]**, 작업 [W85]~[W88]. ~~ScanTurn 연동 미확인.~~ 포즈 세션 확인, 걸음·급박도 소비도 PIE "잘됨".
+★ **2026-09-18 — 분대 명령 층이 빌드되어 시험 레벨 `L_SoldierScenario`(적 15·아군 20·UGV·트럭, 드론 없음)에서 처음 돌았다** → `squad/2026-09-18_squad_layer_fixes_quota_engage_range.md` · `../level_new_kadex_0811/2026-09-18_soldierlab_three_stage_test_level.md`. 첫 PIE 수정: 도착선 일원화(`ASoldierZone::ArrivalFraction` → 배정, `ArrivalInsetFraction` 삭제, Approach 비용 `1 + 거리/scale` 계단) · 존 **에디터 표시**(구 3개 + 섹터 화살표 + 스프라이트) · `bTakesSquadOrders`(차량 제외) · **정원제·대타** `ReinforceSquads` + DT `Quota` · **`EngageRangeCm`**(ROE 사거리 — 적군이 스폰 지점에서 92 m 밖 UGV 를 쏘던 것) · 트리거 `EnemyFireStarted`/`EnemyNearFriendlySoldiers` · RCWS 청각 ← SoldierLab 총성(`OnGunshot`) · `LogTick` 순환 경고(CMC `bTickBeforeOwner=false`, 2.5d-1 정정, [C-146]) · 총구 `DrawDebugCoordinateSystem` 해제. 완주(ScenarioComplete)는 아직 [C]. 1차 전투지 위치 [Q50].
+★★ **2026-09-17 저녁 — 위험 지도(`SoldierDangerMap`)가 삭제되고 상황 필드 `USoldierSituationFieldSubsystem`(`AI/SoldierSituationField`)이 들어섰다** → **`ai/2026-09-17_situation_field_lighting_model.md`**. 위험도를 **저장하지 않는다** — 목격(라이트)이 그림자를 긋고 안 본 땅(사전값 0.5)이 앰비언트다. 값은 **Project Settings → Game → SoldierLab Situation Field**(`USoldierFieldSettings`, `DefaultGame.ini`). 오버레이 `SoldierLab.Debug.Field`(월드당 1회). `LogSoldierAI`는 `AI/SoldierLabLog`로 이사. 잠입(사전값·콘 스윕·스프린트 규칙·볼 곳) → `ai/2026-09-17_infiltration_and_unknown_ground.md`. ~~**1·2단계 + 오버레이는 PIE 확인, 3단계(앰비언트·필드 후보·필드 자세)는 빌드 전 [B].**~~ → 09-18 전부 PIE 확인. 같은 날 오전분(위협 보너스·사선 거부·히스테리시스·차량 높이)은 `ai/2026-09-17_threat_bonus_lane_denied_vehicle_heights.md`. 새 원칙 **P143~P151**.
+★★ **2026-09-17 — 애니메이션이 진영별 2벌이 됐다. 이 문서의 클립·PSD·Chooser 경로가 전부 바뀌었다** → **`animation/prototypes/2026-09-17_ally_enemy_anim_set_split.md`**. `/Game/SoldierLab/Animations_Enemy/`(`Enemy_`) · `/Game/SoldierLab/Animations_Ally/`(`ALLY_`) 각 247개, 옛 `Animations/`·`PoseSearch/` 는 **소멸**. 스켈레톤·ABP 는 **1벌 그대로**이고 ABP 안에서 `UseAllyAnimSet` 이 **5축을 분기**한다(2.4b). 작업 기준 세트는 **적군**.
+★★ **2026-09-17 — 피격·사망이 실제로 화면에 나오기 시작했다** → **`ai/2026-09-17_hit_death_three_causes.md`**. 09-15 에 배선은 끝났으나 **원인 셋**(C++ 생성자의 경로 하드코딩 · 배치 인스턴스의 빈 배열 · 사망 슬롯 `FullBody` 부재)으로 한 번도 재생된 적이 없었다. 몽타주는 이제 **BP 데이터**이고 사망은 **순수 래그돌**(몽타주 OFF), 피직스 에셋은 두 메시 다 `PA_UEFN_Mannequin`. 새 원칙 **P134~P141**.
 ★ **2026-09-14~15 애니메이션 정리 라운드**: 적군 메시 · 왼손 IK 토글(기본 OFF) + 그립 오프셋 런타임 산출 · 급선회 스냅 해결(`maxRotationError` −1 복귀, [C-80]) · BF 머리 부풀기 해결(`ModifyBone_8`) · 총 오프셋을 메시 소켓으로 · 총내림 클립 2차 시험 실패 → `animation/prototypes/2026-09-15_sharp_turn_pop_bf_head_scale_and_weapon_socket.md` · 디자이너 가이드 완성 `assets/2026-09-14_designer_guide.html`.
 ★ **2026-09-15 저녁 — 체력·피격·사망**: `AI/SoldierHealth` C++ 컴포넌트 하나 + ABP `AdditiveHitReact` 슬롯 경로 + BP 총구 보정 게이트 AND. 사용자 PIE "잘됨", 수치는 [C-110]~[C-118] → `ai/2026-09-15_health_hit_death_implementation.md`
-AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교전·엄폐·**목표** + **위험 지도 · 부채꼴 후보 · 표적 잠금 · 엄폐↔사격 사이클(노출 회계) · 실제 총구 소켓·포즈별 오프셋 학습**. **L0 명령 · L1 분대는 여전히 초안만**(엄폐 자리 예약 없음 → [W51]).
+AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교전·엄폐·**목표** + **위험 지도 · 부채꼴 후보 · 표적 잠금 · 엄폐↔사격 사이클(노출 회계) · 실제 총구 소켓·포즈별 오프셋 학습** + ★ **2026-09-16~17 분대 항 넷(자리 주장·사선 비우기·표적 분담·엄호 이동, 등록부만) · 배운 죽음(시체를 보거나 무전으로 — 방송 아님) · 부정 증거 · 두 점 시야(가슴→머리)** → `ai/2026-09-16_squad_terms_and_learned_death.md`. **L0 명령(이동·경계·점령·방어) · L1 분대 객체는 여전히 없다**(→ [W55]) — 있는 것은 비용 항과 선호뿐.
 ★ **2026-09-14 교정 라운드**: 노출의 사다리(조리개·사격자세) · 반동 · 조준 선회 · `FightingCost` · **목표 액터의 루트 컴포넌트 버그** → `ai/2026-09-14_exposure_ladder_and_corrections.md`
 ★ **2026-09-14~15 거동 라운드**: `ai/2026-09-14_danger_map_and_position_commitment.md` → **`ai/2026-09-15_exposure_cycle_and_muzzle_learning.md`**(값이 바뀐 자리는 이쪽이 최신). ~~⚠ 수비수가 정착해 쓰지 못하는 문제는 여전히 미해결이다 → [C-95]~~ → **해결**(기준면 + 위 두 라운드). 사용자 평가 "지금까지는 가장 좋네"(2026-09-15).
 
@@ -31,13 +44,15 @@ AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교
 | **AI 층 (인지~교전)** | ✅ **동작 확인** (2026-09-13) | C++ **9쌍** `Source/SoldierLab/AI/`. 진영·기록/감쇠/융합·시야·무전·제압·교전·엄폐·**목표** + 디버그 규약. 5절 ★ **09-14 교정 라운드**: 조리개/사격자세 · 반동 · 조준 선회 · `FightingCost`. `ai/2026-09-14_exposure_ladder_and_corrections.md` |
 | L3 실행 | ⚠ **형태가 바뀜** | StateTree가 아니라 **컴포넌트 + Tick 접합**이 한다. `AIC_Soldier`의 `StartLogic`은 **삭제**됐다 → [C-43] |
 | L2 판단 | ⚠ **얇은 판이 돈다** | 유틸리티 스코어러는 없다. 교전/엄폐가 각자 자기 질문을 푼다. `ai/drafts/`는 **여전히 미반영** |
-| L1 분대 | ⬜ 초안만 | `squad/drafts/` |
-| L0 명령 | ⬜ 초안만 | `squad/drafts/` 의 명령 스키마. **목표·임무 개념은 [D10]으로 생겼다** — 다만 `ASoldierObjective` 는 **레벨 마커 한 개**일 뿐 명령도 국면 전환도 아니다 → [W25] ★ **09-14에 목표가 실제로 돌기 시작했다** — 다만 여전히 **마커 하나 · 소유권 변경 없음** |
+| L1 분대 | ✅ **빌드 · 시험 레벨 PIE · ★ 09-21 New_kadex_0811 본 레벨 첫 완주** [A 코드 / C 2차 PIE] | `Squad/SoldierSquadSubsystem` — 분대 객체 없이 등록부를 (Faction, `SquadId`)로 묶음. 명령→멤버별 `FSoldierAssignment`(제약만), 지연 출발, Approach→Hold(**도착선 = 존의 `ArrivalFraction`**, 09-18), achieved, **정원제 `ReinforceSquads`**(09-18, 본 레벨 로그 `quota=10 living=7 needed=3 moved=3`). `squad/2026-09-17_command_layer_design.md` → `squad/2026-09-18_squad_layer_fixes_quota_engage_range.md` → **`squad/2026-09-21_break_contact_and_targeting_exclusion.md`** |
+| L0 명령 | ✅ **빌드 · 본 레벨 적용** (09-18 → ★ 09-21) | `Squad/SoldierOrderTypes.h`(`FSoldierSquadOrder`·ROE·Speed·**`EngageRangeCm`**·★ 09-21 **동사 `BreakContact`**(존 유지, 가는 길의 엄폐·경로·위험·제압 항 0 = 도주) · `bTargetableByOwnSideWeapons` = 시나리오 지시, 소비자 둘(브리지 → RCWS · `IsContactExcluded`)) · `Squad/SoldierZone` 저작 액터(**에디터에서 보임**, 09-18) · 시나리오 `IssueSquadOrder` 이펙트(+`Quota`, ★ 09-21 `SetTargetable(false)` 가 UGV RCWS `bRespectEnemyTargetingExclusion` 도 켬) + 트리거 `EnemyFireStarted`/`EnemyNearFriendlySoldiers` + 콘솔 `titan.SquadOrder`. **적·아군 전원 SoldierLab로 교체 — ★ 09-21 New_kadex_0811 이관 완료**(구 병사 40 삭제, `ASoldierZone` 8개, DT `DT_ScenarioSteps_ThreeStage_SoldierLab` 26행, 첫 PIE 전 체인 완주 "아주 잘됨"): `../level_new_kadex_0811/2026-09-21_soldierlab_migration_new_kadex_0811.md`. 시험 레벨 `L_SoldierScenario` + DT 13행: `../level_new_kadex_0811/2026-09-18_soldierlab_three_stage_test_level.md`. 옛 행 ↓ |
+| ~~L0 명령 (옛 행)~~ | ⬜ 초안만 | `squad/drafts/` 의 명령 스키마. **목표·임무 개념은 [D10]으로 생겼다** — 다만 `ASoldierObjective` 는 **레벨 마커 한 개**일 뿐 명령도 국면 전환도 아니다 → [W25] ★ **09-14에 목표가 실제로 돌기 시작했다** — 다만 여전히 **마커 하나 · 소유권 변경 없음** |
 | 엄폐 | ✅ **동작 확인** (2026-09-13) | **시야 판정을 거꾸로 돌린 것.** 볼륨·마커·베이크 없음. `cover/drafts/`의 EQS/SmartObject 초안은 **미채택** |
 | **목표(objective)** | ✅ **이제야 실제로 돌기 시작했다** (2026-09-14) | `ASoldierObjective` + 세 비용 스코어러. **레벨에 0개 배치**라 셋째 항이 항상 0 → **[W25]** · `ai/2026-09-13_objective_and_position_cost.md` ★ **09-14**: 레벨에 `Objective_AllyBase` **1개 배치**. 그런데 **놓기만 했으면 여전히 안 돌았다** — 루트 컴포넌트가 없어 `GetActorLocation` 이 **영원히 월드 원점**을 답하고 있었다(**P90**). 반경·밴드·환율도 전부 바뀜다 → **[C-94]** · `ai/2026-09-14_exposure_ladder_and_corrections.md` 6절 |
-| **관전 · 1인칭 · 머리 추종** | ✅ (2026-09-14 저녁) | `Observer/SoldierObserverPawn` · `Camera/SoldierFirstPersonComponent` · `Pose/SoldierHeadAimComponent` — 5.1절 표. 머리 추종은 **기본 OFF**. 마지막 2건(둘러보기 2단 · 선 기반 눈 목표+학습 방향 오프셋)은 **빌드·확인 대기**. [C-95] 기준면 수정은 빌드됐으나 **정착 여부 미확인** |
+| **관전 · 1인칭 · 머리 추종** | ✅ (2026-09-14 저녁 → 09-18 추기) | `Observer/SoldierObserverPawn` · `Camera/SoldierFirstPersonComponent` · `Pose/SoldierHeadAimComponent` — 5.1절 표. 머리 추종은 **기본 OFF · H 수동 토글뿐, AI 자동 활성화 없음**(P171). ~~마지막 2건(둘러보기 2단 · 선 기반 눈 목표+학습 방향 오프셋)은 빌드·확인 대기~~ → 09-14 21:30 확인. ~~[C-95] 정착 여부 미확인~~ → 09-15 해결. ★ **09-18**: 관전 휠 비행 속도 · slomo 무관 · 롤 잔류 수정 |
+| **AI 포즈 층 (계약 소비)** | ✅ **동작 확인** (2026-09-17~18) | `Pose/SoldierScanTurnComponent`(총 내린 idle 의 캡슐 회전) · `Pose/SoldierGaitBridgeComponent`(Walk → GASP `WantsToWalk`) · `Pose/SoldierPoseSmootherComponent`(자세 축 4종 사다리꼴 × urgency) — AI 세션의 `GetAimPoint()/IsScanning()/GetDesiredGait()/GetPoseUrgency()` 를 읽는 쪽. 셋 다 **AI 전용**. 5.1절 표 · `animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md` |
 
-| **체력 · 피격 · 사망** | ✅ **동작 확인** (2026-09-15) | C++ `USoldierHealthComponent`(`AI/SoldierHealth`) 하나 — 표준 `OnTakePointDamage` 수신(투사체 무변경) · 부위 배율 · `bInvincible` · HitReact 애디티브 몽타주 13(`bStopAllMontages=false`, 재장전 안 끊김) · Death 몽타주 6 → 끝 0.1 s 전 래그돌(속도 관성 + 다음 틱 임펄스) · 등록부 Unregister + SoldierLab 컴포넌트/CMC/AIController/Tick 정지 · `Health/bDead/LastHit` 복제. **아군은 `BP_Soldier_Friendly` 의 `Invincible (무적)` 체크로 안 죽는다**(사용자 결정). 수치 전부 [C] → [C-110]~[C-118]. `ai/2026-09-15_health_hit_death_implementation.md` |
+| **체력 · 피격 · 사망** | ✅ **동작 확인** (2026-09-15) | C++ `USoldierHealthComponent`(`AI/SoldierHealth`) 하나 — 표준 `OnTakePointDamage` 수신(투사체 무변경) · 부위 배율 · `bInvincible` · HitReact 애디티브 몽타주 13(`bStopAllMontages=false`, 재장전 안 끊김) · Death 몽타주 6 → 끝 0.1 s 전 래그돌(속도 관성 + 다음 틱 임펄스) · 등록부 Unregister + SoldierLab 컴포넌트/CMC/AIController/Tick 정지 · `Health/bDead/LastHit` 복제. **아군은 `BP_Soldier_Friendly` 의 `Invincible (무적)` 체크로 안 죽는다**(사용자 결정). 수치 전부 [C] → [C-110]~[C-118]. ★ **09-23**: `EndPlay`(`Destroyed` 일 때) 가 **자기가 어태치/소유한 액터(소총 등)를 같이 파괴** — `bDestroyCarriedActorsOnDestroy` 기본 켬, 풀링 투사체·클라 복제 액터 제외(P188, [W116]). `ai/2026-09-15_health_hit_death_implementation.md` |
 
 **플레이어가 WASD로 직접 조작해 검증 가능하고(T 1인칭 · H 머리 추종), `GM_SoldierObserver`로 관전하면 AI끼리 싸운다(F 추적 · T 1/3인칭).**
 ~~**단 병사는 죽지 않는다** — 데미지·체력·사망이 없다 → [W18].~~ → **2026-09-15 해결** — 적군은 죽고 시체가 남는다. 아군은 무적(맞으면 움찔만). `SoldierLab.Debug.Health 1` 로 체력·마지막 피격이 보인다.
@@ -61,21 +76,35 @@ AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교
 
 ### 2.1 클립 자산 [A]
 
-```
-/Game/SoldierLab/Animations/Rifle/           130개
-    Loops/       Walk · Jog · Crouch_Walk × Fwd/Bwd/Left/Right      (12)
-    Starts/ Stops/ Pivots/                                          (36)
-    TurnInPlace/ Turn L/R × 90/180 × Stand/Crouch                   (8)
-    Idles/       Idle_ADS · Idle_Hipfire · IdleBreak ×2 · Crouch_Idle  (5)
-    Poses/       조준 오프셋 포즈 15장
-    AO_Rifle_Aim  AimOffset — Yaw −180..180 × Pitch −90..90, 샘플 15
-    _Extra/ _MF/  미사용 보관
+> ★★ **2026-09-17 — 아군/적군 세트 분리.** 옛 `/Game/SoldierLab/Animations/` 와 `/Game/SoldierLab/PoseSearch/` 는 **소멸했다.**
+> 전문: **`animation/prototypes/2026-09-17_ally_enemy_anim_set_split.md`**. 스켈레톤은 **1벌 그대로**(가르는 안은 기각 — ABP 1200노드·PSD 17·Chooser·AO·몽타주가 전부 두 벌이 되고 P76 의 이점이 사라진다). 갈린 것은 **클립·PSD·Chooser** 뿐이다.
 
-/Game/SoldierLab/Animations/Actions/          95개
-    HitReact 13 (Front/Back/Left/Right × Lgt/Med/Hvy) · Death 6 (4방향)
-    Dash · Equip/Unequip · Melee · GrenadeToss 등
-    → 배선된 것은 사격/재장전뿐이다. 나머지는 반입만 돼 있다
 ```
+/Game/SoldierLab/Animations_Enemy/     247개 · 전부 Enemy_ 접두사    ← 기준 세트
+    Animations/Rifle/           130개
+        Loops/       Walk · Jog · Crouch_Walk × Fwd/Bwd/Left/Right      (12)
+        Starts/ Stops/ Pivots/                                          (36)
+        TurnInPlace/ Turn L/R × 90/180 × Stand/Crouch                   (8)
+        Idles/       Idle_ADS · Idle_Hipfire · IdleBreak ×2 · Crouch_Idle  (5)
+        Poses/       조준 오프셋 포즈 15장
+        AO_Rifle_Aim  AimOffset — Yaw −180..180 × Pitch −90..90, 샘플 15
+        _Extra/       미사용 보관   (옛 _MF/ 39개는 사본에 안 따라왔다)
+    Animations/Actions/          95개
+        HitReact 13 (Front/Back/Left/Right × Lgt/Med/Hvy) · Death 6 (4방향)
+        Dash · Equip/Unequip · Melee · GrenadeToss 등
+    PoseSearch/                  2.2절
+
+/Game/SoldierLab/Animations_Ally/      247개 · 전부 ALLY_ 접두사 · 같은 구조
+/Game/SoldierLab/Animation/  (단수, 그대로)  SoldierCharacter_ABP · CHT_Soldier_CharacterAnimations
+```
+
+예: `Enemy_MM_Rifle_Idle_ADS` = `/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_ADS`,
+아군은 같은 자리에서 `Animations_Ally` + `ALLY_`. **아래 이 문서의 모든 클립 이름은 접두사를 뺀 공통 이름으로 적는다.**
+
+**작업 기준은 적군 세트다** [A] — 적군 시나리오가 최우선이라 모든 애니메이션을 적군 기준으로 먼저 맞추고 아군은 나중에 재피팅한다(사용자 전략). 디자인팀 검수 대상도 적군 세트.
+
+배선된 것은 사격/재장전 + **피격 13 · 사망 6**(2026-09-15)이고 나머지 Actions 는 반입만 돼 있다.
+⚠ **사망 몽타주는 2026-09-17 부터 재생되지 않는다** — `bPlayDeathMontage = false`(순수 래그돌, 사용자 결정). 슬롯은 `FullBody` → **`DefaultSlot`** 으로 고쳐 둔 채다 → `ai/2026-09-17_hit_death_three_causes.md` 4·6절
 
 **리타깃**: `RTG_Lyra_to_UEFN` (`IK_LyraManny` → GASP의 `IK_UEFN_Mannequin`).
 루트 facing 손실 없음이 실측으로 확인됐다 → `animation/prototypes/2026-09-09_lyra_rifle_migration.md` 3절.
@@ -86,14 +115,19 @@ AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교
 ### 2.2 Pose Search [A]
 
 ```
-/Game/SoldierLab/PoseSearch/Rifle/
+/Game/SoldierLab/Animations_Enemy/PoseSearch/Rifle/     (접두사 Enemy_)
+/Game/SoldierLab/Animations_Ally/PoseSearch/Rifle/      (접두사 ALLY_)   ★ 2026-09-17 두 벌
     PSD_Rifle_Stand_{Idles, Idles_LowReady, TurnInPlace}
     PSD_Rifle_Stand_Walk_{Loops, Starts, Stops, Pivots}
     PSD_Rifle_Stand_Jog_{Loops, Starts, Stops, Pivots}
     PSD_Rifle_Crouch_{Idles, TurnInPlace}
     PSD_Rifle_Crouch_Walk_{Loops, Starts, Stops, Pivots}      = 17개
     PSN_Rifle_All                                              정규화 세트 (멤버 17)
+   (한 층 위) PSD_Soldier_Walk_Test                            P0-1 실험 잔재 (5.3절)
 ```
+
+★ **PSD 의 클립 목록(`TArray<FInstancedStruct>`, MCP 로는 못 읽는다)이 Advanced Copy 에서 제대로 remap 됐다** [A] —
+사본 PSD 가 사본 클립을 가리키고 원본 폴더 참조 0건(디스크 바이트 스캔). 정규화 세트도 사본끼리 묶였다.
 
 - 스키마는 GASP 원본 `PSS_Default` / `PSS_Idle`을 그대로 쓴다
 - **정규화 세트는 우리 것을 따로 만들었다** — Epic 것을 가리키면 GASP 25개 DB의
@@ -103,7 +137,8 @@ AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교
 ### 2.3 Chooser [A]
 
 ```
-/Game/SoldierLab/PoseSearch/CHT_Soldier_Databases      4열 × 17행
+/Game/SoldierLab/Animations_Enemy/PoseSearch/Enemy_CHT_Soldier_Databases   4열 × 17행
+/Game/SoldierLab/Animations_Ally/PoseSearch/ALLY_CHT_Soldier_Databases     동   ★ 2026-09-17 두 벌
     열: Stance · MovementState · Gait · RotationMode    출력: PoseSearchDatabase
     (_BAK 은 이전 MMDatabaseLOD 구성 백업)
 
@@ -116,6 +151,10 @@ AI가 GASP 몸을 실제로 운전한다 — 인지·시야·무전·제압·교
 중첩 표를 쓰지 않는다. **통과하는 행이 전부 기여하므로**(`Chooser.cpp:712-713`)
 DB 하나당 행 하나를 두고 행끼리 상호배타가 되게 짰다. Walk / ≠Walk 분기는
 `MatchNotEqual`로 처리해 Run·Sprint를 함께 받는다. → 같은 문서 8절, `CLAUDE.md` 6.1d
+
+★ **2026-09-17 — Chooser 가 두 벌이 된 것은 Advanced Copy 의 덤이다** [A]. `CHT_Soldier_Databases` 가 확인 대화상자에서
+**체크된 채로** 복사돼 사본 PSD 를 가리키는 Chooser 가 자동으로 생겼다 — 덕분에 "열 하나 추가 + 17행 복제"(에디터 수작업)가
+**불필요해졌다.** 진영 선택은 Chooser 안이 아니라 **ABP 의 Branch + 두 번째 EvaluateChooser** 가 한다 → 2.4절 끝
 
 ### 2.4 `SoldierCharacter_ABP` — 애님 그래프 [A]
 
@@ -222,6 +261,29 @@ Slot 'DefaultSlot' → OffsetRootBone_0 → RemapCurves_0 → LocalToComponentSp
 
 > ⚠ MCP로 애님 노드를 고친 뒤에는 **반드시 `compile_blueprint`** 를 부른다. 저장은 컴파일이 아니다 (P23).
 > ⚠ 핀으로 노출된 프로퍼티는 **핀 리터럴이 `node.<prop>`를 이긴다** (P25).
+
+#### 2.4b ★ 진영 분기 — `UseAllyAnimSet` 하나로 5축 [A] (2026-09-17)
+
+애니메이션 세트가 두 벌이 됐으나 **ABP 는 한 벌**이다(2.1절). 구동 변수는 하나:
+
+```
+ABP 변수      UseAllyAnimSet (bool, 기본 false = 적군)
+캐릭터 변수    UseAllyAnimSet (bool, Instance Editable)
+              → BeginPlay 의 Cast(SoldierCharacter_ABP) 뒤에 Set 노드 삽입
+BP_Soldier_Friendly = true  /  BP_SoldierCharacter · BP_Soldier_Hostile = false
+```
+
+| 축 | 방법 | 노드 |
+|---|---|---|
+| 로코모션 61클립 | `Update_MotionMatching` 에 Branch + **두 번째 EvaluateChooser** | `K2Node_IfThenElse_0` · `K2Node_EvaluateChooser2_0`(ALLY_CHT) · `K2Node_VariableSet_1`(SetValidDatabases) · `K2Node_VariableGet_1`(GetValidDatabases → `SetDatabasesToSearch.Databases`) |
+| 조준 AO 2 | Select 3단 (스탠스 Select ×2 → 진영 Select) → `BlendSpacePlayer_1.BlendSpace` | `K2Node_Select_1`(ally) · `K2Node_Select_2`(faction) · `K2Node_VariableGet_15` |
+| 총내림 델타 1 | 노드 복제 + `BlendPosesByBool`(blend time 0) | `AnimGraphNode_SequencePlayer_1` · `AnimGraphNode_BlendListByBool_1` |
+| 블라인드파이어 3 | 동 | `SequenceEvaluator_3/4/5` · `BlendListByBool_2/3/4` |
+| 사격/재장전 몽타주 2 | 캐릭터 변수 `FireMontage` · `ReloadMontage`(Instance Editable) → `PlayAnimMontage` 핀 | `K2Node_VariableGet_35/36` |
+
+전부 컴파일·저장 완료. 피격·사망 몽타주 19개는 ABP 가 아니라 **체력 컴포넌트 템플릿**이 진영별로 들고 있다(5절 · `ai/2026-09-17_hit_death_three_causes.md` 2절).
+
+⚠ 함정 — `EvaluateChooser` 는 **Chooser 에셋이 노드 타입에 구워져 있다**(제네릭으로 만든 뒤 `chooser` set, 그리고 `mode`/`structOutputMode` 를 원본과 맞출 것) · 변수 setter 의 `type_id` 는 **카테고리 경로**를 탄다 · **BP 변수 추가 직후에는 CDO 에 프로퍼티가 없다**(컴파일 먼저) · `BlendListByBool` 은 **true 가 `BlendPose_0`** → `CLAUDE.md` 6.1 · P135·P138
 
 ### 2.5 왼손 IK [A]
 
@@ -429,6 +491,14 @@ CharacterMovement.AddTickPrerequisiteActor( self )
                       →  AC_PreCMCTick  →  우리 Tick  →  CMC
 ```
 
+> ⚠⚠ **2026-09-18 정정 — 위 두 줄만으로는 순서가 서지 않았다.** 엔진이 CMC 에 기본으로 거는 반대 엣지
+> (`UMovementComponent::bTickBeforeOwner = true` → 액터가 CMC **뒤**, `MovementComponent.cpp:186-188`)와 **순환**이
+> 되어 `FTickTaskManager` 가 우리 엣지를 매 프레임 버리고 `LogTick: … CharMoveComp … would form a cycle` 을 찍고
+> 있었다(시험 레벨 35명 = 초당 600줄). 수정: `BP_SoldierCharacter` `CharMoveComp` **`Tick Before Owner = false`**
+> (+ 자식 BP·레벨 인스턴스). 경고는 사라졌고 **실제 순서는 아래 서명 시험으로 재확인 대기 [C-146]** —
+> `animation/prototypes/2026-09-18_tick_cycle_warning_charmovecomp.md`. 같은 세션이 Event Tick 의 총구
+> `DrawDebugCoordinateSystem`(모든 소총의 xyz 축) exec 을 끊었다(노드 잔존).
+
 > **`BodyErr == 0.000`(정확히 0)은 `RotationRate.Yaw = −1`이 살아 있다는 서명이다.**
 > 0이 아닌 값이 나와야 유한 각속도가 먹고 있는 것이다. **육안으로는 판별되지 않는다** —
 > 애니메이션은 자기 속도로 계속 돌기 때문이다 (**P39**).
@@ -483,16 +553,20 @@ BlindFireH   −1(좌) ~ +1(우)          BlindFireV   0 ~ +1(상)
 **쓰는 것은 프레임 0 하나뿐**이다.
 
 ```
-/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_L
-/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_R
-/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_U
+<세트>/Animations/Rifle/Poses/<접두>MM_Rifle_BlindFire_L        ★ 2026-09-17 부터 진영별 2벌
+<세트>/Animations/Rifle/Poses/<접두>MM_Rifle_BlindFire_R           <세트> = Animations_Enemy | Animations_Ally
+<세트>/Animations/Rifle/Poses/<접두>MM_Rifle_BlindFire_U           <접두> = Enemy_ | ALLY_
 
 애디티브 변환 (3장 동일)
     additiveAnimType = AAT_RotationOffsetMeshSpace
     refPoseType      = ABPT_AnimFrame
-    refPoseSeq       = /Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_ADS
+    refPoseSeq       = <세트>/Animations/Rifle/Idles/<접두>MM_Rifle_Idle_ADS   ← 사본끼리 remap 됨 [A]
     refFrameIndex    = 0
 ```
+
+★ **그래프의 BF 3레이어도 진영 분기가 붙었다** (2026-09-17) — 레이어마다 `SequenceEvaluator` 를 복제하고
+`BlendListByBool`(blend time 0)로 갈랐다: `SequenceEvaluator_3/4/5` · `BlendListByBool_2/3/4`,
+조건은 `UseAllyAnimSet` → 2.4b절.
 
 - **척추/몸통과 머리까지** 저작돼 있다(2.5e-1의 이유가 그대로 반영된 것)
 - **왼손이 총에 붙어 있는 상태**로 저작됐다
@@ -934,10 +1008,15 @@ stance 축        StanceRate            1.0   (0→1 에 1초)       ← 2.5f (2
                  ~~relLoc (−10, 0, 0) · relRot yaw 90 · animClass ABP_Weap_Rifle~~
                  → ★ 2026-09-15: relLoc **(0,0,0)** · relRot **(0,0,0)** (MCP 되읽기 확인). 옛 오프셋 (−10,0,0)·yaw 180(위 줄엔 90 으로 적혀 있었으나 2026-09-15 실측은 180)은
                    세 메시의 `weapon_r` **메시 소켓**에 흡수됐다(3.2절 소켓 표). 애님 에디터 프리뷰(소켓 직결)와 런타임이 같아진다
-                 ★ WeaponMesh 의 실제 역할 3가지 [A]: ① BP_AR4Rifle 부착 앵커 ② BeginPlay 에서 SetVisibility(false) (P48)
+                 ★ WeaponMesh 의 실제 역할 3가지 [A]: ① BP_AR4Rifle 부착 앵커 ~~② BeginPlay 에서 SetVisibility(false) (P48)~~
                    ③ **총구 보정(2.5c)이 `WeaponMesh.GetSocketTransform("Muzzle", World)` 를 읽는다** · 그리고 2026-09-15 부터
                    ④ 왼손 그립 오프셋 산출이 `WeaponMesh.GetSocketLocation("LeftHandGrip")` 을 읽는다(2.5절).
                    사망 드롭 용도 아님. → 이 컴포넌트의 메시는 **스폰되는 총과 같은 메시**여야 하고 `Muzzle` · `LeftHandGrip` 소켓이 필요하다.
+                   > ★ **정정 2026-09-21 (게임 스레드 묶음 세션, `ai/2026-09-21_game_thread_batch_cameras_abp_muzzle.md` 2.3절) [A]** — ② 는 반대다.
+                   > BeginPlay 의 `SetVisibility(false)`(노드 `K2Node_CallFunction_84`) 는 self ← **SpawnActor 결과**, 즉 **스폰된 총 액터 `BP_AR4Rifle` 의 WeaponMesh** 를 숨긴다.
+                   > **캐릭터의 WeaponMesh(SK_AR4_X / 적군 SK_KA74U_X)가 화면에 보이는 총**이다 → 폰당 스켈레탈 메시 2(캐릭터 + 캐릭터 WeaponMesh) + 총 액터 1.
+                   > 캐릭터 WeaponMesh 의 `AnimClass = ABP_Weap_Rifle` 은 본 이름 0개 일치(`USkeleton::IsCompatibleMesh`, `Skeleton.cpp:648`)라 인스턴스가 안 생기던 **죽은 참조** → **None** 으로 정리.
+                   > 숨은 총 액터 메시는 `VisibilityBasedAnimTickOption = OnlyTickPoseWhenRendered`(0.26 → 0.07 ms). ③④ 는 그대로 맞다.
                    아군/적군 총이 갈라질 때의 규약 → [W67]
     gait       = Run   ← 기본값. walkSpeeds는 걷기 입력이 있어야 쓰인다 ([C-52])
     AimCorrection  (Rotator)  총구 정렬 누적 보정값. 매 Tick 갱신 → ABP로 전달 (2.5c)
@@ -992,7 +1071,23 @@ stance 축        StanceRate            1.0   (0→1 에 1초)       ← 2.5f (2
     BP_Soldier_Friendly        상속 AC_SoldierHealth 의 `Invincible (무적)` = true (사용자가 에디터에서.
                                도구로 자식 BP 오버라이드는 못 쓴다 — P128)
 
+    ── 2026-09-17 추가 (진영별 애님 세트 · 2.4b) ─────────────────────────
+    UseAllyAnimSet     (Boolean, Instance Editable)  기본 false = 적군 세트
+                               BeginPlay 의 Cast(SoldierCharacter_ABP) 뒤에서 ABP 의 동명 변수로 전달
+                               BP_Soldier_Friendly = true / BP_Soldier_Hostile = false
+    FireMontage /
+    ReloadMontage      (AnimMontage, Instance Editable)  PlayAnimMontage 의 핀으로 들어간다
+                               (옛 배선은 AM_MM_Rifle_Fire / _Reload 를 리터럴로 물고 있었다)
+    AC_SoldierHealth 템플릿    몽타주 19개를 **여기서** 들고 있다 — C++ 생성자의 경로 하드코딩을 걷어냈다(P134)
+                               BP_SoldierCharacter = Enemy_ 19 / BP_Soldier_Friendly = ALLY_ 19 오버라이드
+                               BP_Soldier_Hostile 은 자체 템플릿이 없어 부모(Enemy) 상속
+    AC_SoldierHealth.bPlayDeathMontage = **false**  (BP_SoldierCharacter · BP_Soldier_Friendly)
+                               순수 래그돌. 사용자 결정 → `ai/2026-09-17_hit_death_three_causes.md` 6절
+    ⚠ 자식 BP 의 CDO 는 부모 기본값을 **안 물려받는다** (P137) · 배치 인스턴스는 템플릿 갱신을
+      **안 따라온다** (P139) · 읽기 전용 에셋의 쓰기는 성공하고 **저장만 실패**한다 (P136)
+
 /Game/SoldierLab/Animation/SoldierCharacter_ABP
+    UseAllyAnimSet (Boolean)  ★ 2026-09-17. 진영 분기 5축의 구동 변수 (2.4b)
     AimCorrection  (Rotator)  캐릭터가 매 Tick 써 넣는다. Get_AOValue 에서만 쓰인다 (2.5c)
     AOActive       (Boolean)  **`Update_Logic` 에서 `Update_States` 직후**에 `Enable_AO()` 결과를
                               대입한다 [A] (2026-09-12). 그 자리인 이유는 신선한
@@ -1021,9 +1116,9 @@ stance 축        StanceRate            1.0   (0→1 에 1초)       ← 2.5f (2
 ── 2026-09-12 갱신 (3.1절 · 투사체 이식) ────────────────────────────────
 IA_Fire   (Triggered) → Rifle.Shoot()              ← **몽타주를 직접 재생하지 않는다**
 Rifle.OnWeaponFired (디스패처)
-                      → PlayAnimMontage(AM_MM_Rifle_Fire)
+                      → PlayAnimMontage( ~~AM_MM_Rifle_Fire~~ → 변수 **FireMontage** )   ★ 2026-09-17 (2.4b)
                         ↑ 탄이 실제로 스폰·발사된 뒤에만 방송된다 (P49)
-IA_Reload (Triggered) → PlayAnimMontage(AM_MM_Rifle_Reload)
+IA_Reload (Triggered) → PlayAnimMontage( ~~AM_MM_Rifle_Reload~~ → 변수 **ReloadMontage** )
 
 ~~WeaponMesh.GetAnimInstance.Montage_Play(AM_Weap_Rifle_Fire / AM_Weap_Rifle_Reload)~~
     **삭제됨** — 무기 메시를 `SK_AR4_X`로 갈아끼웠고 그쪽엔 애님 블루프린트가 없어
@@ -1050,20 +1145,37 @@ Source/SoldierLab/Weapons/SoldierProjectile.h (~560줄) / .cpp (~1050줄)
     titan_example 의 ARCWSProjectile 이식. **히트스캔이 아니라 중력 포물선 투사체**
     (리드 사격·탄착 낙차·비행 시간이 AI 층이 쓸 물리적 재료다)
     풀링 설계: LaunchFrom() / Deactivate()
-    ⚠ **풀 자체는 없다** — 무기 컴포넌트가 없어 발당 SpawnActor 한다.
+    ~~⚠ **풀 자체는 없다** — 무기 컴포넌트가 없어 발당 SpawnActor 한다.~~
       LaunchFrom 은 어느 쪽이든 같으므로 풀 추가는 **쏘는 쪽의 변경**이다
+    ★ 09-21 [A]: 없는 것이 비용이 아니라 **누수**다 — Deactivate()(.cpp:1191)는 숨김+충돌·틱 off 만이고
+      Destroy 가 없는데 BP_AR4Rifle.Shoot/PlayShotCosmetics · 도탄 Multicast_LaunchRicochet
+      (AI/SoldierEngagement.cpp:248-268)이 발마다 SpawnActor → 주차된 투사체가 **영구 누적**
+      (비행 21발 프레임에 TracerTrailComponent 80개). 발당 스폰 0.94 ms. 풀 + 빈 EventTick 삭제 +
+      QueryOnly → ~~**[W109] 착수**~~ ★ **09-21 후편 [W109] 해결** (`ai/2026-09-21_game_thread_structural_pool_rays_bridge.md` A절):
+    ★ **풀 = `Weapons/SoldierProjectilePool.h/.cpp` `USoldierProjectilePoolSubsystem`**(월드 서브시스템, 2026-09-21)
+      `Acquire(TSubclassOf<ASoldierProjectile>, AActor* Owner)` — 클래스별 풀, 주차된(틱 꺼진) 것을 커서부터 재사용
+      → 없으면 상한까지 스폰 → 상한이면 RCWS 풀처럼 라운드로빈(클래스당 1회 경고). 상한 cvar **`SoldierLab.Projectile.PoolMax` 96**
+      쏘는 쪽 전부 `Acquire → LaunchFrom`: BP_AR4Rifle.Shoot · PlayShotCosmetics · 도탄 Multicast_LaunchRicochet(.cpp:263)
+      CollisionComponent **QueryOnly**(.cpp:124, ← QueryAndPhysics — 명중은 ProjectileMovement 이동 스윕의 블로킹 히트, OnComponentHit 그대로)
+      **`MaxFlightDistanceCm 60000`**(.h:206, 600 m) — 시간 상한 `MaxFlightTimeSeconds 5`(.h:199)와 같은 자리(Tick .cpp:264-267)에서 주차, 도탄은 튕긴 지점부터
+      결과: Shoot 안 스폰 0.83 ms/발 → 0 · 투사체 액터 47 에서 정지(비행 15). 3.1 의 "발당 SpawnActor" 서술은 09-21 전 이야기다
     총구 섬광·발사음·반동은 **여기 없다** — 총구에서 일어나므로 무기 액터 소유
 
 /Game/SoldierLab/Weapons/Blueprints/BP_RifleProjectile    부모 /Script/SoldierLab.SoldierProjectile
+    ★ 09-21 후편: EventGraph 의 빈 EventTick · BeginPlay · Overlap 노드 삭제(발당 BP ReceiveTick 디스패치 제거) — 그래프는 비어 있는 것이 맞다
     M_RCWSRound · NS_Rifle_Tracer · NS_Rifle_Dirt + MS_hit_rifle_dirt
     NS_Blood + MS_hit_rifle_enemy · MI_Blood(적 + 지면 혈흔)  · MS_bullet_whizz
-    surfaceImpactEffects **5행** — 행마다 이펙트 + 사운드 + M_Decal_Bullet + MS_Ricochet
+    ~~surfaceImpactEffects **5행** — 행마다 이펙트 + 사운드 + M_Decal_Bullet + MS_Ricochet~~
+    ⚠ **09-21 정정**: 디스크 CDO 확인 시 5행이 전부 Dirt/None 빈 껍데기였다(왜 비어 있었는지는 미확인).
+      titan 구 BP 값으로 다시 채움 — `sfx_vfx/2026-09-21_combat_audio_voice_budget_and_attenuation.md` §6.
+      피격음 감쇠 1000/150000 → 200/2500 도 같은 날
     ⚠ 마이그레이션본은 **부모가 /Script/titan_example.RCWSProjectile 이라 12.8KB 껍데기**였다
       (컴포넌트·그래프 전부 소실). **C++ 이식 후 0부터 다시 만들었다** — 순서는 C++ 먼저다
 
 /Game/SoldierLab/Weapons/Blueprints/BP_AR4Rifle           부모 /Script/Engine.Actor (순수 BP)
-    Shoot: Branch(CanShoot?) → Branch(탄약) → 총구 사운드 → 총구 섬광 NS
-           → CanShoot?=false → shotsFiredCount++ → SpawnActor BP_RifleProjectile
+    Shoot: Branch(CanShoot?) → Branch(탄약) → 총구 사운드 → 총구 섬광 NS(09-21: 상주 MuzzleFlashFX Activate)
+           → CanShoot?=false → shotsFiredCount++ → ~~SpawnActor BP_RifleProjectile~~
+             ★ 09-21 후편: GetSoldierProjectilePoolSubsystem → Acquire(BP_RifleProjectile_C, OwningCharacter)
            → SoldierProjectile::LaunchFrom → ammoInMag-- → **CallOnWeaponFired**
     탄창이 비면 자동 StartReload · SetTimerByEvent(fireRate) 가 CanShoot? 를 재장전
     기본값  fireRate 0.12 · muzzleVelocity 80000 · tracerInterval 3
@@ -1140,8 +1252,12 @@ BP_SoldierCharacter · BeginPlay 추가분
     바인드 T-포즈 · 키 181cm (마네킹 A-포즈 · 165.6cm) — 같은 스켈레톤 에셋이면 바인드 포즈 차이는 무관하다
     메시 소켓 weapon_r        부모 hand_r · ~~(0.19749, 3.411153, −0.381067) · rot 0~~ → **(−9.80, 3.41, −0.38) · yaw 180** (2026-09-15, 아래 소켓 표)    ← 총 부착 + 왼손 IK effector
     메시 소켓 Rifle_Socket    titan 구 시스템(BP_Ally_kadex) 잔재 — SoldierLab BP/ABP 참조 0건. 무시/삭제 가능 (titan 쪽 동명 메시의 것은 건드리지 말 것, [W33])
+                              ★ 2026-09-17 디스크 스캔 재확인: **새 시스템에 필요한 캐릭터 메시 소켓은 `weapon_r` 하나뿐이다** [A]
     머티리얼 슬롯 Ch15_body / Ch_49_body / Ch_49_eyelashes  ← Mat_Soldier / Mat_soldier2 / Ch_49_eyelashes
-    피직스 에셋 soldier_T_PhysicsAsset (원래 것 그대로. 바디 확인은 에디터에서 → [W29])
+    피직스 에셋 ~~soldier_T_PhysicsAsset~~ → ★ **PA_UEFN_Mannequin** (2026-09-17 교체, MCP assign_physics_asset)
+                  자동 생성본은 관절 제한이 기본값이라 래그돌에서 **무릎·팔꿈치가 반대로 꺾였다.**
+                  스켈레톤이 같아 본 이름으로 매칭된다. 대가: 바디가 마네킹 체형 기준이라 캡슐이 메시와 약간 어긋난다
+                  → 진영별 복제 + 바디 피팅은 **[W72]**(에디터 수작업) · 정량 판정 **[C-127]**
     포스트프로세스 ABP 없음  ← 마네킹의 ABP_UEFN_Mannequin_PostProcess 는 thigh 1.12 · head 1.15 스케일 보정이라 붙이지 않는다
 /Game/SoldierLab/Characters/Ally/soldier_T_Skeleton  고아 (참조 0건) → 삭제 예정 [W29]
 
@@ -1155,6 +1271,7 @@ BP_SoldierCharacter · BeginPlay 추가분
 /Game/Soldiers/New_enemy_soldiers/NewFolder/new_enemy_T    스켈레톤 = SK_UEFN_Mannequin   ← Assign Skeleton (본 추가 0)
     UE5 표준 명명 · 111,083 버텍스 · LOD 1 · 키 178.7 cm
     메시 소켓 weapon_r        부모 hand_r · (−9.80, 3.41, −0.38) · yaw 180        ← 아군과 같은 값
+    피직스 에셋 ~~new_enemy_T_PhysicsAsset~~ → ★ **PA_UEFN_Mannequin** (2026-09-17, 아군과 같은 이유·같은 대가)
     머티리얼 슬롯 Ch_49_body2 / Ch_49_eyelashes / Ch_49_body1                     ← 임포트 시 전부 WorldGridMaterial 이던 것을
                                                                                     MCP set_material 로 상위 폴더 MI Ch_49_body1/body2/eyelashes 에 할당
     포스트프로세스 ABP 없음   ← 아군과 같다. 그래서 BF 포즈의 구워진 head 1.15 가 이 메시에서도 드러났다 (2.5e-7)
@@ -1175,6 +1292,12 @@ BP_SoldierCharacter · BeginPlay 추가분
 
 L_SoldierTest   Ally_A · Ally_B · Ally_B2 · Ally_B3 = BP_Soldier_Friendly / Enemy_A · B · C = BP_Soldier_Hostile
 ```
+
+> ★ **정정 2026-09-21 — 병사 메시(`CharacterMesh0`) 콜리전은 QueryOnly 가 아니었다** [A] (`ai/2026-09-21_game_thread_structural_pool_rays_bridge.md` C절)
+> `ai/2026-09-21_perf_instrumentation_and_cover_cost.md` 7절 [W98] ② 와 이 문서가 "살아 있는 병사의 피직스 바디는 QueryOnly" 라고 전제했지만, **실제 CDO 는 GASP 커스텀 프로파일 `QueryAndPhysics`** 였다(MCP 되읽기).
+> 09-21 후편에서 **`QueryOnly` 로 바꿨다** — 부모 `BP_SoldierCharacter` CDO + `BP_Soldier_Friendly`/`_Hostile` CDO + `L_SoldierScenario` 인스턴스 35(CDO 쓰기는 자식/인스턴스에 전파 안 됨). 같은 자리에서 CMC `bAlwaysCheckFloor=false` · `bEnablePhysicsInteraction=false`([W111]).
+> 안전한 이유: 사망 래그돌은 `AI/SoldierHealth.cpp:554-572 StartRagdoll` 이 **`QueryAndPhysics` 로 되돌리고**(`:572`) 피격 부위 판정 `ResolveBoneByTrace` 는 Query 다. 키네마틱 본 스킵 불가(전편 2.2절)는 그대로 — Query 를 받는 바디는 포즈를 따라가야 한다.
+> `FEndPhysics` 에 대한 효과는 투사체 QueryOnly 와 같은 프레임에 들어가 **분리 판정 보류 [B]**. **오브젝트 타입은 ECC_Pawn 그대로** — 09-21 부터 AI 트레이스가 병사를 `AddIgnoredActor` 대신 **Pawn 채널 응답 Ignore**(`AI/SoldierQuery.h BodiesAreNotWalls()`)로 거르므로, 병사 메시/캡슐의 오브젝트 타입을 바꾸면 트레이스가 병사에 막힌다.
 
 **`weapon_r` 메시 소켓 규약 (2026-09-15 확정)** [A] — 총 부착 오프셋은 컴포넌트가 아니라 **메시 소켓**이 갖는다(3절 `WeaponMesh` 상대 0):
 
@@ -1231,6 +1354,8 @@ Source/SoldierLab/                런타임 모듈 — ~~아직 비어 있다~~ 
                                   (BlueprintPure. `FInterpTo`/`Lerp`는 지수형이라 목표 근처에서
                                    늘어지고 입력이 멈추면 목표로 붕괴한다 — 자세 축에는 안 맞는다)
                                   → `UpdateBodyYawRate` 가 `RampAxisTo` 를 쓴다 (2.5d)
+                                  ⚠ `RampAxisTo` 는 **rate ≤ 0 이면 Target 을 그대로 반환**(램프 없음 = 즉시).
+                                  "정지"로 쓰려면 0.0001 같은 극소 양수 (P167, 09-18 스냅 사고)
 
                                   ★ 2026-09-12 추가 — 골반 높이 역산 2종 (2.5f-5)
                                   SolveBoneHeightOffset(TargetWorldZ, MeasuredWorldZ, AppliedOffset)
@@ -1269,6 +1394,14 @@ Source/SoldierLab/                런타임 모듈 — ~~아직 비어 있다~~ 
                                   1500) · 등록부 Unregister · /Script/SoldierLab 컴포넌트 전부 틱 off ·
                                   ABP 축 변수 7종 0 · 8 s 후 시체 틱 정지 · Health/bDead/LastHit 복제.
                                   콘솔 SoldierLab.Debug.Health 1 · SoldierLab.Invincible 1.
+                                  ★ **2026-09-17 — 몽타주는 이제 C++ 이 아니라 BP 데이터다** [A].
+                                  생성자의 `ConstructorHelpers::FObjectFinder` 19개 + include 를 **삭제**했다
+                                  (`/Game/SoldierLab/Animations/Actions/` 하드코딩이 세트 분리로 죽어 배열이 전부
+                                  빈 채였고, 같은 로드가 옛 몽타주를 **루트셋에 박아** 폴더 삭제까지 막았다 — P134).
+                                  기본값은 `BP_SoldierCharacter`(Enemy_ 19) / `BP_Soldier_Friendly`(ALLY_ 19) 템플릿.
+                                  **`bPlayDeathMontage = false`** — 사망은 순수 래그돌(사용자 결정, [C-128]).
+                                  사망 몽타주 12장의 슬롯은 `FullBody` → **`DefaultSlot`** 으로 고쳐 유지(P140).
+                                  → `ai/2026-09-17_hit_death_three_causes.md`
                                   몽타주 19개는 생성자 FObjectFinder 기본값(BP 에서 덮는다)
                                   → `ai/2026-09-15_health_hit_death_implementation.md`
 
@@ -1287,6 +1420,22 @@ Source/SoldierLab/                런타임 모듈 — ~~아직 비어 있다~~ 
     Pose/SoldierHeadAimComponent  머리·목 조준 추종 + 눈–조준선 정렬 + 몸 회전(캡슐 yaw, 정지·비조준 시).
                                   닫힌 루프·월드 Additive, ABP 변수 5개에 리플렉션 쓰기. 기본 OFF, H 키.
                                   콘솔 `SoldierLab.Debug.HeadAim 1`
+                                  ★ 09-18: H 는 **수동 토글뿐** — AI 자동 활성화(bEnableForAI) 넣었다 되돌림 (P171)
+
+    ★ 2026-09-17~18 추가 (포즈 세션) — AI 세션 계약의 소비 측, 셋 다 AI 전용 (IsPlayerControlled → return)
+    Pose/SoldierScanTurnComponent 총 내림 ∧ 정지 ∧ (IsScanning ∨ HasContact) 면 캡슐 yaw 를 GetAimPoint() 로.
+                                  Start 20° / Stop 5° 히스테리시스, 180°/s, 메시는 GASP OffsetRootBone + MM TIP.
+                                  Engagement 틱 선행. 콘솔 `SoldierLab.Debug.ScanTurn 1`
+    Pose/SoldierGaitBridgeComponent
+                                  GetDesiredGait()==Walk → CharacterInputState.WantsToWalk (리플렉션, 매 틱).
+                                  BP 구조체 필드는 GUID 접미사라 GetAuthoredName/prefix 매칭 (P170). bDriveSprint 기본 off
+    Pose/SoldierPoseSmootherComponent
+                                  stance/lean/BF-H/BF-V 목표를 사다리꼴 프로파일로(축별 MaxSpeedUp/Down/Accel ×
+                                  urgency 스케일 0.5~1.6, 목표 변경 시 속도 연속). BP 상태+AI 목표 변수 동시 쓰기,
+                                  액터 틱 선행 (P168). BP 램프 rate(StanceRate/BlindFireRate)를 0.0001 로 얼림 —
+                                  0 이면 RampAxisTo 가 목표를 반환해 스냅 (P167). `ext` 감사.
+                                  콘솔 `SoldierLab.Debug.PoseSmooth 1`
+                                  → animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md
 ```
 
 > ⚠ 위 두 파일은 **2026-09-11 심야에 추가됐는데 문서에 반영되지 않고 있었다**(2026-09-12 소스 실측).
@@ -1305,33 +1454,49 @@ Source/SoldierLab/                런타임 모듈 — ~~아직 비어 있다~~ 
 > **`ai/2026-09-13_engagement_and_cover.md`**(교전·엄폐 기하) ·
 > **`ai/2026-09-13_objective_and_position_cost.md`**(★ 목표 · 세 비용 위치 선택) ·
 > **`ai/2026-09-13_ai_bridge_and_scene.md`**(블루프린트 배선·레벨·도구 함정 9건) ·
-> ★ **`ai/2026-09-14_exposure_ladder_and_corrections.md`**(**교정 라운드 — 값이 바뀜 자리는 이쪽이 최신이다**).
+> ★ **`ai/2026-09-14_exposure_ladder_and_corrections.md`**(**교정 라운드**) ·
+> ★★ **`ai/2026-09-17_situation_field_lighting_model.md`**(**상황 필드 — 땅의 기억은 이쪽이 최신, 09-14 위험 지도는 폐기**) ·
+> **`ai/2026-09-17_infiltration_and_unknown_ground.md`**(잠입 거동).
 > 이 절은 **무엇이 어디 있는가**만 적는다.
 
-### 5.1 C++ — `Source/SoldierLab/AI/` 9쌍 [A]
+### 5.1 C++ — `Source/SoldierLab/AI/` ~~9쌍~~ **11쌍 + 설정 헤더 1 + ★ 09-21 `SoldierQuery.h` 1** [A] (2026-09-17: `SoldierDangerMap` −1 · `SoldierSituationField` `SoldierLabLog` +2 · `SoldierFieldSettings.h` +1) + `Pose/` ~~4쌍~~ **5쌍**(HeadAim · ★ 09-18 ScanTurn · GaitBridge · PoseSmoother · ★ 09-21 **AIBridge**) + `Observer/` · `Camera/` 1쌍씩 + ★ 09-21 `Weapons/SoldierProjectilePool` 1쌍(투사체 본체는 3.1절)
 
 | 파일 | 무엇 | 한 줄 |
 |---|---|---|
-| `SoldierIdentity` | 진영 · 소켓 · 등록부 · ★ **몸의 자** | `ESoldierFaction{Friendly,Hostile,Neutral}` · 눈 `head` / 표적 **`spine_03`**(정수리만 넘어온 병사는 보이는 게 아니다) · `USoldierRegistrySubsystem`은 **평평한 배열 하나** · `GetFeetLocation()`(P103) ★ **09-15**: **높이를 상수가 아니라 몸에서 잰다**(P115) — `ObserveStance`가 축 양 끝에서 spine_03·head 높이를 실측(가슴 기립 **96~105** / 웅크림 **50~57** / 눈 140~150; 웅크림은 기립×(80/135) 선추정), `GetFightProbeHeightCm = min(눈, 총구 140)`. **총구**: `MuzzleSocket "Muzzle"`(SK_AR4_X, 부착 액터에서 탐색)을 `GetMuzzleLocation`으로 매 틱, `ObservePose`가 포즈 끝(기립/웅크림/린 ±1/블라인드 위·좌·우)에서 몸 기준 오프셋 학습 → `PredictMuzzle*` |
-| `SoldierPerception` | ★ 이 층의 본체 | `FSoldierEnemyRecord`는 **관측된 그대로 + 절대 시각**만 담고, **감쇠는 전부 질의 함수**에 있다(P63). **신선도와 해상도를 합치지 않는다**(P62). 융합은 **역분산 가중**(P65) ★ **09-14**: **추측항법이 만료된다** — `VelocityTrustSeconds 1.5`(총성 기록 0). 속도에 대한 믿음은 위치에 대한 믿음보다 먼저 죽는다 (P88) ★ **09-15**: `LastGunshotTimeSeconds`(총성 시각, 융합은 max — 눈 활동도의 재료) · `FindRecordNear`(익명 기록을 위치로 재발견 — 표적 잠금용) |
-| **`SoldierDangerMap`** | ★ 땅의 기억 (2026-09-14 신규, `UWorldSubsystem`) | 진영별 2 m 격자, 셀당 **보였음(기립)/공터였음/총알 지나감** 세 시각. 엄폐 트레이스 결과와 근접탄이 쓰고, 자리 점수는 "공터였음"만(**눈이 0일 때만**), 길 점수는 셋 다("보였음"은 × 활동도). `GetRouteDangerSplit`. `LogSoldierAI` 카테고리 정의처 |
-| `SoldierSight` | 시야 생산자 | 싸구려 기각(거리²·콘 dot)은 전부, **트레이스만 예산**(라운드로빈 3/틱). **"시야 상실"을 보고하지 않는다** |
-| `SoldierComms` | 전달 생산자 | 지연을 지연으로 모델링하지 않았다 — **말하는 데 걸리는 시간**이 낡음과 속도제한을 동시에 만든다. 방송 판정은 **정보량**으로 |
-| `SoldierSuppression` | 0..1 스칼라 | 인과적·연속적이라는 것만 주장한다. 회복은 **무조건** 돈다 — 사격이 앞지를 뿐 |
-| `SoldierEngagement` | ★ 결정 | 방아쇠는 **"앎이 무기보다 나쁜가"**(P66). 거절 3종은 따로 — `Blocked`(총구에서 트레이스) / `Masked` / 탄약 ★ **09-14**: 막히면 거절하는 대신 **조리개**(Direct/Over/Right/Left)를 찾고 **사격 자세**(Open/Lean/Blind)를 고른다(P81). 사다리를 고르는 것은 **제압도**다. **반동**은 탄창이 줄어드는 것을 보고 센다([W26]). **조준은 240°/s 로 선회**하고 시야 콘도 그 회전을 읽는다(P86) → 새 의도 `Traversing`. `GetDesiredLean` / `GetDesiredBlindFireH/V` 발행([W19] 해결) · `WantsToSprint`(P89) ★ **09-15**: **표적 잠금**(`SelectTarget` — 확신 +0.3 또는 거리 0.6배 이내일 때만 교체; 확인됨 `switches 0`) · **가치 게이트 분리**(`bWorthTheRound` = 총 산포 ≤ 500만, 제압사격은 앎 ≤ `SuppressiveKnowledgeRadiusCm 1000`) · ★ **노출 회계**(`ExposureAccount` 0..1 — 몸이 보이면 활동도×(1+제압)/1.5 s로 오르고 숨으면 2 s로 내림, **< 0.2 내밈 / > 0.8 숨김**) · `PlanAperture`(실제 총구 Direct → Over/Open → Lean R/L → Blind Up/R/L, 너무 위험하면 Open/Lean 미제공; 내미는 동안 자세 재질의 안 함) · **관찰 회차**(낡은 표적 + 제압 < 0.3이면 쏘지 않고 봄) · **방아쇠는 실제 총구 소켓의 사선으로** · `ReadActualPoseAxes`(BP `LeanCurrent`/`BlindFireH`/`BlindFireV` 리플렉션) · 전이 로그 `SoldierLab.Debug.Engagement.Log` (P118) |
-| `SoldierCover` | 엄폐 + 위치 선택 | **시야 판정을 거꾸로 돌린 것.** 한 스윕이 **노출 + 필요 자세** 두 답을 준다. 자리는 **세 비용 한 통화**로 고른다 — `Exposure + RouteRiskWeight×RouteRisk + ObjectiveWeight×ObjectiveCost` ★ **09-14**: 첫 항이 노출에서 **`FightingCost`** 로 바뀌었다(P82) — 한 스윙이 이제 **세 답**을 준다(노출 · 필요 자세 · **싸울 수 있는가**). 경로 위험은 **거리로 스케일**(P83) · 후보는 **두 겹 링** · 위협 추정은 **한 바퀴 동안 얼린다** · **정지 감지**(P87)와 **RVO 회피**도 여기 ★ **09-14~15**: 위협 = **기억 속 적 전원**(가까운 순 ≤3, 스무딩 1 s, **활동도** 가중 — 최근 3 s 총성 1.0 → 0.3, P117) · 후보 = **부채꼴 그림자**(눈마다 24줄×2높이, 반경 24 m; 링은 예비) · 비용 항별 `FSoldierPositionCost`(Fighting/Route/Objective/Danger/Suppression) · 경로 위험 **길이 비례, 상한 없음**(P84) · 위험 지도 항(자리는 눈 0일 때만, P116) · **머무름**(엄폐 있을 때 3 s, 여유 1.0)·이동 중 스윕 폐기 · "쏠 수 있나" = min(눈, 총구) + **린 좌·우 2점**(코너 = 사격 위치) · 예산 하한 후보 1개(P114) · 오버레이 2줄 + `SoldierLab.Debug.Cover.Log` |
-| `SoldierObjective` | ★ 땅의 값 (2026-09-13 추가) | **로직 없는 레벨 마커 액터.** 한 개가 **쥔 쪽에겐 수비 · 나머지 전부에겐 공격**이 된다. 수비는 **반경 안 평평한 0**(거리로 매기면 수비대가 중심점으로 붕괴한다 — P73), 공격은 **평지 없는 비례**. ⚠ **레벨에 아직 0개** → **[W25]** ⚠ **09-14 정정**: 루트 컴포넌트가 없어 **여태까지 모든 거리를 (0,0,0) 에서 재고 있었다**(P90). 공격 비용의 **clamp 제거**(P84) · 반경 900→1500 · 밴드 900→1200 · 환율 6000→3000(P85) |
-| `SoldierDebugDraw` | 오버레이 공통 규약 | 색=출처 · 회색=센서 활동 · 크기=해상도 · 굵기=신선도 (P70) |
-| **`Observer/SoldierObserverPawn`** | ★ 관전 카메라 (2026-09-14 오후 신규) | `ADefaultPawn` 자식. **F** 조준선 아래 병사 추적/해제(AI 는 그대로 — `Possess` 아님) · **T** 1/3인칭(~~V~~ → 병사 조작과 통일) · **Tab** 다음 병사 · **휠** 거리. 픽은 트레이스가 아니라 **등록부+시야각**(`PickConeDegrees` **15**, 병사가 Visibility 를 무시하므로). 키는 `FKey` UPROPERTY + `BindKey`, IA/ini 불필요. 충돌 없음. ✅ **2026-09-15 확인**: 1인칭일 때 따라다니는 병사의 `USoldierFirstPersonComponent` 에 뷰를 **위임** — `BeginExternalView()/EndExternalView()`(소켓→시선 캘리브레이션, `bExternalView` 면 알파 무관 소켓 완전 추종), 관전 폰 `CalcCamera` 오버라이드가 `ComputeView()` 호출(빙의 없음). 옵션 `bUseSoldierFirstPersonComponent`(기본 true; 없으면 옛 head 소켓 간이 뷰). **H**(`HeadAimToggleKey`) = 그 병사의 `USoldierHeadAimComponent::ToggleHeadAim()`(AI 는 `bApplyToAI` 필요). HUD 상태줄 `headaim:ON/off` · `/ soldier eyes`. Tab·3인칭·EndPlay 에서 외부 뷰 해제. `ai/2026-09-14_cover_frame_fix_and_observer.md` 2절 · `animation/2026-09-14_sight_alignment_plan.md` 0' 절 |
+| `SoldierIdentity` | 진영 · 소켓 · 등록부 · ★ **몸의 자** | `ESoldierFaction{Friendly,Hostile,Neutral}` · 눈 `head` / 표적 **`spine_03`**(정수리만 넘어온 병사는 보이는 게 아니다) · `USoldierRegistrySubsystem`은 **평평한 배열 하나** · `GetFeetLocation()`(P103) ★ **09-15**: **높이를 상수가 아니라 몸에서 잰다**(P115) — `ObserveStance`가 축 양 끝에서 spine_03·head 높이를 실측(가슴 기립 **96~105** / 웅크림 **50~57** / 눈 140~150; 웅크림은 기립×(80/135) 선추정), `GetFightProbeHeightCm = min(눈, 총구 140)`. **총구**: `MuzzleSocket "Muzzle"`(SK_AR4_X, 부착 액터에서 탐색)을 `GetMuzzleLocation`으로 매 틱, `ObservePose`가 포즈 끝(기립/웅크림/린 ±1/블라인드 위·좌·우)에서 몸 기준 오프셋 학습 → `PredictMuzzle*` ★ **09-16~17**: **자리 주장**(`SetClaim/GetClaim` — 가는/선 자리, 나이는 땅이 바뀐 시각부터, S1의 재료) · `GetRegistryIndex`(엄호 타이브레이크) · `GetHeadHeightCm(stance)`(웅크린 `head` 소켓도 실측 — 두 점 엄폐의 재료) · 등록부 `IsRegisteredActor`(**쳐다볼 시체 고르기용**, 지식은 트레이스로만) ★ **09-17 오전**: `GetSocketOrFallback` — 소켓 없는 **비-`ACharacter`**(브리지가 등록한 UGV/트럭)는 `GetActorBounds` Z 비율로 **눈 0.8 · 표적 0.5**(원점+상수는 차체 안/땅 밑에 떨어져 바퀴를 겨눴다) → [C-126] 갱신 |
+| `SoldierPerception` | ★ 이 층의 본체 | `FSoldierEnemyRecord`는 **관측된 그대로 + 절대 시각**만 담고, **감쇠는 전부 질의 함수**에 있다(P63). **신선도와 해상도를 합치지 않는다**(P62). 융합은 **역분산 가중**(P65) ★ **09-14**: **추측항법이 만료된다** — `VelocityTrustSeconds 1.5`(총성 기록 0). 속도에 대한 믿음은 위치에 대한 믿음보다 먼저 죽는다 (P88) ★ **09-15**: `LastGunshotTimeSeconds`(총성 시각, 융합은 max — 눈 활동도의 재료) · `FindRecordNear`(익명 기록을 위치로 재발견 — 표적 잠금용) ★ **09-16**: **배운 죽음** — `LearnDeath`(기록 삭제 + `KnownDead`; **눈이 시체를 보거나 무전으로 들었을 때만**, 세계가 대신 부르지 않는다 P130) · `IsKnownDead`(죽은 줄 아는 적의 늦은 무전 무시) · `TakeDeathToReport`(Comms용) · **`ReportClearView`**(부정 증거 — 보고 있는데 없으면 `ObservedCertainty × 0.5^(dt/ClearViewHalfLifeSeconds 1.5)`, P133) ★ **09-17**: `ReportThreatenedBy(Shooter)`(근접탄·피격이 호출 — 기록에 `LastThreatenedTimeSeconds`, **기록이 없으면 안 만든다**) · `GetSecondsSinceThreatened` · `ReportGunshot` → 필드 `ReportSighting(추정점, HeardPresence 0.75, 반경)` — 흐린 라이트(그림자 없음, 글로우만), **0.75는 사전값 0.5보다 커야 한다** ★ **09-21**: **`ReceiveSharedRecord`** 가 `IntegrateRecord` 뒤 **받는 병사의 분대 필드**에 `Field->ReportSighting(OwnIdentity, 위치, 부풀린 반경, 깎인 확신, ObservedTimeSeconds)` — 관측 시각 그대로라 태어나며 낡아 있고, 같은 분대 라이트면 `LastSeenTime = max` 로 자기 눈의 시계를 안 되돌린다. **남의 분대 목격이 우리 필드에 들어오는 유일한 길**(P179) |
+| ~~**`SoldierDangerMap`**~~ | ⛔ **삭제 (2026-09-17 `p4 delete`)** | ~~진영별 2 m 격자, 셀당 보였음/공터였음/총알 지나감 세 시각, 30 s 반감, max-only~~ → 출처 없는 누적 버퍼라 "GI처럼 붉은 얼룩"(P147). `SoldierLab.Debug.Danger` cvar · `SoldierCover::DangerHalfLifeSeconds` 함께 소멸. 대체 ↓ |
+| **`SoldierSituationField`** | ★★ **상황 필드** (2026-09-17 신규, `UTickableWorldSubsystem`; **09-18 재작성** 2332줄) | 진영별 XY 해시 격자(2.5D, 셀당 지면 Z 캐시 — 내비메시 → 하향 트레이스 → 점 Z), ~~희소 레벨 피라미드(`LevelCount`/`LevelScale`/`DetailRangeCm`, 기본 단일 격자)~~ → **09-18 밉 + 다중 앵커 퇴거**: 레벨 0 `FCell`만 쓰고, 레벨 1+ `FCoarseCell`(경계도 max · lit 평균 · 잔여물)/`FCoarseHorizon`(트임 평균)은 `MarkDirtyUp`으로 더럽혀져 읽을 때 재집계(`RefreshCoarse`, TTL `CoarseRefreshSeconds 1`); 진영 병사 **아무나**에게서 `DetailRadiusCm 8000 × LevelScale^L` 밖 레벨 L은 `Evict`/`EvictHorizons`(스냅샷 2 s, 1024/틱)가 부모에 `FoldInto` 후 해제; 읽기는 `SampleFinest`(레벨 0 → 1 → 2, `FSample` 한 모양); 섀도우는 앵커 80 m 안 라이트만; `SoldierLab.Field.CellSizeCm` cvar. **저장 1**: 경계도 `FCell.Presence`(**0이 아니라 `UnknownPresence 0.5`를 향해** 8 s 반감, 눈만 낮춤). **정적 1**: 호라이즌 `FHorizon`(8방향 × 2높이 uint8 셀 거리, 지연 굽기 8셀/틱 × 16, 진영 공유, 안 다시 굽되 **먼 것은 퇴거**). **파생 1**: 위험도 = **직접**(라이트 `FLight` — 목격, 사람 아님; 0.5 s 연속창 넘기면 **얼고** 다음은 새 라이트, `MaxLights 16`, 흐린 것(`SharpRadiusCm 400` 초과)은 글로우만; 섀도우 48방향 × 2줄, 셀별 광선 높이로 자세 2/1/0(지면 아래 허용 **`GroundSlackCm 40`**, ← −110), 셀당 `FLit{Light,Generation,Stance}` 슬롯 3, **타이머 없음 — 세대로 무효화**, 거리 감쇠 30→90 m; **09-18 부정 증거** `ClearViewSeconds` — 얼린 라이트를 뚫린 선이 지나면 `ContradictLightsAlong`이 시간을 적립, 밝기에 `0.5^(t/ClearViewHalfLifeSeconds 4)` 추가, 다시 보이면 0 [B]) **+ 앰비언트**(호라이즌 × 확산 경계도 8방향 평균, 라이트 제외). API: `ReportSighting` · `MarkClear(AlongRay)` · `GetExposure(ByStance)` · `GetMostExposedDirection` · `FindDarkestCells` · `GetPresence` · `GetCellCount(F, Level)`. 오버레이 `SoldierLab.Debug.Field(.Channel/.Faction/.Level/.RadiusCm)` **월드당 1회** — **09-18 v2**: 자체 `ULineBatchComponent`(`DebugBatcher`) 0.1 s flush+refill · 색 8단계 양자화 색별 `DrawMesh` · `Level −1` 클립맵 링(25 m/100 m/전체 12000) · **불투명도 = 신선도**(크기 0.7 고정) · 링 넘치면 **대칭 축소** + CAPPED(6000, [B]) · 미굽기 파랑끼 [B] · 라이트 불투명도 = 밝기, 초록 봄/호박 들음, 흰 점 = 그림자 미완 [B] · 헤더 2줄 `DescribeGround` [B] · 볼 곳 보라 화살표 2.5 m [B]. `ai/2026-09-17_situation_field_lighting_model.md` **16~18절** ★ **09-18 오후(2491줄, PIE)**: **`GetStaleVantage(Foot, StaleSeconds)`**(앰비언트 적분의 방사체를 "안 본 지 얼마나"로 — 순찰의 재료) · `GetMostExposedDirection`에 **`PreferDir/PreferWeight`(편향)·`ArcYawDeg/ArcHalfWidthDeg`(부채꼴 — 선택만 제한, 적분은 그대로)** · **`FHorizon::bSolid`**(굽기가 기하 안에서 시작 = 전방향 255 + `FindDarkestCells` 제외) · **`GetExposureByStance` → bool**(미지 = false) · `MarkClearAlongRay` **16 m 밖 3셀 폭 띠** · `ContradictLightsAlong` 들은 라이트 제외([W83]) · 라이트 링 annulus 메시 · 화살표에 배정 arc — **20~23절** ★★ **09-21(3036줄)**: **분대 스코프** — `FScope{Faction, SquadId, Levels, Lights, Anchors, EvictionQueue}` × `3 × MaxSquadsPerFaction`, `ScopeFor(Faction, SquadId)`(처음 말하는 순서로 슬롯, 넘치면 슬롯 0 + `WarnedOverflowSquads` 분대당 1회 경고) · `ScopeFor(Who)`(`bTakesSquadOrders=false` → −1) · **공개 API 전부 `Who`**(−1 = 쓰기 무시 / 0 / false / Max) · 호라이즌·`AllAnchors` 는 세계 공유 · 섀도우 예산은 세계 하나(가장 밝은 것, 따라가는 것 우선, 스코프 앵커 80 m 안만) · **`GetWedgePresence(Who, Apex, DirA, DirB, Range, Now)`**(쐐기 안 경계도 × m², 4°/갈래 ≤ 12 · 셀 표본 ≤ 48, 표본 셀의 자기 호라이즌(apex 쪽 bin)·solid 로 가림, 안 구운 셀은 사전값 + 큐, 트레이스 0 — 엣지 전진의 재료) · `GetDebugScope`(관찰 병사의 진영·슬롯 따라감, `Debug.Field.Faction`/`.Squad` 로 반쪽씩 고정) · `Debug.Field.Centre 1`(분대원 전원 주위 링) · `DescribeScope` `HOSTILE/1` · 헤더 3줄째 **비용 줄** `[Field] cost/tick: shadows … (rays/tick, waiting of alive) bake evict | overlay` · ~~**[B] 빌드 전**~~ → **같은 날 늦게 빌드·PIE ✅([W96] 해결, 재측정 0.03 ms · 0 waiting · 96 alive = 기준선 동일)**: `FLight::ShadowEye/ShadowCastTime` · `Refresh` 재캐스트 = 한 셀 ∧ `ShadowRecastSeconds 0.5` · `FreezeLight` 낡은 그림자 즉시 재캐스트 · `CastShadow` 패스 시작점 고정 + **riders**(다른 스코프 반 셀 안 라이트 동승, 셀마다 rider 별 `TouchCell`/`LightCell`) — `ai/2026-09-21_per_squad_field_edge_advance_fire_model.md` 1·2.4·4·10절 ★ **09-21 늦게(3081줄) — 오버레이 노출 보정(P181, PIE ✅)**: `DebugMeshes`(`USoldierDebugMeshComponent`, `GetDebugMeshes()`, `Deinitialize` 해제) 에 **셀 사각형·라이트 링**, 배처에는 선·점·구·화살표만, 둘 다 같은 틱 `Flush` + 채우기; `DrawDebug` 의 `ExposureScale = SoldierDebug::GetExposureScale(World)` + `HDR` 람다(RGB × 배율, 알파 그대로) — 지역 변수 `Exposure` 가 바깥을 가려 C4456(에러) → `ExposureScale` 로 개명. `ai/2026-09-21_debug_overlay_exposure.md` 3.5절 ★ **09-22**: **`ResetForRestart()`** — `Scopes`(셀·라이트·앵커·퇴거큐)뿐 아니라 **지오메트리 캐시(`Horizons`/`CoarseHorizons`)까지** Built* 무효화 → `EnsureLevels` 가 첫 실행과 같은 경로로 재구축(설계 4a 의 "지오메트리 유지"는 폐기, "PIE 와 동일" 기준). 시나리오 재시작 리셋 계약(P187), `SoldierLab.ResetWorld` 에 포함 |
+| **`SoldierFieldSettings`** | Project Settings (2026-09-17 신규, `UDeveloperSettings`, `config=Game defaultconfig`; **09-18 갱신**) | **Game → SoldierLab Situation Field.** Resolution **7**(`CellSizeCm` `LevelCount` `LevelScale` **`DetailRadiusCm` `EvictionCellsPerTick` `EvictionIntervalSeconds` `CoarseRefreshSeconds`**, ~~`DetailRangeCm`~~) · Presence 3 · Lights **10**(+`ClearViewHalfLifeSeconds`) · Shadow 10 · Ambient 6 · Debug **7**(`MaxDebugCells` `DebugRefreshSeconds` `DebugDetailRadiusCm` `DebugFill` `DebugAlphaMin` `DebugAlphaMax` `DebugStaleSeconds`, ~~`DebugAlpha` `DebugFillMin/Max`~~) = **43개 값, 전부 미측정** → [C-130]~[C-133] [C-140]~[C-142]. 해상도 바꾸면 필드 비움(`[Field] resolution changed`) ★ **09-21**: Resolution **+`MaxSquadsPerFaction 3`**(1~4, 바꾸면 필드 비움) · Shadow **+`ShadowRecastMoveCm 0`(= 한 셀) · `ShadowRecastSeconds 0.5`**(~~빌드 전 [B]~~ → 같은 날 빌드·PIE ✅) = **46개** → [C-157] [C-161] |
+| **`SoldierLabLog`** | `LogSoldierAI` 정의처 (2026-09-17 신규) + ★ **`STATGROUP_SoldierLab`**(09-21) | 위험 지도 헤더에 있던 것을 독립 — 로그만 쓰려고 서브시스템을 include 하던 결합 제거 ★ **09-21**: **`stat SoldierLab`** — `DECLARE_STATS_GROUP(STATGROUP_SoldierLab, STATCAT_Advanced)` + 사이클 스탯 23(시스템 틱 9 · Cover 하위 7 · Field 5 · Squad/Zone 선언만 [W103]) + DWORD 카운터 5(`Traces: Sight/Cover/Engagement/Field` · `Soldiers Ticked`), 전부 `SOLDIERLAB_API`. 각 시스템 `.cpp` 의 `TickComponent` 첫 줄 `SCOPE_CYCLE_COUNTER`, 동기 트레이스마다 `INC_DWORD_STAT`. 짝 = off 스위치 `SoldierLab.<System>.Enabled`(각 `.cpp` 의 `GSoldier*Enabled`). `.h:17-59` · `.cpp:7-34`. P182 |
+| `SoldierSight` | 시야 생산자 | 싸구려 기각(거리²·콘 dot)은 전부, **트레이스만 예산**(라운드로빈 **5**/틱, ← 3). **"시야 상실"을 보고하지 않는다** ★ **09-16~17**: **두 점** — 상대 **가슴(`spine_03`) → 막히면 머리(`head`)**, 보인 점이 기록 위치(머리만 보이면 머리 조준)(P131) · 남은 예산으로 **시체 확인**(등록부에서 빠진 기억 속 적의 몸을 같은 거리·콘·트레이스로 → `LearnDeath`, P130) · **빈 땅 확인**(기록 예상점이 콘 안·뚫리면 `ReportClearView`, P133) · `SightRangeCm` **12000** (← 6000 — 스폰 63 m·교전 95 m와 불일치로 첫 9 s 무반응) ★ **09-17 저녁**: **콘 스윕** `SweepCone`(표적 트레이스보다 먼저·무조건, `ConeSweepTracesPerTick 2` 별도 예산, `ConeSweepRays 21` 라운드로빈, `ConeSweepRangeCm 4000`) → 필드 `MarkClearAlongRay` — **사전값 0.5를 물리는 유일한 것**(0이면 잠입 OFF) · 목격 시 **비우기 먼저 → `ReportSighting(발, 1.0, SightingRadiusCm 100)`**(P151) · 빈 땅 확인도 필드에 비움 ★ **09-21**: **`FSoldierSweepRay{Eye, Dir, Stop, bBlocked, TimeSeconds}`** 를 슬롯별로 보관(`SweepRays[Slot]`, 각도순 — 이웃은 다른 틱), **`GetSweepRays()`** — 엄폐 층이 **엣지**(옆 광선은 ≥ 2×·+3 m 가는데 ≤ 10 m 에 멈춘 광선)를 읽는 자리, 트레이스 추가 없음(P177). 필드 호출은 전부 `OwnIdentity` 로(분대 스코프) |
+| `SoldierComms` | 전달 생산자 | 지연을 지연으로 모델링하지 않았다 — **말하는 데 걸리는 시간**이 낡음과 속도제한을 동시에 만든다. 방송 판정은 **정보량**으로 ★ **09-16**: **사망 보고**(`BeginCasualtyTransmission` — 같은 입·25 m·1.2 s, 새로 배운 사망이 접촉 보고보다 먼저, 사망만 릴레이). 이것이 분대 통신의 전부다 — 자리·의도·명령은 없다 |
+| `SoldierSuppression` | 0..1 스칼라 | 인과적·연속적이라는 것만 주장한다. 회복은 **무조건** 돈다 — 사격이 앞지를 뿐 ★ **09-17**: `ApplyNearMiss(거리, Shooter)` → `Perception->ReportThreatenedBy(Shooter)` · **필드에는 안 쓴다**(옛 `MarkFiredUpon` 폐기 — 지나간 탄은 사수 위치의 증거지 이 땅의 증거가 아니다, P144) |
+| `SoldierEngagement` | ★ 결정 | 방아쇠는 **"앎이 무기보다 나쁜가"**(P66). 거절 3종은 따로 — `Blocked`(총구에서 트레이스) / `Masked` / 탄약 ★ **09-14**: 막히면 거절하는 대신 **조리개**(Direct/Over/Right/Left)를 찾고 **사격 자세**(Open/Lean/Blind)를 고른다(P81). 사다리를 고르는 것은 **제압도**다. **반동**은 탄창이 줄어드는 것을 보고 센다([W26]). **조준은 240°/s 로 선회**하고 시야 콘도 그 회전을 읽는다(P86) → 새 의도 `Traversing`. `GetDesiredLean` / `GetDesiredBlindFireH/V` 발행([W19] 해결) · `WantsToSprint`(P89) ★ **09-15**: **표적 잠금**(`SelectTarget` — 확신 +0.3 또는 거리 0.6배 이내일 때만 교체; 확인됨 `switches 0`) · **가치 게이트 분리**(`bWorthTheRound` = 총 산포 ≤ 500만, 제압사격은 앎 ≤ `SuppressiveKnowledgeRadiusCm 1000`) · ★ **노출 회계**(`ExposureAccount` 0..1 — 몸이 보이면 활동도×(1+제압)/1.5 s로 오르고 숨으면 2 s로 내림, **< 0.2 내밈 / > 0.8 숨김**) · `PlanAperture`(실제 총구 Direct → Over/Open → Lean R/L → Blind Up/R/L, 너무 위험하면 Open/Lean 미제공; 내미는 동안 자세 재질의 안 함) · **관찰 회차**(낡은 표적 + 제압 < 0.3이면 쏘지 않고 봄) · **방아쇠는 실제 총구 소켓의 사선으로** · `ReadActualPoseAxes`(BP `LeanCurrent`/`BlindFireH`/`BlindFireV` 리플렉션) · 전이 로그 `SoldierLab.Debug.Engagement.Log` (P118) ★ **09-16**: **표적 분담**(`PickCandidate` = 확신 − `TargetCrowdingPenalty 0.15`×아군 수, 교체 문턱도 같은 점수, S3) · **엄호의 사실** `IsCoveringEnemy`(정지 ∧ 사격 의도 ∧ 그 적 잠금 — 의도가 아니라 사실, S4의 재료) · **블라인드 펄스 수정**(`bBlindForCost` — 위험/기하 이유별 종료, 블라인드로는 관찰 안 함, `bWorthShot`에 앎 ≤ 1000, `bBlindNoShot`; P132) ★ **09-17 오전**: **위협 보너스** — 점수 `Certainty − Crowding×Crowd + ThreatenedBonus 0.6 × Threatened`(`Perception->GetSecondsSinceThreatened`, 5 s 기억, 나를 쏘는 놈은 분담 감점 면제) · **사선 거부** `IsLaneDenied()`(접촉 ∧ 믿음 ∧ (Blocked ∨ Aperture None)이 `LaneDeniedSeconds 2` 지속 → 래치, 엄폐가 HERE에 `LaneDeniedCost` 부과 — "15 s 전이 0" 해결) · **가치 히스테리시스** `bWorthTheRound = 산포 ≤ 500 × (bWasFiring ? WorthHysteresis 1.2 : 1)`(30 Hz 방아쇠 떨림 해결) ★ **09-17 저녁**: **스프린트 규칙** `bUrgent = 접촉 ∥ 제압 ∥ 사선 거부`, 엄폐로 갈 때 ∧ 급할 때만; `Cautious` 절대 안 뛰고 `Rush` 늘 뜀(P150) · ~~**무접촉 조준 = 섹터 > `Cover->GetWatchPoint()`(가장 모르는 방향) > 없음**~~ → ★ **09-18 오후 정정: 볼 곳(부채꼴 안에서) > 섹터 중심**(섹터를 고정 방위로 읽자 명령받은 병사의 스캔이 영영 안 돌았다, P163) · 무접촉 분기에서도 **`AimPoint`** 채움 + **`IsScanning()`**(~~볼 곳 있을 때 true~~ → **밤: 섹터 중심이든 볼 곳이든 무접촉 조준점이 있으면 true**, [W89]) 발행 — 포즈 세션 `Pose/SoldierScanTurnComponent`가 읽어 총 내린 idle 의 캡슐을 돌린다(~~연동 [C-152]~~ 포즈 측 PIE ✅) · **`MinStance`** 바닥(`DesiredStance = max(…, Task.MinStance)`, Rush 무시) — `ai/2026-09-18_patrol_scan_and_move_robustness.md` 1·5절 ★ **09-18 밤**: **긴장도 `GetTension()`**(`LastAlarmSeconds` — 알람 = `bUrgent` ∥ 적 기록의 총성 1 s 안, `0.5^(age/TensionHalfLifeSeconds 20)`) · **걸음 `GetDesiredGait()`** `ESoldierGait {Walk, Jog, Sprint}`(Sprint = `bWantsToSprint` 명령 반영 뒤 · Jog = 접촉 ∨ 긴장 ≥ `JogTension 0.3` · **Cautious ∧ 무접촉 = Walk**, P175) — 포즈 세션 `GaitBridge`가 Walk → GASP `WantsToWalk` · **포즈 급박도 `GetPoseUrgency()`** 0..1(`UrgencyIdle 0.15` / `ContactIdle 0.35` / `LookPeek 0.3` / `ShootPeek 0.6` / `Retreat 0.7`(내밈 끝 뒤 `RetreatUrgencySeconds 0.6`) / `Reload 1.0` 의 max + 제압 — "AI 는 목표 + 숫자 하나, 움직임은 포즈 층", P172) — 포즈 세션 `PoseSmoother`가 축 속도 ×0.5~1.6 · `[Engage]` 로그 끝 `tension %.2f gait %d urg %.2f` · **AI 층은 어떤 BP 축도 쓰지 않는다**(`ReadActualPoseAxes`는 읽기뿐) — 같은 문서 13~15절 ★★ **09-21(1712줄) — AI 가 콘을 소유한다(P178)**: **`GetShotSpreadDegrees()`** = `WeaponSpreadDegrees 0.8`(← 3) × `(1 + MovementSpreadScale 6 × min(1.5, v/ReferenceSpeedCms 600))`(← 2) × 자세(`LeanSpreadScale 1.5` ← 1.4 / `BlindSpreadScale 15` ← 4 — 가치 게이트 사거리 조깅 ≈ 40 m · 블라인드 ≈ 24 m 보존) × (1 + `RecoilSpread`) + **`AimSettleDeg`**(`[Accuracy]` — 선회 중 `max(·, AimSettleInitialDeg 2.5)`, 매 틱 `×exp(−dt/AimSettleSeconds 0.4)`, 발마다 `+RecoilKickDeg 0.6`, 이동 바닥 `MoveWobbleDeg 1.5 × v/600`, 상한 30) · **조준 게이트**: 기록 반경 ≤ `TargetRadiusCm 45 × AimedHitTolerance 2`(사격 중 ×1.2) 이면 지금 콘이 들어감 → `Aimed` / 정착 콘(이동 흔들림 포함) 들어감 → **`Settling`**(새 의도, 기다림 — 60 m ≈ 1.5 s · 10 m 0) / 예비 → `Suppressive` · **버스트**(`[Rhythm]`): `WantsToFire` 뒤 `Now < NextBurstSeconds` → **`Pacing`**, 남은 발 0 → `BurstRoundsMin 2..Max 5` 딜(제압 = Max), 발마다 감산, 0 → `NextBurst = Now + BurstPauseSeconds 0.5 × (1 ± RhythmJitter 0.35)`, `FRandomStream Rhythm` = `GetTypeHash(이름)` 시드 · `[Engage]` 꼬리 `cone %.2f wobble %.2f burst %d next %+.2f` · `KnowledgeToSpreadRatio` **삭제** · **엣지 전진 연동**: 무접촉 조준 = `Cover->GetAdvanceView`(쐐기 이등분 8 m + 벽 쪽 `DesiredLean`) > 볼 곳 > 섹터 · **`bWantsToAim = 접촉 ∥ IsAdvancing()`**(BP 는 아직 `HasContact()` [W93]) · 전진 ∧ 무접촉 = Walk(스프린트 해제) · 급박도 `UrgencyLookPeek`. ⚠ **무기 BP 가 `GetShotSpreadDegrees()` 를 읽기 전에는 탄이 옛 고정 콘** [W93] — `ai/2026-09-21_per_squad_field_edge_advance_fire_model.md` 3절 |
+| `SoldierCover` | 엄폐 + 위치 선택 | **시야 판정을 거꾸로 돌린 것.** 한 스윕이 **노출 + 필요 자세** 두 답을 준다. 자리는 **세 비용 한 통화**로 고른다 — `Exposure + RouteRiskWeight×RouteRisk + ObjectiveWeight×ObjectiveCost` ★ **09-14**: 첫 항이 노출에서 **`FightingCost`** 로 바뀌었다(P82) — 한 스윙이 이제 **세 답**을 준다(노출 · 필요 자세 · **싸울 수 있는가**). 경로 위험은 **거리로 스케일**(P83) · 후보는 **두 겹 링** · 위협 추정은 **한 바퀴 동안 얼린다** · **정지 감지**(P87)와 **RVO 회피**도 여기 ★ **09-14~15**: 위협 = **기억 속 적 전원**(가까운 순 ≤3, 스무딩 1 s, **활동도** 가중 — 최근 3 s 총성 1.0 → 0.3, P117) · 후보 = **부채꼴 그림자**(눈마다 24줄×2높이, 반경 24 m; 링은 예비) · 비용 항별 `FSoldierPositionCost`(Fighting/Route/Objective/Danger/Suppression) · 경로 위험 **길이 비례, 상한 없음**(P84) · 위험 지도 항(자리는 눈 0일 때만, P116) · **머무름**(엄폐 있을 때 3 s, 여유 1.0)·이동 중 스윕 폐기 · "쏠 수 있나" = min(눈, 총구) + **린 좌·우 2점**(코너 = 사격 위치) · 예산 하한 후보 1개(P114) · 오버레이 2줄 + `SoldierLab.Debug.Cover.Log` ★ **09-16~17**: 비용에 **`q`(Squad) 항** = `SquadCost` — **S1 자리 주장**(아군 주장 2.5 m 안 후보 +1.0, 현재 자리는 상대가 먼저일 때만 → 겹친 둘 중 한 명만 비킴) + **S2 사선 비우기**(아군 총구→표적 선분 1.5 m 안 +0.6) · **S4 엄호 이동** `IsEnemyCoveredByTeammate`(아군이 사실로 엄호하는 적의 눈 활동도 ×0.5; 엄호자는 내 자리보다 나쁘지 않은 쪽만, 동률은 등록부 앞) · **두 점 엄폐** — 자세 3단마다 **가슴+머리 둘 다** 모든 눈에서 가려져야 숨음(`GetHeadHeightCm`, 예산 `(3+2×heights+routes)×eyes`, P131) ★ **09-17**: `Field` 포인터(상황 필드) — Danger 항 = `DangerWeight 0.8 × Field->GetExposure`(**눈 0일 때만**) · 경로 표본 = `max(live, Field->GetExposure × 활동도)` · **부채꼴·몸 밴드·경로 광선은 필드에 안 쓴다**(P144) · HERE에 `LaneDeniedCost 1.0`(오전) · **골든앵글** `CandidateRotationRad += 2.39996 rad`/스윕(링 각도 + 부채꼴 지터 — 정지 병사가 같은 20점만 긋던 것) · **[B] 빌드 전**: `AddFieldCandidates`(`FindDarkestCells` → `FieldCandidateCount 6`, 부채꼴 다음·링 앞) · `EvaluatePosition` **눈 0 분기가 필드를 읽어** `HiddenThreshold 0.25`로 은폐/낮은 벽/공터 세 사실 산출(옛 `CanHide=true` 조기 탈출 제거) · `BeginSweep` → `WatchPoint`(`GetMostExposedDirection`) · `IsRushing()`(배정 Rush)이면 셋 다 우회 · `DangerHalfLifeSeconds` **삭제** ★ **09-18 오후(PIE ✅)**: **`PatrolCost`**(`GetStaleVantage` — Hold/수비 반경 안 `+ PatrolWeight × (1 − vantage)`, 눈 0일 때만) · `TaskCost` Hold **밴드 밖 기울기 계속**(P158) · `BeginSweep` 볼 곳을 **눈 유무 무관 항상**(P165) + 편향(이동 `WatchTravelBias 1` / 정지 Approach `WatchApproachBias 0.5`) + 정지 시 섹터 **arc** · `EvaluatePosition` 눈 0 분기 **미지 = 노출 1·은폐 불가**(`GetExposureByStance` false, P159) · `FinishSweep` **`MoveGraceSeconds 0.75`** 유예(P162) + `MoveTo` 전 **`FindPathSync` 부분 경로 불허**(P161) + **`RejectCandidate`/`IsRejected` 30 s**(`REJECT` 로그) + 무진전 거부 + **`ScanDwellSeconds 2`**(눈 0 도착 머무름) · `[Cover] watch=` ★ **09-18 저녁 ~~[B] 빌드 전~~ → 밤 PIE ✅ "잘됨"**: **A** 은폐 판정 = 자세마다 모든 눈, 보는 눈 활동도 비율 ≤ `HiddenGazeFraction 0.5`(P166) · **B** `AddMicroCandidates`(정지 ∧ 눈 있음, 8 × `MicroStepCm 30`, 병합 우회) + `CoverAcceptanceRadiusCm 20`·`bStopOnOverlap=false` + 무진전 "같은 자리" 15 cm · **C** `CurrentPath` 보관 → `FindNextCorner`(`CornerAngleDeg 35`, `CornerLookAheadCm 500`) → `UpdateCornerPause`(`CornerStopCm 150` 앞 `PauseMove` `CornerPauseSeconds 0.8`, 눈 0 ∧ Rush 아님, 굽이당 1회) + 볼 곳 편향 = 굽이 너머 — **진짜 파이 자르기 아님** ★ **09-18 밤**: 첫 빌드 로그의 **코너 멈춤 루프**(0.82 s 마다 `MOVE`) → 굽이 기억을 인덱스에서 **자리**(`LastPausedCornerLocation`, `CornerStopCm` 반경, P173)로 · 재개 시 **`LastMoveIssuedSeconds = Now`**(재개된 이동 = 방금 발행한 이동, P174) · **눈이 나타나면 즉시 재개**(`SweepEyes.Num() > 0`) · `RejectCandidate` 만료 `RemoveAll`([W90]). `ai/2026-09-18_patrol_scan_and_move_robustness.md` 7 · 12절 ★★ **09-21(2374줄) — 엣지 전진이 코너 멈춤을 대체**(P176·P177, 빌드됨 CL 500 · **PIE [W95]**): ~~`UpdateCornerPause`·`IsPausedAtCorner`·`CornerStopCm`·`CornerPauseSeconds`~~ **삭제**, `FindNextCorner`·`CornerAngleDeg 35`·`CornerLookAheadCm 500` 은 **볼 곳 미리 보기용으로만**. `[Advance]`: `FindViewEdges`(스윕 광선 이웃 쌍(0.75 s 안)에서 막힌 ≤ `EdgeRangeCm 1000` 광선 옆이 ≥ max(2×, +3 m) 가면 엣지, 진행 쪽만, 숨은 쪽 10° 탐침 쐐기가 `EdgeIgnorePresence 0.5` 미만이면 그냥 벽) → `UpdateEdgeAdvance`(매 `AdvanceCheckSeconds 0.1`; 시작 조건 눈 0 ∧ Rush 아님 ∧ 엄폐 이동 중 ∧ `Moving` → `StopMovement` + `bAdvancing`; 걸음 뒤 발이 멈추면 `AdvanceRestSeconds` 찍고 **`GlowInWedges` ≤ `AnalyzedPresence 1` ∥ ≥ `MaxLookSeconds 3`** 이면 다음; 엣지 없거나 걸음 못 내면 `EndAdvance` = 원 목적지 재발행) → `IssueAdvanceStep`(목표 방향 `{0, ±35, ±70, ±105}°` × `AdvanceStepCm 60` × 1..`AdvanceStepCount 4`, 내비 투영, 뒤로 제외, `OpenedByStep` = 엣지마다 눈-apex 선의 선회가 숨은 쪽이면 `GetWedgePresence(apex, Before, After, WedgeRangeCm 1500)`; 예산 `StepPresenceBudget 6`(Cautious ×0.5) 안 `진전 − 0.5 × 걸음 × 열림/예산` 최대, 없으면 1걸음 중 최소 열림) · 접촉 → `BreakAdvanceForContact`(그 자리 정지, 경로 리셋, 걸어온 자리(≤ 8)를 `AdvanceRetreatSeconds 10` 동안 후보에) · `IsAdvanceLooking()` 은 `bAlreadyGoing`(재결정 안 함), 새 엄폐 이동은 전진 취소 · `GetAdvanceView`/`IsAdvancing` (교전이 소비) · 로그 `[Cover] … ADVANCE begins/step/ends` · 오버레이 시안 핀(엣지) + 시안 두 줄(마지막 쐐기, 밝음 = 글로우 남음) — `ai/2026-09-21_per_squad_field_edge_advance_fire_model.md` 2절 · 값 [C-158] ★ **09-21 성능(2491줄, PIE ✅ 실측)** — `TickComponent` 재구성(P183): `SoldierLab.Cover.Enabled`/`.Avoidance` cvar(`:27-38`, 회피는 `bAvoidanceApplied` 래치로 다음 틱 적용 `:2181-2189`) · **`bSweepSuspended`**(`:2229-2244` — `Moving ∧ (유예 안 ∨ 속도 > StallSpeedCms)` ∨ `IsAdvanceLooking()` 이면 후보 루프 통째 건너뜀, 풀리면 `bSweepActive=false` → 새 스윕) · **`UpdateWatchPoint()`**(`:1887-1975`, `BeginSweep` 에서 떼어냄 — 정지 중 `WatchRefreshSeconds 0.25` 마다 `:2287-2294`) · HERE 는 **`HereEvalIntervalSeconds 0.1` ∨ 걸음 > `MicroStepCm` ∨ 새 스윕**(`LastHereEvalSeconds/Foot`, `:2257-2285` — 정지 여부 무관) · 후보 루프 **`CalmCandidatesPerTick 2`**(눈 0, `:2311-2316`) · **경로 가지치기**(`ScorePosition(…, 0)` 이 best 에 지면 `EvaluateRoute` 생략 `:2345-2381`) · 하위 스코프 7. `Category "SoldierLab|Cover|Cost"` `.h:548-563`. 8.92 → **1.92 ms**, 487 → **243** 트레이스. 값 [C-162] · `ai/2026-09-21_perf_instrumentation_and_cover_cost.md` 4절 |
+| `SoldierObjective` | ★ 땅의 값 (2026-09-13 추가) | **로직 없는 레벨 마커 액터.** 한 개가 **쥔 쪽에겐 수비 · 나머지 전부에겐 공격**이 된다. 수비는 **반경 안 평평한 0**(거리로 매기면 수비대가 중심점으로 붕괴한다 — P73), 공격은 **평지 없는 비례**. ⚠ **레벨에 아직 0개** → **[W25]** ⚠ **09-14 정정**: 루트 컴포넌트가 없어 **여태까지 모든 거리를 (0,0,0) 에서 재고 있었다**(P90). 공격 비용의 **clamp 제거**(P84) · 반경 900→1500 · 밴드 900→1200 · 환율 6000→3000(P85) ★ **09-18 오후**: 수비 비용이 **밴드 밖에서도 `ApproachScaleCm` 비율로 계속 오름**(P158 — 1.0에서 멈춰 집으로 갈 기울기가 없었다) · **`PatrolWeight 1.0` · `PatrolStaleSeconds 30`** — 명령 없는 레벨(`L_SoldierTest`)의 수비대도 순찰(`SoldierCover::TaskCost`가 수비 반경 안에서 `PatrolCost` 가산) |
+| `SoldierDebugDraw` | 오버레이 공통 규약 + ★ **노출 보정**(09-21) | 색=출처 · 회색=센서 활동 · 크기=해상도 · 굵기=신선도 (P70) ★ **09-17**: `GetObservedSoldier(World)` — 진영 단위 오버레이(필드)가 "누구 편"을 답하는 한 곳: 필터 이름 → 관전 폰 `GetFollowedSoldier()` → 조종/뷰타겟 병사(P146) ★ **09-21**: 조종 폰/뷰타겟은 **`bTakesSquadOrders` 인 Identity 만** 병사로(UGV 의 표적 Identity 제외 — UGV 조종 중 오버레이가 UGV 를 따라가던 원인, P179) ★★ **09-21 늦게 — 노출 보정(P181, PIE ✅)**: EV10 고정 레벨에서 오버레이 전부가 숯검정(디버그 프리미티브는 톤매퍼 **앞**, `DrawDebug*` 는 8-bit `FColor`). **`GetExposureScale(World)`** — `FSoldierDebugExposureExtension : FSceneViewExtensionBase` 가 `SetupView` 에서 게임 뷰의 `GetLastEyeAdaptationExposure()` 를 저장(게임 스레드, 렌더 없음, 첫 호출에 등록·프로세스 수명), 반환 `clamp(1/exposure, 1e-3, 1e6)`(첫 프레임 1) · **`Bright(World, FColor) → FLinearColor`**(sRGB → 선형 × 배율, **알파 제외**) · 래퍼 **`Line(…, LifeTime)`**(> 0 이면 영속 배처) **`Point` `Sphere`**(대원 3) **`Circle`**(`YAxis/ZAxis`) — 월드 라인 배처, 한 프레임 · cvar **`SoldierLab.Debug.ExposureScale 0`**(0 자동 · 아니면 수동 배율, 블룸 레벨은 조금 낮게). `AI/` 의 `DrawDebugLine/Point/Sphere/Circle` **24곳 전부** 래퍼로(Cover 11 · Objective 3 · Sight 3 · Engagement 2 · Perception 2 · Suppression 2 · Comms 1), `DrawDebugString` 은 그대로. **`Arrow` 래퍼 없음**. `Squad/`·`Pose/`·`Weapons/` 17곳은 [W97]. `ai/2026-09-21_debug_overlay_exposure.md` |
+| **`SoldierDebugMesh`** | ★ **선형 색 디버그 메시** (2026-09-21 신규, PIE ✅) | `USoldierDebugMeshComponent : UPrimitiveComponent` — 라인 배처의 메시 경로(`DrawMesh`, `FColor` 저장)를 **`FLinearColor` 로** 재구현: `FMesh{Verts(월드), Indices, Colour, DepthPriority}` · `DrawMesh(Verts, int32 Indices, FLinearColor, DPG)` · `Flush()` · 자체 `FSoldierDebugMeshSceneProxy`(메시 배열 복사, `FDynamicMeshBuilder`, **같은 `GEngine->DebugMeshMaterial`** 에 `FColoredMaterialRenderProxy(Parent, Mesh.Colour)` 한 프레임 프록시 — 배처와 색 타입만 다름, 반투명 관련성, `bWillEverBeLit=false`) · 충돌·틱·스트리밍 없음. 소비자 = 필드 오버레이의 **셀 사각형(색 그룹당 1)·라이트 링**(`USoldierSituationFieldSubsystem::DebugMeshes/GetDebugMeshes`, 배처와 같은 틱 `Flush` + 채우기). `Build.cs` **`RenderCore` · `RHI`** 가 전제. `ai/2026-09-21_debug_overlay_exposure.md` 3.4절 |
+| **`Observer/SoldierObserverPawn`** | ★ 관전 카메라 (2026-09-14 오후 신규) | `ADefaultPawn` 자식. **F** 조준선 아래 병사 추적/해제(AI 는 그대로 — `Possess` 아님) · **T** 1/3인칭(~~V~~ → 병사 조작과 통일) · **Tab** 다음 병사 · **휠** 거리. 픽은 트레이스가 아니라 **등록부+시야각**(`PickConeDegrees` **15**, 병사가 Visibility 를 무시하므로). 키는 `FKey` UPROPERTY + `BindKey`, IA/ini 불필요. 충돌 없음. ✅ **2026-09-15 확인**: 1인칭일 때 따라다니는 병사의 `USoldierFirstPersonComponent` 에 뷰를 **위임** — `BeginExternalView()/EndExternalView()`(소켓→시선 캘리브레이션, `bExternalView` 면 알파 무관 소켓 완전 추종), 관전 폰 `CalcCamera` 오버라이드가 `ComputeView()` 호출(빙의 없음). 옵션 `bUseSoldierFirstPersonComponent`(기본 true; 없으면 옛 head 소켓 간이 뷰). **H**(`HeadAimToggleKey`) = 그 병사의 `USoldierHeadAimComponent::ToggleHeadAim()`(AI 는 `bApplyToAI` 필요). HUD 상태줄 `headaim:ON/off` · `/ soldier eyes`. Tab·3인칭·EndPlay 에서 외부 뷰 해제. ★ **09-18**: 자유 비행 시 **휠 = 비행 속도**(`FlySpeedCms 1200`, ×/÷`FlySpeedWheelFactor 1.25`, 100~20000, `ApplyFlySpeed()` 가 FloatingPawnMovement MaxSpeed·Accel·Decel 비례) · **`bIgnoreTimeDilation`**(`CustomTimeDilation = 1/배속`, slomo 무관) · **롤 잔류 수정**(외부 뷰 동기화는 yaw·pitch 만, 전환 시 롤 0 — P169). `ai/2026-09-14_cover_frame_fix_and_observer.md` 2절·**5절** · `animation/2026-09-14_sight_alignment_plan.md` 0' 절 |
 | **`Camera/SoldierFirstPersonComponent`** | ★ 1인칭 (2026-09-14 오후 신규) | 뷰타겟 교환: `ASoldierFirstPersonViewTarget`(`CalcCamera` 오버라이드)로 `SetViewTarget`, 돌아올 땐 캐릭터. **GASP `GameplayCamera` 는 건드리지 않는다**(Deactivate/재활성화는 망가짐 — P107). `Anchor` Body/Weapon · `CameraSocket`(사용자 `eyes` 소켓) · `LocationOffset`(폰/소켓 공간) · `RotationOffset` · `RotationMode` ControlRotation/**FollowSocket** · `bAlignToAimOnEnter`(머리 실제 시선 기준) · `bFollowSocketOnlyWhileHeadAims` · `bHideBodyFromOwner` = `PC->HiddenPrimitiveComponents` · **`NearClipPlaneCm 2`**(1인칭 뷰에만 `FMinimalViewInfo::PerspectiveNearClipPlane` — 전역 10 cm 로는 총이 잘린다). 런타임 IA/IMC, 키 **T**. 관전 폰이 빌려 쓰는 `BeginExternalView/EndExternalView`(2026-09-15 확인). `ai/2026-09-14_cover_frame_fix_and_observer.md` 3c절 |
-| **`Pose/SoldierHeadAimComponent`** | ★ 머리·목 조준 추종 + 눈–조준선 정렬 (2026-09-14, 10차까지 사용자 확인 "완벽") | **닫힌 루프·월드 Additive**(총구 되먹임 2.5c 와 같은 꼴). **몸 프레임 = `TorsoBone`(spine_03) 실제 회전 × 레퍼런스 상대회전**(P111) — 보정·굽힘·스트레치·학습된 조준선 전부 이 프레임에 저장했다가 매 틱 월드 변환(P110). 방향: 지난 프레임 머리 실제 시선 vs 목표의 **swing** 오차를 `CorrectionGain 8`/s 누적, `ToSwingTwist` 로 시선축 twist 제거(P106), 몸 기준 yaw±75/pitch±55 클램프 후 **`Body.Pitch+Δ, Body.Yaw+Δ` 로 재조립**(P109), 안티와인드업. **2단**: 둘러보기(켜지면 항상, `LookAroundStrength 1`) / 정렬 = **weld 가중치**(조준경 +X ↔ 컨트롤 회전 각도 smoothstep `AlignZeroDegrees 35`→0 · `AlignFullDegrees 3`→1, `WeldBlendRate 12`/s, 1 에 닿으면 **래치** `UnweldDelaySeconds 0.5`, P113) — `AOActive` ∧ 학습된 선 필요. 조준선 학습: 정지 게이트(≤30°/s ∧ ≤15cm/s, 0.1s) ∧ `AimAlignmentDegrees 8` 안에서 스냅샷, 학습값 대비 `TrackSmallMovesCm/Deg 3` 이내면 `LineTrackRate 12`/s 연속 추적, 큰 점프는 홀드. 눈 목표 = 선 위 최근접점(`EyeReliefMinCm 5~MaxCm 20`)을 `자연 눈 + w×(선−자연 눈)` 로 블렌드. **목 굽힘**(neck_01/neck_02 `NeckBendSplit 0.5`, `MaxNeckBendDegrees 60`) + **스트레치**(목이 못 하는 성분만 머리 본 이동, `MaxNeckStretchCm 5`) — 유효 레버가 목 길이뿐인 기하 한계(P112). **맹목사격**(`BF_AlphaL/R/U` > 0.05) 이면 전체 off. 조준은 `Controller->GetControlRotation()`(P104), AI 는 접촉 시 `Engagement->GetAimPoint()`. **몸 회전**(2026-09-15, `SoldierLab\|HeadAim\|BodyTurn`): 켜짐 ∧ 비조준 ∧ 정지 ∧ 플레이어일 때 카메라 yaw 가 캡슐에서 `BodyTurnStartDegrees 60` 밖이면 **캡슐 yaw 만** `BodyTurnRateDegPerSec 360` 으로 돌리고 `BodyTurnStopDegrees 10` 안에서 멈춤 — 메시·turn-in-place 는 GASP OffsetRootBone + MM 이 조준 모드와 같은 경로로(P119; Strafe 우회는 항상 견착이라 폐기 P120). **기본 OFF**, 키 **H**, `bApplyToAI`. 전부 `EditAnywhere`(`SoldierLab\|HeadAim\|…`). 콘솔 `SoldierLab.Debug.HeadAim 1`. 최종 설계 **`animation/2026-09-14_sight_alignment_plan.md` 0' 절** |
+| **`Pose/SoldierHeadAimComponent`** | ★ 머리·목 조준 추종 + 눈–조준선 정렬 (2026-09-14, 10차까지 사용자 확인 "완벽") | **닫힌 루프·월드 Additive**(총구 되먹임 2.5c 와 같은 꼴). **몸 프레임 = `TorsoBone`(spine_03) 실제 회전 × 레퍼런스 상대회전**(P111) — 보정·굽힘·스트레치·학습된 조준선 전부 이 프레임에 저장했다가 매 틱 월드 변환(P110). 방향: 지난 프레임 머리 실제 시선 vs 목표의 **swing** 오차를 `CorrectionGain 8`/s 누적, `ToSwingTwist` 로 시선축 twist 제거(P106), 몸 기준 yaw±75/pitch±55 클램프 후 **`Body.Pitch+Δ, Body.Yaw+Δ` 로 재조립**(P109), 안티와인드업. **2단**: 둘러보기(켜지면 항상, `LookAroundStrength 1`) / 정렬 = **weld 가중치**(조준경 +X ↔ 컨트롤 회전 각도 smoothstep `AlignZeroDegrees 35`→0 · `AlignFullDegrees 3`→1, `WeldBlendRate 12`/s, 1 에 닿으면 **래치** `UnweldDelaySeconds 0.5`, P113) — `AOActive` ∧ 학습된 선 필요. 조준선 학습: 정지 게이트(≤30°/s ∧ ≤15cm/s, 0.1s) ∧ `AimAlignmentDegrees 8` 안에서 스냅샷, 학습값 대비 `TrackSmallMovesCm/Deg 3` 이내면 `LineTrackRate 12`/s 연속 추적, 큰 점프는 홀드. 눈 목표 = 선 위 최근접점(`EyeReliefMinCm 5~MaxCm 20`)을 `자연 눈 + w×(선−자연 눈)` 로 블렌드. **목 굽힘**(neck_01/neck_02 `NeckBendSplit 0.5`, `MaxNeckBendDegrees 60`) + **스트레치**(목이 못 하는 성분만 머리 본 이동, `MaxNeckStretchCm 5`) — 유효 레버가 목 길이뿐인 기하 한계(P112). **맹목사격**(`BF_AlphaL/R/U` > 0.05) 이면 전체 off. 조준은 `Controller->GetControlRotation()`(P104), AI 는 접촉 시 `Engagement->GetAimPoint()`. **몸 회전**(2026-09-15, `SoldierLab\|HeadAim\|BodyTurn`): 켜짐 ∧ 비조준 ∧ 정지 ∧ 플레이어일 때 카메라 yaw 가 캡슐에서 `BodyTurnStartDegrees 60` 밖이면 **캡슐 yaw 만** `BodyTurnRateDegPerSec 360` 으로 돌리고 `BodyTurnStopDegrees 10` 안에서 멈춤 — 메시·turn-in-place 는 GASP OffsetRootBone + MM 이 조준 모드와 같은 경로로(P119; Strafe 우회는 항상 견착이라 폐기 P120). **기본 OFF**, 키 **H**, `bApplyToAI`. 전부 `EditAnywhere`(`SoldierLab\|HeadAim\|…`). 콘솔 `SoldierLab.Debug.HeadAim 1`. 최종 설계 **`animation/2026-09-14_sight_alignment_plan.md` 0' 절**. ★ **09-18 확정: H 는 수동 토글뿐, AI 에 자동으로 켜는 로직 없음**(09-17 `bEnableForAI`/`bTurnBodyForAI` 넣었다 되돌림, P171 — AI 몸 회전은 아래 ScanTurn) |
+| **`Pose/SoldierScanTurnComponent`** | ★ AI 몸 회전 (2026-09-17~18, ✅ PIE) | **AI 전용**. `!WantsToAim()` ∧ (`IsScanning()` ∨ `HasContact()`, `bOnlyWhileScanningOrInContact`) ∧ 정지(지면·가속 0·`MaxSpeedCms 10`) 일 때 캡슐 yaw 를 `GetAimPoint()` 방위로 — `StartDegrees 20` 넘으면 시작, `StopDegrees 5` 안이면 정지, `TurnRateDegPerSec 180`(교전 조준 선회 240 보다 낮게, 몸이 눈을 따라감). 메시는 GASP OffsetRootBone + MM TIP(P119 의 AI 판). 견착이면 GASP aim 모드 몫, 이동 중이면 CMC OrientToMovement 몫. Engagement 틱 선행. 콘솔 `SoldierLab.Debug.ScanTurn 1`. 틈: 섹터만 있고 굽기 전 `IsScanning()==false` [W89]. `animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md` 1절 |
+| **`Pose/SoldierGaitBridgeComponent`** | ★ Walk → GASP (2026-09-17~18, ✅ PIE) | **AI 전용**. 매 틱 `CharacterInputState.WantsToWalk = (GetDesiredGait()==Walk)` 를 리플렉션으로(BP 구조체 필드 GUID 접미사 → `GetAuthoredName()`/prefix, P170). GASP gait = Sprint > **Walk** > Run 인데 Walk 만 길이 없었다. `bDriveSprint` 기본 **false**(Sprint 는 BP 브리지 소유). 같은 문서 2절 |
+| **`Pose/SoldierPoseSmootherComponent`** | ★ 자세 축 사다리꼴 (2026-09-17~18, ✅ PIE "해결완료") | **AI 전용**, `AIPoseDriven` 게이트. stance/lean/BF-H/BF-V 각각 `FSoldierPoseAxisMotion{MaxSpeedUp, MaxSpeedDown, Acceleration}` — **Stance 1.6/0.9/5**(앉는 쪽 = Up 이 빠름) · 나머지 1.2/1.2/4 — × `lerp(ScaleAtCalm 0.5, ScaleAtUrgent 1.6, GetPoseUrgency())`. `Wanted = sign(d)·min(MaxSpd, √(2·a·|d|))`, `FInterpConstantTo(Vel, Wanted, a)` → 목표가 바뀌어도 속도 연속, 스냅 eps 0.002/0.02, 범위 벽. **BP 상태+AI 목표 변수를 같은 값으로 씀**(`StanceAxis`+`AITargetStance` …) + Engagement 뒤·**액터 틱 앞** 선행(P168). BP 램프 rate `RateVariablesToFreeze={StanceRate, BlindFireRate}` 를 첫 틱에 **`FrozenRate 0.0001`** 로(린 램프는 그래프 리터럴 핀 → BP 에서 0.0001). ⚠ 처음 0 으로 얼렸다가 **급할 때 1프레임 스냅** — `RampAxisTo` 가 rate ≤ 0 이면 Target 반환(P167). `ext`(지난 쓰기 − 이번 읽기) 감사. 콘솔 `SoldierLab.Debug.PoseSmooth 1`. 값 전부 [C-154]. 남은 이산 전환 = GASP 크라우치 DB(`StanceThreshold 0.5`) [W91]. 같은 문서 3절 |
+| **`Pose/SoldierAIBridgeComponent`** | ★ **캐릭터 BP EventTick 본문의 C++ 판** (2026-09-21 후편, ✅ PIE — [W108]) | **`TickBridge(DeltaSeconds)`** = `BP_SoldierCharacter` EventTick 본문(조준 보정 회전 수학(2.5c) → 린 램프 → 입력 상태 구조체 Sprint/Aim 직접 쓰기(`UpdateInputState_Server` 본문 = `SetCharacterInputState` 라 권한에선 동치) → `AOActive`/`AIPoseDriven`/AI 다리 5개 → `UpdateBodyYawRate`/`UpdateBlindFire`/`UpdateStance` → `WantsToFire`/`Reload` → Rifle `Shoot`/`StartReload` 이벤트)을 **노드 순서 · Kismet 산술(RLerp/ComposeRotators/NormalizedDeltaRotator/MapRangeClamped/InRange) 그대로** 이식. **변수 47개(캐릭터 34 · 부모 4 · ABP 7)는 BP 소유 그대로 `FProperty` 로 읽고 씀** — 스무더·게이트브리지·리플리케이션 분기가 같은 변수를 쓰므로 소유권 불변(P170 과 같은 리플렉션 경로). BeginPlay 바인딩 실패 시 경고 + BP 원본 경로(`ShouldRunBlueprintCopy()`), cvar **`SoldierLab.AIBridge.Native`**(0 = BP 옛 본문, A/B). AI·플레이어 공통(본문이 그랬다). 아군 20 ReceiveTick 1.16~1.21 → **0.22 ms**. `AC_PreCMCTick`(GASP)은 미이관 → [W115]. `ai/2026-09-21_game_thread_structural_pool_rays_bridge.md` E절 |
+| **`AI/SoldierQuery.h`** | ★ **트레이스 공통 응답** (2026-09-21 후편, 헤더만 — [W110]) | **`SoldierQuery::BodiesAreNotWalls()`** → `FCollisionResponseParams` 에 **ECC_Pawn → Ignore**. 병사는 캡슐·메시 모두 Pawn 이고 이 레벨들의 Pawn 오브젝트 타입은 병사뿐(트럭/UGV ECC_Vehicle · 드론 PhysicsBody · 총 NoCollision)이라, 레지스트리 35명 `AddIgnoredActor` 루프(호출당 35 × 190회/프레임)를 **Engagement 1 · Cover 5(`IgnoreBodies` 는 빈 함수로 남김) · Field 2** 트레이스 사이트에서 제거. ⚠ **Pawn 타입 액터가 새로 들어오면 전제가 깨진다**. 같은 세션 Engagement `IsShotBlockedByWorld` 8슬롯 캐시(`FLaneAnswer`, `LaneCacheMoveCm 15`/`LaneCacheSeconds 0.15`)와 함께 씬 쿼리 1,030~1,120 → 357/576회. 같은 문서 B절 |
+| **`Weapons/SoldierProjectilePool`** | ★ **투사체 풀** (2026-09-21 후편, ✅ PIE — [W109]) | `USoldierProjectilePoolSubsystem`(월드 서브시스템) `Acquire(Class, Owner)` — 3.1절. cvar `SoldierLab.Projectile.PoolMax 96` ★ **09-22**: **`RecallAll()`** — 나는 탄 전부 `ASoldierProjectile::Park()`(풀로 주차, 비활성) — 시나리오 재시작 리셋 계약(P187) |
+| **`Squad/SoldierOrderTypes`** | ★ L0/L1 명령 계약 (2026-09-17, **빌드 전 [B]**) | `FSoldierAssignment`(Mode Approach/Hold · Anchor/Radius/Band/ApproachScale · Speed Cautious/Normal/Rush · ROE Free/ReturnFireOnly/HoldFire · Aggression · Sector · SuppressArea · NavFilterClass · bTargetableByOwnSideWeapons · Revision) — **전부 제약**. `FSoldierSquadOrder`(Verb MoveTo/Occupy/Withdraw/SetROE/SuppressArea/SetTargetable/Clear + Stagger + ZoneTag). `SoldierSquadAssignmentLabel()` ★ **09-18 오후**: 배정·명령에 **`PatrolWeight`(기본 0) · `PatrolStaleSeconds 30` · `MinStance`(기본 0)** 추가 — 존 동사와 함께 `BuildAssignment`가 복사 · **`bHasSector`의 뜻이 부채꼴(arc)로**(주석 갱신). titan `FScenarioSquadOrderSpec`엔 셋 다 **없음** ★ **09-21**: 동사 **`BreakContact`**(`.h:44-49`, 규칙 동사 — `bBreakContact=true` + ROE/`EngageRangeCm`/Speed 를 SetROE 처럼 나름, 다음 존 동사가 `FSoldierAssignment()` 리셋으로 지움) · `FSoldierAssignment::bBreakContact`(`:232-241`) · **`bTargetableByOwnSideWeapons` 주석 정정**(`:223-230` — "상대편 무기(차량은 브리지, 보병은 Engagement)가 이 병사를 표적으로 안 삼는다"는 시나리오 지시, 존 동사에도 이어짐 `SoldierSquadSubsystem.cpp:277`) · 라벨 ` BREAK`/` excl`(`:95-96`) [A] |
+| **`Squad/SoldierSquadSubsystem`** | ★ L1 분대 (2026-09-17 → 09-18 빌드·PIE [A]) | 분대 객체 없음 — 등록부 (Faction, `SquadId`), **`bTakesSquadOrders=false`(차량) 제외**. `IssueOrder`(지연 출발, 규칙 동사는 대기 중 배정에도 적용) · Approach→Hold 자동(~~반경×`ArrivalInsetFraction 0.8`~~ → **반경 × 배정의 `ArrivalFraction`**, 존에서 옴, 09-18) · achieved(생존 전원 도달) · **`ReinforceSquads(Faction, SquadIds, Quota, Toward)`**(정원제 — 다른 분대에서 목적지에 가까운 순으로 `SquadId` 영구 변경, `[Squad] reinforce …`) · `GetSquadStatus/IsOrderAchieved/GetSquadZoneTag`. 서버 전용. `SoldierLab.Debug.Squad` / `.Squad.Log`. 익명 네임스페이스 헬퍼는 `Squad` 접두(유니티 빌드) ★ **09-22**: **`ResetForRestart()`**(명령/멤버 맵 · 시리얼 초기화 — `ReinforceSquads` 가 바꾼 `SquadId` 는 병사 재스폰이 저작값으로 되돌림) + 콘솔 **`SoldierLab.ResetWorld`**(분대 · 상황 필드 · 투사체 풀 셋 한 번에) — 시나리오 재시작 리셋 계약(P187) |
+| **`Squad/SoldierZone`** | 저작 액터 (2026-09-17 → 09-18 [A]) | RadiusCm/**ArrivalFraction 0.8**/BandCm/ApproachScaleCm/섹터(액터 yaw, **09-18 오후부터 부채꼴** — `bUseSector true`·`SectorHalfWidthDeg 45`)/**`PatrolWeight 1.0`·`PatrolStaleSeconds 30`**(09-18 오후 — 존을 거친 명령만 순찰이 켜짐)/NavFilterClass. `ApplyToOrder`. **에디터 전용 표시**: 반경(노랑)·도착선(초록)·밴드(흐림) `USphereComponent` + 섹터 `UArrowComponent`(길이 = 반경) + `S_TargetPoint` 스프라이트, `OnConstruction` 갱신, 쿡 제외. PIE `SoldierLab.Debug.Zone` |
+| 훅 (2026-09-17 → 09-18 → ★ 09-21 [A]) | Identity `SquadId`·`bSquadLeader`·`Assignment`·**`bTakesSquadOrders`**(09-18) · 레지스트리 `GetGunshotCount` · **`OnGunshot` 멀티캐스트**(09-18, 서버·병사만 — titan 브리지가 RCWS 청각 `ReportGunfire`로 넘김) | Cover: `TaskCost`(배정이 Objective **대체**, Approach = **도착선 안 0 / 밖 `1 + 거리/ApproachScaleCm`**, 09-18) · `AggressionScale`(2×agg) · NavFilter · Objective 매 스윕 재해석 · `[Cover] task=` · ★ 09-21 **`IsBreakingContact()`**(`bBreakContact && Mode==Approach`, `SoldierCover.cpp:152-160`) → `ScorePosition` 이 Fighting/Route/Danger/Suppression 을 0 으로(`:1839-1845`, Objective·Squad 만 남음) · `MinDwell`/`ScanDwell` 없음(`:2050`) / Engagement: ROE 게이트 + **`EngageRangeCm`**(09-18, ROE 옆 — 넘으면 `Restrained`) + 의도 `Restrained` · 섹터 조준 · Speed↔스프린트 · `ReturnFireWindowSeconds 3` · `WantsToAim()` · `[Engage] roe=free/4000` · ★ 09-21 **`IsContactExcluded(record)`**(static, 상대 배정 `!bTargetableByOwnSideWeapons` — `PickCandidate` 제외 `:488` · 잠금 해제 `:683`, 인지 불변) · `bBreakContact` → 이동 중 `bWantsToSprint=true`(`:1579-1582`) · `DesiredStance=0`(`:852-855`, 재장전 웅크림은 그대로 · ⚠ `MinStance` 바닥이 그 뒤 `:859-862` 라 Rush 아니면 도로 올린다) / Perception: `ReportOrderedArea`(`bOrderedArea` 기록은 융합 안 함, `OrderedAreaRefreshSeconds 1`·`OrderedAreaCertainty 0.6`) / **P5 게이트** Cover·Engagement·Sight·Comms / titan: `IssueSquadOrderSpec` `SetTargetable(false)` → UGV RCWS `bRespectEnemyTargetingExclusion=true`(`ScenarioStateSubsystem.cpp:1919-1928`, 트럭 제외) |
 
 ★ **2026-09-14 오후 — 높이 기준면 통일 (P103)**: `USoldierIdentityComponent::GetFeetLocation()`(원점 − 현재 캡슐 반높이)이
 AI 층의 유일한 높이 기준이다. 엄폐 HERE · 경로 시작 · 총구(`MuzzleAtStance`) · 관전 폴백이 전부 이 위에 더한다.
 `SoldierCover` 에 **`ThreatEyeAboveContactCm 20`** 신설(기록 위치는 이미 가슴이다), 엄폐 트레이스는 **등록부 전원 무시**,
 오버레이에 **`st`**(RequiredStance) 추가. `SoldierEngagement` 의 상수 `CapsuleHalfHeightCm 90` 삭제. [C-95] 원인.
 
-`Build.cs`: **`AIModule`**(`SetFocalPoint`) · **`NavigationSystem`**(엄폐 후보 투영) 추가. ★ 09-14 저녁: **`EnhancedInput`**(런타임 IA/IMC 토글) 추가.
+`Build.cs`: **`AIModule`**(`SetFocalPoint`) · **`NavigationSystem`**(엄폐 후보 투영) 추가. ★ 09-14 저녁: **`EnhancedInput`**(런타임 IA/IMC 토글) 추가. ★ 09-17 저녁: **`DeveloperSettings`**(`USoldierFieldSettings` — 필드 해상도는 액터가 아니라 프로젝트의 속성) 추가. ★ 09-21: `PrivateDependencyModuleNames` 에 **`RenderCore` · `RHI`**(`USoldierDebugMeshComponent` 의 자체 씬 프록시 — 오버레이 사각형을 선형 색으로, P181) 추가.
 
 ⚠ **[C-95] 상태 (2026-09-14 저녁)**: 기준면 수정은 **빌드됐으나 수비수 정착 여부는 사용자가 아직 보고하지 않았다** — 판정 기준은 `ai/2026-09-14_cover_frame_fix_and_observer.md` 1.6절.
 
@@ -1389,24 +1554,160 @@ SoldierIdentity    StandChestHeightCm 135 / CrouchChestHeightCm 80 / EyeHeightCm
                    StandMuzzleOffsetCm (40,20,140) · CrouchMuzzleOffsetCm (40,20,95)
                    LeanRight/LeftMuzzleDeltaCm (0,±70,−10) · BlindUpMuzzleDeltaCm (0,0,+55) · BlindRight/LeftMuzzleDeltaCm (−10,±80,0)
 SoldierPerception  FSoldierEnemyRecord.LastGunshotTimeSeconds (−1 = 없음)
-SoldierDangerMap   CellSizeCm 200 (상수)
+~~SoldierDangerMap   CellSizeCm 200 (상수)~~   → 2026-09-17 폐기, 아래 09-17 블록
 ```
+⚠ 위 블록의 `DangerHalfLifeSeconds 30`은 **2026-09-17에 삭제**됐고 `DangerWeight 0.8`은 상황 필드 `GetExposure`를 읽는다.
+
+★ **2026-09-16~17 분대 항·죽음·시야 현행값** (`ai/2026-09-16_squad_terms_and_learned_death.md` 7절이 원본, 전부 [C] → [C-108] [C-109] [C-121]):
+
+```
+SoldierCover|Squad   ClaimRadiusCm 250 · ClaimedCost 1.0 · LaneClearanceCm 150 · LaneCost 0.6 · CoveredEyeFactor 0.5
+SoldierEngagement    TargetCrowdingPenalty 0.15 · CoveringStillSpeedCms 20
+                     bWorthShot 에 앎 ≤ SuppressiveKnowledgeRadiusCm 1000 조건 추가 (값 그대로)
+SoldierPerception    ClearViewHalfLifeSeconds 1.5 (신설)
+SoldierSight         SightRangeCm 12000 (← 6000) · MaxTracesPerTick 5 (← 3)
+SoldierIdentity      웅크린 머리 높이 실측(MeasuredCrouchEyeHeightCm), 측정 전 = 웅크림 가슴 + (기립 머리 − 기립 가슴)
+SoldierComms         사망 보고는 기존 VoiceRangeCm 2500 · MessageDurationSeconds 1.2 공용
+```
+⚠ **두 점 시야(Sight/Cover/Identity 일부)는 2026-09-17 기준 Perforce 미제출** — CL 471(분대 항·죽음) · 472(블라인드·부정 증거·시야 12 m)까지가 제출분.
+
+★ **2026-09-17 오전 — 교전 층 수정 넷 현행값** (`ai/2026-09-17_threat_bonus_lane_denied_vehicle_heights.md` 5절, 전부 [C] → [C-136] [C-126]):
+
+```
+SoldierEngagement    ThreatenedBonus 0.6 · ThreatenedMemorySeconds 5 · LaneDeniedSeconds 2 · WorthHysteresis 1.2
+SoldierCover         LaneDeniedCost 1.0 (HERE만)
+SoldierIdentity      비-캐릭터 폴백 = 바운즈 Z 비율 눈 0.8 / 표적 0.5
+```
+
+★★ **2026-09-17 저녁 — 상황 필드 · 잠입 현행값** (`ai/2026-09-17_situation_field_lighting_model.md` 10절 · `ai/2026-09-17_infiltration_and_unknown_ground.md` 9절, 전부 [C] → [C-130]~[C-135] [C-138] [C-139]):
+
+```
+USoldierFieldSettings (Project Settings → Game → SoldierLab Situation Field, DefaultGame.ini)   ★ 09-18 갱신
+  Resolution  CellSizeCm 200 · LevelCount 3 (← 1) · LevelScale 4 · DetailRadiusCm 8000 (신설, DetailRangeCm 3000 삭제) ·
+              EvictionCellsPerTick 1024 · EvictionIntervalSeconds 2 · CoarseRefreshSeconds 1   (신설)
+  Presence    PresenceHalfLifeSeconds 8 · UnknownPresence 0.5 · BodyBandCm 200
+  Lights      LightHalfLifeSeconds 20 · LightDeathThreshold 0.05 · ClearViewHalfLifeSeconds 4 (신설, [B]) · ContinuityWindowSeconds 0.5 ·
+              MaxTrackedSpeedCms 600 · TrackToleranceCm 150 · MergeRadiusCm 300 · MaxLights 16 · SharpRadiusCm 400 · FrozenPresence 0.6
+  Shadow      LightEyeHeightCm 160 · CrouchTopCm 110 · StandTopCm 175 · ShadowRays 48 · ShadowRaysPerTick 96 · ShadowRangeCm 6000 ·
+              LightFullRangeCm 3000 · LightMaxRangeCm 9000 · ShadowChannel GameTraceChannel5 · MaxMarchCellsPerRay 32
+              (상수 GroundSlackCm 40 — 셀 지면 아래 허용, ← −CrouchTop 110)
+  Ambient     HorizonRangeCm 4000 · HorizonStandHeightCm 135 · HorizonCrouchHeightCm 70 · HorizonBakesPerTick 8 · AmbientWeight 1 · HiddenThreshold 0.25
+  Debug       MaxDebugCells 6000 (← 4000) · DebugRefreshSeconds 0.1 · DebugDetailRadiusCm 2500 · DebugFill 0.7 · DebugAlphaMin 0.1 · DebugAlphaMax 0.8 ·
+              DebugStaleSeconds 30   (DebugAlpha 0.35 · DebugFillMin/Max 삭제; 상수 DebugLiftCm 12)
+  cvar        SoldierLab.Field.CellSizeCm 0 (신설) · SoldierLab.Debug.Field.Level -1 (← 0) · SoldierLab.Debug.Field.RadiusCm 12000 (← 4000)
+SoldierSight         ConeSweepTracesPerTick 2 · ConeSweepRays 21 · ConeSweepRangeCm 4000 · SightingRadiusCm 100   (신설)
+SoldierPerception    HeardPresence 0.75   (신설 — 사전값 0.5보다 커야 한다)
+SoldierCover         FieldCandidateCount 6 (신설) · 골든앵글 2.39996 rad/스윕 (상수) · DangerWeight 0.8 (뜻 변경) · DangerHalfLifeSeconds 삭제
+SoldierEngagement    스프린트 규칙 bUrgent (새 값 없음)
+
+★ 09-18 오후~저녁 (ai/2026-09-18_patrol_scan_and_move_robustness.md 10절 → [C-148]~[C-153])
+SoldierCover         WatchApproachBias 0.5 · WatchTravelBias 1.0 · ScanDwellSeconds 2 · MoveGraceSeconds 0.75 · CandidateRejectSeconds 30   (신설, PIE)
+                     HiddenGazeFraction 0.5 · CoverAcceptanceRadiusCm 20 · MicroStepCm 30 · CornerAngleDeg 35 · CornerLookAheadCm 500 · CornerStopCm 150 · CornerPauseSeconds 0.8   (신설, ~~빌드 전~~ 밤 PIE ✅)
+★ 09-18 밤 4차 (같은 문서 12~14절 → [C-155]~[C-156])
+SoldierEngagement    [Gait] TensionHalfLifeSeconds 20 · JogTension 0.3 (+ 알람 창 총성 1 s 상수)                                              (신설, PIE)
+                     [Pose] UrgencyIdle 0.15 · UrgencyContactIdle 0.35 · UrgencyLookPeek 0.3 · UrgencyShootPeek 0.6 · UrgencyRetreat 0.7 ·
+                            RetreatUrgencySeconds 0.6 · UrgencyReload 1.0 (제압은 자기 값 max)                                             (신설, PIE)
+SoldierCover         코너 "같은 굽이" 반경 = CornerStopCm 재사용 (새 값 없음)     SoldierSituationField   GetExposure 미지 = UnknownPresence × AmbientWeight (새 값 없음)
+ASoldierZone         PatrolWeight 1.0 · PatrolStaleSeconds 30   (신설)     ASoldierObjective   PatrolWeight 1.0 · PatrolStaleSeconds 30   (신설)
+FSoldierAssignment / FSoldierSquadOrder   PatrolWeight 0 · PatrolStaleSeconds 30 · MinStance 0   (신설 — titan DT 미연결)
+SoldierSituationField   WidenFromCm = 셀 × 8 (상수) · USoldierFieldSettings 변경 없음
+Pose/SoldierScanTurnComponent (포즈 세션)   StartDegrees 20 · StopDegrees 5 · TurnRateDegPerSec 180 · MaxSpeedCms 10 · bOnlyWhileScanningOrInContact true   (✅ PIE)
+
+★ 09-17~18 포즈 세션 (animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md → [C-154])
+Pose/SoldierGaitBridgeComponent    bDriveSprint false · InputStateVariable CharacterInputState · WalkField WantsToWalk
+Pose/SoldierPoseSmootherComponent  Stance {Up 1.6 · Down 0.9 · Accel 5} · Lean/BlindFireH/BlindFireV {1.2 · 1.2 · 4} · ScaleAtCalm 0.5 · ScaleAtUrgent 1.6
+                                   RateVariablesToFreeze {StanceRate, BlindFireRate} · FrozenRate 0.0001 (0 금지, P167) · 스냅 eps 0.002/0.02 (상수)
+BP_SoldierCharacter                린 AI 램프 핀 K2Node_CallFunction_92.RatePerSecond 1.0 → 0.0001 (스무더가 못 얼리는 리터럴)
+Observer/SoldierObserverPawn       FlySpeedCms 1200 · FlySpeedWheelFactor 1.25 · Min 100 · Max 20000 · bIgnoreTimeDilation true · WheelStepCm 50 (3인칭 거리)
+
+★★ 09-21 분대 필드 · 엣지 전진 · 사격 콘 · 섀도우 감축 (ai/2026-09-21_per_squad_field_edge_advance_fire_model.md 6절 → [C-157]~[C-161])
+USoldierFieldSettings   Resolution MaxSquadsPerFaction 3 (신설, PIE) · Shadow ShadowRecastMoveCm 0 (= 한 셀) · ShadowRecastSeconds 0.5 (신설, 같은 날 빌드·PIE ✅ — 재측정 0.03 ms · 0 waiting · 96 alive)
+cvar                    SoldierLab.Debug.ExposureScale 0 (신설 09-21 늦게 — 0 자동 = 뷰 노출의 역수 · 그 외 수동 배율; 디버그 cvar, [C] 아님, P181)
+                        (상수) riders 동승 반경 반 셀 · 얼림 시 재캐스트 문턱 반 셀 · 비용 평활 Lerp 0.1 · GetWedgePresence 4°/갈래 ≤ 12 · 표본 ≤ 48
+cvar                    SoldierLab.Debug.Field.Squad -1 · SoldierLab.Debug.Field.Centre 0   (신설)
+SoldierCover [Advance]  bEdgeAdvance true · StepPresenceBudget 6 (Cautious ×0.5) · AnalyzedPresence 1 · MaxLookSeconds 3 · EdgeRangeCm 1000 · WedgeRangeCm 1500 ·
+                        EdgeIgnorePresence 0.5 · AdvanceStepCm 60 · AdvanceStepCount 4 · AdvanceLean 0.7 · AdvanceCheckSeconds 0.1 · AdvanceRetreatSeconds 10   (신설, 빌드됨·PIE 대기)
+                        (상수) 이웃 광선 신선도 0.75 s · 엣지 far ≥ max(2×near, near+300) · 탐침 10° · 부채꼴 {0,±35,±70,±105}° · 조준점 apex+8 m · 후퇴 자리 8
+                        ~~CornerStopCm 150 · CornerPauseSeconds 0.8~~ 삭제 · CornerAngleDeg 35 · CornerLookAheadCm 500 유지(볼 곳 미리 보기만)
+SoldierSight            (기존) ConeSweepRays 21 · SightHalfAngleDeg 60 → 엣지 해상도 6° · ConeSweepTracesPerTick 2 → 한 바퀴 ≈ 0.35 s
+SoldierEngagement       WeaponSpreadDegrees 0.8 (← 3) · MovementSpreadScale 6 (← 2) · LeanSpreadScale 1.5 (← 1.4) · BlindSpreadScale 15 (← 4)   (PIE — 가치 사거리 보존)
+             [Accuracy] AimSettleInitialDeg 2.5 · AimSettleSeconds 0.4 · RecoilKickDeg 0.6 · MoveWobbleDeg 1.5 · TargetRadiusCm 45 · AimedHitTolerance 2   (신설, PIE)
+             [Rhythm]   BurstRoundsMin 2 · BurstRoundsMax 5 · BurstPauseSeconds 0.5 · RhythmJitter 0.35   (신설, PIE)  (상수) 흔들림 상한 30° · 시드 GetTypeHash(이름)
+                        ~~KnowledgeToSpreadRatio~~ 삭제
+⚠ 위 SoldierEngagement 09-14 교정분의 LeanSpreadScale 1.4 · BlindSpreadScale 4.0 은 09-21 에 1.5 · 15 로 바뀌었다(기준 3° → 0.8° 재스케일).
+⚠ 무기 BP 는 아직 GetShotSpreadDegrees() 를 읽지 않는다 — 탄착은 옛 고정 콘 [W93].
+
+★ 09-21 성능 계측 · 엄폐 비용 (ai/2026-09-21_perf_instrumentation_and_cover_cost.md 4절 → [C-162])
+SoldierCover [Cover|Cost]  HereEvalIntervalSeconds 0.1 · CalmCandidatesPerTick 2 (ClampMin 1) · WatchRefreshSeconds 0.25 (바닥 0.05)   (신설, PIE 실측 — ms 는 [A], 거동 지연은 [C-162])
+                        (재사용) 이동 중 판정 = MoveGraceSeconds 0.75 · StallSpeedCms 20 (FinishSweep 의 bAlreadyGoing 과 같은 식) · HERE 걸음 문턱 = MicroStepCm 30
+cvar                    SoldierLab.Sight/Perception/Cover/Engagement/Suppression/Comms/Field.Enabled 1 · SoldierLab.Cover.Avoidance 1   (신설 — 계측용, [C] 아님)
+실측 (35명 · PIE · 로깅 on)  Cover Tick 8.92 → 1.92 ms · Traces: Cover 487 → 243 · SoldierLab 합 ≈ 3.3 · World Tick 28.5 → 22.6 · RVO 0.3~0.5 ms (켜 둠)
+
+★ 09-21 분대 — New_kadex_0811 이관 · BreakContact · 표적 제외 (squad/2026-09-21_break_contact_and_targeting_exclusion.md → [C-163]~[C-164])
+FSoldierAssignment / FSoldierSquadOrder   bBreakContact false (신설, 새 튜닝값 없음 — 비용 항 0 은 상수) · 동사 BreakContact
+New_kadex_0811 ASoldierZone ×8            Z0_S1/S2/S3_Engage r1000/1200/1000 yaw 90 · Z1_S2/S3_Withdraw r1200 yaw 0 · Z2_S3_Escape r1500 · ZF_North r2500 / ZF_South r2000 yaw 180 ·
+                                          NavFilterClass = NavQueryFilter_EnemySquad1/2/3 · 나머지 기본값(ArrivalFraction 0.8 · Band 1200 · ApproachScale 3000 · Patrol 1.0/30)   [B 인스턴스]
+DT_ScenarioSteps_ThreeStage_SoldierLab    EnemyApproach MoveTo z0 Cautious HoldFire agg 0.3 · EnemyEngage(UGVFiredNearEnemy 10000) Occupy z0 Rush Free 0.8 ·
+                                          EnemyFleeToZone2(사망 ≥3) 2,3 Withdraw z1 Rush ReturnFireOnly Quota 10 stagger 0.5~3 · EnemyFleeToZone3(≥7) 3 Withdraw z2 Quota 5 ·
+                                          ExcludeFleeingEnemies(+4 s) 3 SetTargetable false · Squad3Run(+6 s) 3 BreakContact HoldFire Rush · Squad3Stand(CommandPostFiredNearEnemy 8000) 3 Occupy z2 Rush Free 0.8 ·
+                                          AllyDefend(+1 s) Occupy z0 ReturnFireOnly 0.3 EngageRangeCm 6000 · AllyEngage(EnemyNearFriendlySoldiers 8000) Occupy z0 Free 0.5   [B 값 / A 행 이름]
+titan RCWS                                UGV bRespectEnemyTargetingExclusion: 인스턴스 false → SetTargetable(false) 행이 런타임에 true (트럭은 false 유지)
+
+★ 09-21 후편 — 게임 스레드 구조 묶음 (ai/2026-09-21_game_thread_structural_pool_rays_bridge.md A~E절, 전부 [A] 실측 · 거동 지연은 [C-162])
+SoldierEngagement [Lane]   LaneCacheMoveCm 15 · LaneCacheSeconds 0.15   (신설 — IsShotBlockedByWorld 8슬롯 캐시, PlanAperture 옵션 포함)
+SoldierCover               CandidateIntervalSeconds 0.033   (신설 — 눈 있는 스윕의 후보 걸음을 시간에 고정; 눈 0 은 CalmCandidatesPerTick 2 그대로)
+SoldierSight               ScanIntervalSeconds 0.033        (신설 — 스캔을 시간에 고정)
+SoldierProjectile          MaxFlightDistanceCm 60000        (신설 — 600 m, 시간 상한 MaxFlightTimeSeconds 5 와 같은 자리 주차)
+cvar                       SoldierLab.Projectile.PoolMax 96 (신설 — 클래스별 풀 상한, 넘으면 라운드로빈) · SoldierLab.AIBridge.Native 1 (A/B, [C] 아님)
+CMC (BP 데이터, CDO 3 + 인스턴스 35)   bAlwaysCheckFloor false (← true) · bEnablePhysicsInteraction false (← true)
+CharacterMesh0 (BP 데이터, 같은 범위)   CollisionEnabled QueryOnly (← QueryAndPhysics — 3.2절 정정 인용)
+실측 (35명 · PIE · 로깅 on)  World Tick 18.3/20.3 → 11.3/14.0 · 씬 쿼리 1,030~1,120 → 357/576회 · Shoot 안 스폰 0.83/발 → 0 · 아군 20 ReceiveTick 1.2 → 0.22 · FindFloor 99~105 → 44/27회
+```
+~~⚠ **3단계(호라이즌/앰비언트 · `FindDarkestCells` · 눈 0 필드 자세 · 볼 곳 · 가상 관찰자 철회)는 코드만 있고 빌드 0회 [B].** 1·2단계 + 오버레이는 PIE에서 사용자 확인.~~ → **09-18: 3단계 + LOD 링 + 오버레이 v2 배처까지 PIE 확인.** 지금 [B]인 것: 대칭 캡 · `MaxDebugCells 6000` · 라이트 시각 v2 · `ClearViewHalfLifeSeconds` · 미굽기 파랑끼 · 헤더 2줄 · 화살표 2.5 m(시스템 문서 14절).
 
 ### 5.2 블루프린트 [A]
 
 ```
-BP_SoldierCharacter    컴포넌트 ~~7개~~ **10개** — AC_SoldierIdentity / Perception / Sight / Comms /
+BP_SoldierCharacter    컴포넌트 ~~7개~~ ~~10개~~ ~~13개~~ **14개** — AC_SoldierIdentity / Perception / Sight / Comms /
                                       Suppression / Engagement / Cover
                        ★ 09-14 저녁 +2 — AC_SoldierFirstPerson (T · 1/3인칭) ·
-                                        AC_SoldierHeadAim (H · 머리 추종, 기본 OFF)
+                                        AC_SoldierHeadAim (H · 머리 추종, 기본 OFF, AI 자동 활성화 없음 P171)
                        ★ 09-15 저녁 +1 — AC_SoldierHealth (체력·피격·사망, 3절 참고.
                                         BP_Soldier_Friendly 에서 Invincible 체크)
+                       ★ 09-17~18 +3 — AC_SoldierScanTurn (AI 몸 회전) · AC_SoldierGaitBridge (Walk→WantsToWalk) ·
+                                        AC_SoldierPoseSmoother (자세 축 사다리꼴) — 셋 다 AI 전용, MCP add_component
+                       ★ 09-18 EventGraph — 린 AI 램프 RampAxisTo 의 RatePerSecond 리터럴 1.0 → **0.0001**
+                                        (0 이면 목표 반환 = 스냅, P167. 스무더가 얼리는 StanceRate/BlindFireRate 와 달리 변수가 아님)
                        AI 다리 변수 5개 (카테고리 SoldierLab|AI Bridge, 인스턴스 편집 가능)
                            AIPoseDriven · AITargetLean · AITargetStance
                            AITargetBlindFireH · AITargetBlindFireV
+                       ★ 09-21 게임 스레드 묶음 (ai/2026-09-21_game_thread_batch_cameras_abp_muzzle.md 4.1 · 4.4절)
+                           변수 **AnimBP** (SoldierCharacter_ABP_C 참조) — BeginPlay 의 CastToSoldierCharacter_ABP 결과 저장,
+                             Tick 의 캐스트 제거(SetAimCorrection / SetLeanTactical / GetAOActive 가 이걸 씀) · SetUseAllyAnimSet 은 BeginPlay 로
+                           BeginPlay 끝: `not IsPlayerControlled` → SetComponentTickEnabled(GameplayCamera, false) → (SpringArm, false)
+                             → (Camera(NotUsedByDefault), false) — **틱만 off, Deactivate 아님**(P107). AI 40명의 GASP 카메라 2.0 ms 제거
+                           ⚠ bEnableUpdateRateOptimizations 는 **URO 크래시로 false 여야 한다**(P186) — ~~지금 CDO·자식·인스턴스에 true 가 남아
+                             `a.URO.Enable=0` 으로 막는 중 → [W107] 되돌리기~~ → 재기동 뒤 CDO 3 + 인스턴스 false 로 되돌림, cvar 줄 삭제 ([W107] 해결, 같은 문서 10절)
+                           런타임 컴포넌트 38개 = CDO 29 + PIE 카메라 프록시/프러스텀 6 + OutputCamera + GameplayTasks + SoldierLabDetectable
+                       ★ 09-21 후편 +1 — **AC_SoldierAIBridge** (USoldierAIBridgeComponent, 5.1절 — EventTick 본문의 C++ 판, [W108])
+                           EventTick 구조: **Parent:Tick → TickBridge(DeltaSeconds) → Branch(ShouldRunBlueprintCopy) → (true) 옛 본문**
+                             옛 본문(조준 보정 → 린 램프 → 입력 상태 → AI 다리 → Update* → Shoot/Reload + 리플리케이션 세션의 HasAuthority 분기 · 바운드 이벤트 2)은
+                             그대로 남아 cvar SoldierLab.AIBridge.Native 0 이거나 바인딩 실패 때만 돈다. 변수 47개는 여전히 BP 소유(아래 "AI 다리" · 3절 변수 목록 불변)
+                           CMC bAlwaysCheckFloor false · bEnablePhysicsInteraction false · CharacterMesh0 QueryOnly — CDO 3 + L_SoldierScenario 인스턴스 35 (3.2절 정정 인용, [W111])
+                           아군 20 ReceiveTick 1.16~1.21 → 0.22 ms (ai/2026-09-21_game_thread_structural_pool_rays_bridge.md C · E절)
 BP_Soldier_Friendly    ─┬ BP_SoldierCharacter 의 자식. Faction 기본값 하나만 다르다 (P4)
 BP_Soldier_Hostile     ─┘
 BP_AR4Rifle            Tick 에서 SetWeaponState(탄/탄창/재장전중) 를 캐릭터 교전 컴포넌트로
+                       ★ 09-21 게임 스레드 묶음 — 컴포넌트 **MuzzleFlashFX**(NiagaraComponent, MuzzlePoint 자식, bAutoActivate=false, Asset NS_MuzzleFlash)
+                         `Shoot` · `PlayShotCosmetics`(리플리케이션 세션 함수) 의 ~~SpawnSystemAttached~~ → **Activate(bReset=true)**
+                         (SpawnSystemAttached 는 bAutoDestroy=false 라 발당 컴포넌트가 영구 누적 — 8정에 106개 — 누수였다). 자식 BP_AK47Rifle 상속 확인
+                       WeaponMesh(스폰된 총 — BeginPlay 에서 숨겨지는 쪽, 3절 정정) VisibilityBasedAnimTickOption = **OnlyTickPoseWhenRendered**
+                       발당 비용 실측 ≈ 1.1 ms(투사체 스폰 0.57 + 총구 0.38 + Launch 0.08) — ~~풀링 [W109]~~ ★ 09-21 후편: Shoot · PlayShotCosmetics 의 SpawnActor →
+                         **GetSoldierProjectilePoolSubsystem → Acquire(BP_RifleProjectile_C, OwningCharacter) → LaunchFrom**([W109] 해결, 3.1절) — 발당 스폰 0.83 → 0
+SoldierCharacter_ABP   ★ 09-21 게임 스레드 묶음 — 변수 **CVarPollSeconds**(float, DeltaTime 누적) · 함수 `Update_CVarDrivenVariables`(ABP 쪽 재선언 —
+                         MCP create_node 가 GASP 원본 SandboxCharacter_CMC_ABP_C 의 동명 함수를 잡으므로 declaring_class 지정)
+                         EventBlueprintInitializeAnimation 에서 1회 + Update 에서 CVarPollSeconds ≥ 1.0 마다(1 Hz). cvar 7 문자열 조회 + ComponentHasTag 2 가
+                         매 틱이었다. Update_PropertiesFromCharacter · Update_Logic 불변. GT 이벤트 그래프 병사당 29 → 22 µs
 AIC_Soldier            ⚠ StartLogic 노드 삭제 — 상속된 ST_Soldier_SmartObject 를 멈춘다
 BP_ObserverPawn        ★ 2026-09-14 오후: 그래프 전부 삭제(38 노드). 옛 빙의는 ① Visibility 트레이스라
                           병사를 못 맞혔고 ② Possess 라 AI 를 멈췄다. 로직은 C++ ASoldierObserverPawn 으로.
@@ -1460,6 +1761,8 @@ SetActualStance(StanceAxis) → <기존 갱신 체인> →
 Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToReload) → StartReload
 ```
 
+> ★ **2026-09-21 후편** — 위 접합 순서는 그대로지만 **실행 주체가 C++ `USoldierAIBridgeComponent::TickBridge` 로 옮겨졌다**([W108], 5.1절). BP 그래프의 옛 본문은 `SoldierLab.AIBridge.Native 0` 일 때만 돈다. 순서·산술·변수 이름이 같으므로 이 절의 설명은 두 판 모두에 맞는다.
+
 **조준 상태**: AI는 `WantsToAim` 을 **GASP 입력 상태 구조체**에 Break/Make 로 실어
 `UpdateInputStateServer` 로 보낸다(다른 필드는 전부 보존). ★ **2026-09-14에 `WantsToSprint` 가 같은 경로로 붙었다** — 규칙이 아니라 **느릴 이유의 부재**다(P89). 프로젝트 자신의 기존 AI 경로
 `STT_SetSoldierInputState` 를 읽어서 찾았다. ⚠ **"AI가 총을 안 들고 몸도 안 돈다"의 근본
@@ -1481,9 +1784,13 @@ Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToRelo
 
 ### 5.4 ⬜ 여전히 초안만 [A]
 
-`squad/drafts/`(L0 명령 · L1 분대) · `ai/drafts/`(인지·위협평가) ·
-`cover/drafts/`(EQS/SmartObject) 의 C++ 초안은 **한 줄도 프로젝트에 들어가 있지 않다.**
-컴파일된 적도 없다.
+`ai/drafts/`(인지·위협평가) · `cover/drafts/`(EQS/SmartObject) 의 C++ 초안은 **한 줄도 프로젝트에
+들어가 있지 않다.** 컴파일된 적도 없다.
+
+★ **`squad/drafts/`(L0 명령 · L1 분대)는 2026-09-17에 *일부* 구현됐다 — 단 초안과 다른 물건이다.**
+승계한 것은 3.2절의 "제약을 주지 명령을 주지 않는다" 하나. 토큰·사기·조(Element)·`ASquadCoordinator`·
+StateTree 노드·`FSoldierOrder`/`FOrderStatusReport` 스키마는 **채택하지 않았다**. 실물은
+`Source/SoldierLab/Squad/` 3파일 + 5.1절 훅 → `squad/2026-09-17_command_layer_design.md`.
 
 ⚠ **인지와 엄폐는 초안과 *다른 물건*으로 구현됐다.** 이름이 겹치는 자리가 있으나
 같은 타입이 아니다 — 초안을 읽고 코드를 예상하지 말 것.
@@ -1494,7 +1801,7 @@ Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToRelo
 
 | 없는 것 | 비고 |
 |---|---|
-| ~~**피격 반응 · 사망 · 데미지 · 체력**~~ | ✅ **해결 (2026-09-15)** — `USoldierHealthComponent` 하나(4절 · 0절 표). 클립 19개 전부 배선됨(HitReact 13 → `AdditiveHitReact` 슬롯, Death 6 → `DefaultSlot`). 래그돌은 GASP 함수를 부르지 않고 같은 일을 C++ 에서. 아군은 무적. 수치는 [C-110]~[C-118]. **옛 기술**: 클립 19개는 반입돼 있으나 **배선 없음.** 래그돌은 GASP에 이미 있다. ⚠ **AI 층이 생긴 지금 이것이 더 아프다 — 병사가 죽지 않으니 교전이 끝나지 않는다** → ~~[W18]~~ |
+| ~~**피격 반응 · 사망 · 데미지 · 체력**~~ | ✅ **해결 (2026-09-15) · 실제로 화면에 나오기 시작한 것은 2026-09-17** — 배선은 09-15 에 끝났으나 **원인 3중**(C++ 경로 하드코딩 · 배치 인스턴스의 빈 배열 · 사망 슬롯 `FullBody` 부재)으로 한 번도 재생된 적이 없었다 → `ai/2026-09-17_hit_death_three_causes.md`. 지금은 피격 O · 사망은 **순수 래그돌**(몽타주 OFF). `USoldierHealthComponent` 하나(4절 · 0절 표). 클립 19개 전부 배선됨(HitReact 13 → `AdditiveHitReact` 슬롯, Death 6 → `DefaultSlot`). 래그돌은 GASP 함수를 부르지 않고 같은 일을 C++ 에서. 아군은 무적. 수치는 [C-110]~[C-118]. **옛 기술**: 클립 19개는 반입돼 있으나 **배선 없음.** 래그돌은 GASP에 이미 있다. ⚠ **AI 층이 생긴 지금 이것이 더 아프다 — 병사가 죽지 않으니 교전이 끝나지 않는다** → ~~[W18]~~ |
 | 이동 중 급선회(spin) | Lyra에 클립이 없다. 회전 클립 + 비용편향으로 근사 중 |
 | 대각선 이동 전용 클립 | Lyra 세트는 4방향뿐. 워핑으로 메운다 — 가끔 발이 꼬이는 원인 |
 | ~~견착/총내림 의도 분기~~ | **✅ 해결 (2026-09-11)** — Chooser `RotationMode` 열 + Idles DB 분리. [C-55] |
@@ -1509,13 +1816,16 @@ Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToRelo
 | **BF 포즈 3장 · `MM_Rifle_LowReady` 의 구워진 PP 스케일** | 마네킹 베이크 때 `ABP_UEFN_Mannequin_PostProcess` 의 head 1.15 · thigh 1.12 가 들어갔다(2.5e-7). head 는 `ModifyBone_8` 로 상쇄 중, **thigh 는 상쇄 안 함** [C]. 재베이크는 저작 시퀀서가 깨져 지금 불가 → **[W65]** · [Q48] |
 | **`/MoverExamples/.../CR_Mannequin_Body` 컴파일 에러 · `/Game/NewLevelSequence`** | 엔진 플러그인 콘텐츠 리그가 "Setup Fingers uses [Bones] pins that no longer exist" · "Forward Spine has unmapped variables" 로 컴파일 실패. `/Game` 에서 이걸 참조하는 건 `/Game/NewLevelSequence`(2026-09-12 포즈 저작 스크래치, `L_SoldierTest` 가 참조 — [W38]) 하나. 제안: 시퀀스 + 레벨 액터 삭제 후 [W34] 의 Mover 계열 플러그인 끄기. **미결정** → **[Q48]** |
 | **PIE 로그 `LogAbilitySystem: Error: SendGameplayEventToActor … GameplayEvent.ReloadDone`** | 병사마다 재장전마다 반복. 재장전 몽타주의 GASP 노티파이가 GAS 이벤트를 보내는데 우리 캐릭터에 ASC 가 없다. **무해.** 노티파이를 떼면 조용해진다 → **[W64]** |
-| **`CHT_Soldier_CharacterAnimations` 실사용 여부** | GASP 비무장 chooser 복제본(UEFN 클립 387개 참조). ABP 가 참조만 하고 실사용 없음 [B] — 확정은 PIE `a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1` 로 → **[C-120]** |
+| **`CHT_Soldier_CharacterAnimations` 실사용 여부** | GASP 비무장 chooser 복제본(UEFN 클립 387개 참조). `Animation/`(단수)에 그대로 있고 **진영별 `Enemy_CHT`/`ALLY_CHT` 와는 별개**다. ABP 가 참조만 하고 실사용 없음 [B] — 확정은 PIE **`a.AnimNode.MotionMatching.DebugDrawInfo 1`** 로 → **[C-120]** ⚠ 옛 문서들이 안내한 `DebugDrawInfoVerbose 1` 은 **단독으로는 아무것도 안 나온다**(P141) |
+| **`AdditiveHitReact` 가 사격/재장전과 같은 슬롯 그룹** | `SK_UEFN_Mannequin` 의 슬롯 그룹은 `DefaultGroup` 하나뿐이고 슬롯 6개가 전부 거기 속한다. 피격은 `bStopAllMontages=false` 라 남을 안 끊지만 **`PlayAnimMontage` 는 기본값이 true** 라 사격·재장전이 **같은 그룹의 피격 몽타주를 정지시킨다**(`AnimInstance.h:626`). 2026-09-17 증상의 원인은 아니었으나 **구조적 위험은 그대로** — 정석은 별도 슬롯 그룹(Anim Slot Manager, **MCP 불가**) → **[W71]** |
+| **피직스 에셋이 두 진영 다 마네킹 것** | 자동 생성본의 관절 제한이 기본값이라 무릎·팔꿈치가 반대로 꺾여 `PA_UEFN_Mannequin` 으로 교체했다(3.2절). 바디가 마네킹 체형이라 아군 181 cm · 적군 178.7 cm 에서 **캡슐이 메시와 약간 어긋난다.** 제한값 유지 + 바디만 피팅한 진영별 복제본이 장기안 → **[W72]** · 품질 정량 판정 **[C-127]** |
+| **아군 세트의 프리뷰 메시** | 적군 세트 227개는 `new_enemy_T` 로 지정 완료. **아군 세트는 사용자가 스크립트 실행 예정** → **[C-129]**. `PreviewSkeletalMesh` 는 `EditAnywhere` 가 아니라 MCP 로 못 읽는다(`CLAUDE.md` 6.1) |
 | **아군/적군 총기 분기 시 `WeaponMesh` · 소켓 규약** | `WeaponMesh` 의 메시 = 스폰 총 메시여야 하고(총구 보정 `Muzzle` · 그립 `LeftHandGrip` 소켓을 그 컴포넌트에서 읽는다) `weapon_r` 메시 소켓이 메시별이라 총이 갈라지면 소켓값도 갈라진다. 지금은 한 벌(`SK_AR4_X`)이라 문제 없음 → **[W67]** |
 | **아군의 "마네킹 비율" 근사** | 사용자 요구: soldier_T 가 마네킹 뼈 길이로 움직이게. translation retargeting `Animation` 5분 시험 미실시 → **[W28]** |
 | **투사체의 리플리케이션** | 이식하며 **3분기 Multicast 라우팅을 걷어냈다** — 세 핸들러가 전부 `PlayImpactEffect`로 되돌아왔으므로 방송할 대상이 없는 지금은 직접 호출과 같다. 멀티가 생기면 여기로 돌아온다 → **[W17]** |
 | **진영(Faction) 판정 — 투사체만** | **정식 소스는 2026-09-13에 생겼다**(`USoldierIdentityComponent::Faction`, 5.1절). AI 층은 전부 그것을 읽는데 **투사체만 아직 `bHitEnemy = IsA<ACharacter>()` 대역**이다 → **[R7]** · 갈아끼우기 **[W23]** |
 | **바람** | 나이아가라 `WindVectorCms` 파라미터에 **0을 먹인다.** 바람 소스가 생기면 한 줄 |
-| **투사체 풀** | `LaunchFrom` / `Deactivate` 는 있는데 **풀이 없다** — 무기 컴포넌트가 없어 발당 `SpawnActor` 한다. 붙이는 것은 **쏘는 쪽의 변경** |
+| **투사체 풀** | `LaunchFrom` / `Deactivate` 는 있는데 **풀이 없다** — 무기 컴포넌트가 없어 발당 `SpawnActor` 한다. 붙이는 것은 **쏘는 쪽의 변경**. ★ 09-21: `Deactivate` 가 `Destroy` 를 안 하므로 발마다 스폰된 투사체가 **영구 누적**(누수) — **[W109] 착수**(3.1절) |
 | **무기 메시의 애니메이션(볼트·탄창)** | `SK_AR4_X` 에 애님 블루프린트가 없다. GASP `SK_Rifle`의 `ABP_Weap_Rifle`을 겨냥하던 `Montage_Play` 2개는 **삭제**했다(항상 None) → **P50**. 되살리려면 새 메시용 무기 ABP를 만들어야 한다 |
 | **디버그 궤적 라인** | 안 보인다. 그 외에는 전부 동작한다 → **[C-81]** |
 | **무기/투사체 튜닝값의 검증** | 전부 `titan_example` 에서 온 숫자다(도탄 3 · 데칼 200 · 휘즈 200/1500 · fireRate 0.12 …). 이 프로젝트에서 재본 적 없다 — P18·P30과 같은 계열의 위험 → **[C-82]** |
@@ -1529,8 +1839,10 @@ Branch(AIPoseDriven) → Branch(WantsToFire) → Shoot / else Branch(WantsToRelo
 | ~~**1인칭 카메라 · 플레이어가 조종하는 병사의 1인칭 모드**~~ | ✅ **2026-09-14 저녁 구현됨** — `Camera/SoldierFirstPersonComponent`(T) · 관전 폰도 T. 빙의(P94)는 폐기(Possess 가 AI 를 멈춤). 남은 것: [C-73]·[C-76]·[C-78] 을 1인칭에서 다시 판정 → [W30] 해결 표시 |
 | **조리개 트레이스가 예산 밖** | `FindAperture` 가 틱당 최대 4발을 쓰는데 엄폐의 라운드로빈 예산에 없다. 디버그를 켜면 **한 번 더** 돌아 8발이 된다 → **[W32]** · [C-83] |
 | ~~★★ **수비수가 정착해 쓰지 못한다**~~ | ✅ **해결 (2026-09-14~15)** — 넷째 원인은 **기준면**(P103), 그 뒤 로그 실측으로 예산 게이트·높이 상수·가치 게이트·경로 상한·활동도·노출 회계를 차례로 고쳤다. 사용자 평가 "지금까지는 가장 좋네". 수치 판정은 미완 → ~~[C-95]~~ · `ai/2026-09-15_exposure_cycle_and_muzzle_learning.md` 12절 |
-| ★ **엄폐 자리 예약이 없다** | 같은 후보를 둘 이상이 고른다(특히 수비수). `MASKED`(아군이 사선에) 8~11 s가 그 귀결. 분대 층의 몫 → **[W51]** |
-| ★ **분대 통신·화망이 없다** | 각자 논다. 사각 없는 위치에서의 제압·엄호/이동 분담·위험 지도 공유 → **[W52]** |
+| ~~★ **엄폐 자리 예약이 없다**~~ → **절반 (2026-09-16)** | 예약이 아니라 **주장 비용**(S1 `ClaimedCost`)과 **사선 비용**(S2 `LaneCost`)으로 갈랐다 — 겹칠 이유가 더 크면 겹친다(P89). 진짜 예약(점유 목록·양보 규칙)은 없고 겹침·`MASKED` 감소는 **미실측** → **[W51]** 절반 · [C-108] |
+| ~~★ **분대 통신·화망이 없다**~~ → **절반 (2026-09-16)** | 통신은 **사망 보고**가 추가됐을 뿐(적 기록 공유는 전부터). 엄호/이동 분담은 S4(엄호받는 눈 ×0.5)로, 표적 분산은 S3로 — 전부 등록부 읽기이지 무전이 아니다. "사각 없는 위치로 옮겨 제압"·화망 구역 지정은 없음 → **[W52]** 절반 |
+| ~~★ **L0 분대 명령 층이 없다**~~ → ~~코드 완료 · 빌드·PIE 미검증 (2026-09-17)~~ → **빌드 · 시험 레벨 첫 PIE (2026-09-18) — 완주 미확인 [C]** | `Squad/`(계약·분대 서브시스템·구역 액터) + 개인 AI 훅 3곳 + titan 브리지(`USoldierLabBridgeSubsystem`) + 시나리오 `IssueSquadOrder`. **적·아군 전원 SoldierLab 교체 결정.** 09-18: 시험 레벨 `L_SoldierScenario` + DT 13행 저작, 첫 PIE 수정 6건(도착선·존 표시·차량 제외·정원제·`EngageRangeCm`·RCWS 청각). 남은 것: 완주 · [C-122]~[C-126] · [C-144][C-145][C-147] · [Q50] 1차 전투지 위치 · [W84] `MinStance` · [W68]~[W70] · [Q49] → **[W55] 진행중**, `squad/2026-09-18_squad_layer_fixes_quota_engage_range.md` · `../level_new_kadex_0811/2026-09-18_soldierlab_three_stage_test_level.md`. **옛 기술**: "특정 위치로 경계하며 이동 · 점령 후 방어" 같은 **명령**이 없다. 있는 것은 목표 마커 하나(`ASoldierObjective`)와 위 선호들뿐 |
+| **거리 의존 발견 시간이 없다** | 시야 120 m 안이면 즉시 본다. 멀수록 "알아채는 데" 오래 걸려야 → **[W56]** |
 | ~~★ **사망·대가가 없다 (재강조)**~~ | ✅ **해결 (2026-09-15)** — 적군은 34 × 3발에 죽는다(머리 2발 · 팔 5발). 분대원 전사 시 반경 15 m 아군에 제압 임펄스 0.4×(1−d/r). ⚠ **아군은 무적이라 대가가 비대칭**이다 — 공격수(적군)만 줄어든다. **옛 기술**: 공터에서 30 s 맞아도 대가는 제압도뿐이라 공격수가 결국 수비수 코앞까지 걸어와 얼굴을 맞댄다 → ~~[W18]~~ |
 | "노는 병사"의 원인 미확정 | 가끔 총을 안 쏘고 서 있는 병사. `[Engage]` 전이 로그의 게이트 0 항목으로 확정할 것 → **[W53]** |
 | **`Cover` 채널(`GameTraceChannel4`)이 미사용** | 시야·엄폐·사선 셋 다 `GameTraceChannel5`("Sight")를 쓴다. [Q21]이 채널을 둘 판 이유가 아직 실현되지 않았다 → **[W24]** |

@@ -1,0 +1,11 @@
+미확정항목	현재상태_전달받지못한내용	우리쪽현재대응	관련WBS	근거문서
+Layer A ICD 자체 (자체방호통제기SW ↔ 상위체계)	LIG가 정의하지 않았고, 채널 추가 여부 자체를 검토 중. 시스템 구성도에도 이 방향 화살표에 프로토콜 라벨이 없고 RTSP 영상 업로드만 확정되어 있음. (2026-08-06 LIG 답변)	폐기하지 않고 선제 설계로 유지 — 메시지 10종의 의미/방향은 정의해 둔 상태. 확정되는 시점에 UGV축과 같은 UDP + {cmd,src,recv,data} 패턴으로 다시 감쌀 예정.	1.3.4, 3.4.2	protocol/protocol_icd.md §5, infra_architecture/architecture_decisions.md §3
+기획서의 'LLM'이 무엇을 가리키는지	미확인. LIG가 '시나리오상 LLM이 전송한 이동경로'라고 언급했으나, 이것이 상위체계(지휘통제 시스템)를 가리키는지 실제 LLM 기반 경로 생성 컴포넌트인지 불명. 질의 작성 완료, 발송 대기.	확정 전까지 LLM 관련 항목은 설계에 반영하지 않음.	1.3.2, 3.4.1	protocol/lig_questions_0816.md §1-신규-3
+시나리오 시작 / 종료 신호 채널	미정. 시나리오를 외부에서 시작·정지시키고 종료를 보고할 대상과 프로토콜이 정의되지 않음.	자체 시나리오 시스템(RunMode = Demo / FullSystem)으로 대체 운용. Demo 모드는 외부 시스템 없이 언리얼만으로 전체 흐름이 돌아감.	1.3.4, 3.3.5	level_new_kadex_0811/2026-09-01_scenario_run_modes_demo_fullsystem.md
+자율주행 목적지 하달 명령 (HQ_MissionMoveToEngage)	LIG 정식 스펙이 아님. 상위체계에서 이동좌표를 전달하는 경로가 '실제로 존재한다'는 답변은 받았으나 규격은 미확정, 차후 논의 대상.	임시로 자체 정의한 HQ_MissionMoveToEngage(East/North/Zone/Letter + Radius)를 기존 RC 채널에 얹어 사용 중. 확정 시 교체 예정.	3.4.2	documents/response_0828.md, protocol/lig_questions_0816.md
+UTM Zone / Datum 실제값	미확정. ICD에 정확한 값이 명시되어 있지 않음. 시연 장소가 고정되어야 결정 가능.	좌표 변환 로직은 UTM 기준으로 구현해 두고, Zone/Datum은 파라미터로 분리.	1.3.3	protocol/protocol_icd.md §2
+자체방호축 PC 고정 IP	미확정. LIG 확인 필요.	축 선택 화면에서 RC IP를 입력받는 구조로 우회 가능하게 해 둠.	-	CURRENT_STATE.md §11, packaging/kadex_0902_패키징_실행가이드.md
+RC_MotionMode 용도	불명. LIG도 '차후 논의'로 답변. 급하지 않음.	현재는 미사용.	-	CURRENT_STATE.md §11, protocol/lig_questions_0816.md
+차량 시동/이그니션 커맨드 존재 여부	미확인. RC_ActivateMovement가 RCWS 조향 게이트였음이 확인되면서, 차량 주행부의 시동 개념이 프로토콜에 별도로 존재하는지 질의해 둔 상태.	현재는 RC_Control_Right(제어권) + RC_OperationMode(STAY/REMOTE)만으로 주행 가능 여부가 결정되는 구조로 구현.	2.2.7	protocol/lig_questions_0816.md §1-신규-2
+UGV축 기능 분리 (시나리오 진행 / 자율주행 목적지 지정 / 자동 사격 판단)	최종적으로는 원격통제기(LIG) 쪽이 담당해야 할 기능인데, 통신 규격이 완전히 확정되지 않아 현재는 테스트 편의를 위해 우리 UGV 시뮬레이션 SW 안에 임시로 남아 있음.	통신 규격 확정·구현되는 대로 순차적으로 분리 예정.	1.3.4, 3.4.2	2026-09-01_kadex_progress_report.md 제약사항
+자체방호축 / 드론 기능 분리	마찬가지로 상위체계(지휘통제 시스템)가 담당해야 할 기능이 현재는 자체 시나리오 시스템으로 대체 구현되어 있음.	Layer A 확정 후 분리 예정.	1.3.4, 3.4.1, 3.4.2	2026-09-01_kadex_progress_report.md 제약사항

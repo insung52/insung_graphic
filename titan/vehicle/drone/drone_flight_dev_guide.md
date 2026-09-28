@@ -1,14 +1,18 @@
 # 드론(UAV) 비행 시스템 레퍼런스
 
-2026-09-15 / 완료 / `ADronePawn`이 구 `AUAVPawn`/`BP_UAV`를 대체 — 로터별 물리 비행 + 자율비행 + 교전 관측 이동 + 수동 조종(비행/짐벌 분리) + 짐벌(2축 안정화) + 사운드 + 바람 + 탐지단계 + 시나리오 + 리플리케이션 전부 구현·실동작 확인됨. **2대 PC 실환경 검증 완료(풀/데모 양쪽).**
+2026-09-23 / 완료 / `ADronePawn`이 구 `AUAVPawn`/`BP_UAV`를 대체 — 로터별 물리 비행 + 자율비행 + 교전 관측 이동 + 수동 조종(비행/짐벌 분리) + 짐벌(2축 안정화) + 사운드 + 바람 + 탐지단계 + 시나리오 + 리플리케이션 전부 구현·실동작 확인됨. **2대 PC 실환경 검증 완료(풀/데모 양쪽) — 09-23 네트워크 관련성·원격 로터 회전·분대 트래킹까지 포함.**
 
 > **이 문서는 "드론이 지금 어떻게 동작하는가"를 다루는 에버그린 레퍼런스다**(`CLAUDE.md`
 > guide/ 갱신 규칙 참고 — 드론 시스템 동작이 바뀌면 여기를 같이 고칠 것). 시간순 작업 기록은
 > 같은 폴더의 날짜 접두 devlog를 볼 것:
 > - `2026-09-01_drone_replaces_bp_uav.md` — 자율비행~BP_UAV 대체까지의 작업 경과·함정
 > - `2026-09-15_drone_gimbal_stabilization.md` — 짐벌 2축 안정화 + 니어플레인 캡쳐 동기화
+> - `2026-09-23_drone_remote_rotor_and_squad_tracking.md` — 원격 로터 회전 복제 + 분대 트래킹
+>   판정을 SoldierLab로 이관(⚠ `Withdraw`는 도주가 아니다 / 분대 이름은 `"3"`)
 > - 리플리케이션 설계 배경: `replication/2026-09-01_drone_client_authoritative.md`,
->   2 PC 실환경 검증·버그 3건: `replication/2026-09-15_drone_two_pc_validation.md`
+>   2 PC 실환경 검증·버그 3건: `replication/2026-09-15_drone_two_pc_validation.md`,
+>   네트워크 관련성(클라 화면에 전장이 통째로 없던 건):
+>   `replication/2026-09-23_net_relevancy_battlefield.md`
 
 멀티로터 비행 역학을 **물리 원칙(로터별 추력 → 토크 → 강체 운동)** 으로 새로 구현한 것.
 기존 `AUAVPawn`의 비행 로직과는 코드/에셋 모두 완전히 분리된 별개 구현이다.
@@ -559,12 +563,16 @@ I (0.044, 0.044, 0.074) kg·m²   [믹서 포화 — 자세 우선, 총추력 �
 
 ### 10.2 제어 루프가 60Hz
 
-이 프로젝트는 물리 서브스테핑이 꺼져 있고 `t.MaxFPS=60`이다(`DefaultEngine.ini` 7~15행,
-UGV 거동 편차 때문에 의도적으로 설정된 것). 그래서 커스텀 물리 콜백이 프레임당 한 번,
-즉 60Hz로 돈다. 각도 모드 비행엔 충분하지만 실제 비행제어기(수백~수천 Hz)보다는 느리다.
+이 프로젝트는 물리 서브스테핑이 꺼져 있고(엔진 기본값 — **한 번도 건드린 적 없음**,
+2026-09-16 정정: `DefaultEngine.ini` 7~15행 주석은 `t.MaxFPS=60`을 넣은 이유이지 서브스테핑
+얘기가 아니다. `Config/DefaultEngine.ini` P4 리비전 31개 전부에 `bSubstepping` 키 없음)
+`t.MaxFPS=60`이다. 그래서 커스텀 물리 콜백이 프레임당 한 번, 즉 60Hz로 돈다. 각도 모드
+비행엔 충분하지만 실제 비행제어기(수백~수천 Hz)보다는 느리다.
 
 코드는 서브스테핑이 켜지면 자동으로 서브스텝마다 돌게 되어 있으나, **켜면 UGV Chaos 차량
-거동까지 같이 바뀌므로** 지금은 안 건드림.
+서스펜션(PBD 컨스트레인트, 강성 ∝ dt²)의 승차감 튜닝이 같이 바뀌므로** 지금은 안 건드림
+(`vehicle/ugv/2026-09-10_ugv_0901_suspension_tuning.md` §7). 물리 dt 클램프와 `slomo` 배속
+관계, 서브스테핑 후보 비교는 `infra_architecture/2026-09-16_slomo_physics_dt_clamp_investigation.md`.
 
 ### 10.3 에셋은 MCP로 만들지 말 것
 
@@ -1014,11 +1022,19 @@ Plane` 하나로 뷰포트·위젯·RTSP 캡쳐가 전부 조절된다 — `Sync
 
 ```
 시뮬 클라(자체방호) → 서버 : Server_ReportState (Unreliable, WithValidation)
-                              위치/회전/속도/짐벌각/줌 — 30Hz(StateReportHz)
+                              위치/회전/속도/짐벌각/줌/로터회전 — 30Hz(StateReportHz)
 서버 자신이 주체(데모)     : RPC 없이 Tick에서 같은 Rep* 프로퍼티에 30Hz로 직접 씀 (2026-09-15)
 서버 → 전원                : 위 값을 Replicated 프로퍼티로 재전파
                               + 시나리오 명령(CommandedPathId, DetectionPhase, 교전 프레이밍 지점)
 ```
+
+> **로터 회전도 복제 대상이다 (2026-09-23).** 원격 프로세스는 Flight 틱이 꺼져 있어
+> `RotorThrustN`이 영원히 0이고, 프로펠러 소리(`DronePropAudioComponent.cpp:142`)와 날개
+> 회전(`UpdateRotorVisuals`)이 둘 다 그 추력에서 역산한다 — 그래서 원격에선 **소리가 idle
+> 레이어에 고정되고 날개도 멈춰 있었다.** `RepRotorSpin01`/`RepRotorSpread01`(0~1)을 추가하고,
+> `ComputeRotorSpinStats()` 한 곳에서 만들어 소리(`SetReplicatedSpin`)와 날개
+> (`GetRotorSpin01ForVisuals`)가 **같은 값**을 보게 했다(어긋남을 구조적으로 차단). 원격은
+> 로터별 편차 없이 평균 하나로 전부 같이 돈다. 데모·풀 **양쪽 게시 경로에 다** 배선했다.
 
 > 2026-09-15 이전엔 Rep*를 채우는 곳이 RPC 구현 하나뿐이라, 데모 서버에 클라가 붙으면 클라 드론이
 > 출발 위치에 굳었다(속도/고도 숫자만 변함). 원격 프로세스의 상태 패널은 `RepVelocity`로 채운다.
@@ -1030,6 +1046,59 @@ Plane` 하나로 뷰포트·위젯·RTSP 캡쳐가 전부 조절된다 — `Sync
   `RemoteInterpSpeed`(12/s)로 보간해 적용한다.
 - 명령 계열은 `ReplicatedUsing` + **카운터**를 같이 둔다(`CommandedPathCounter`,
   `EngagementFocusCounter`) — 같은 값을 다시 보내도 OnRep이 뜨게 하기 위함.
+
+> **규약: 서버 = 복제되는 명령, 시뮬 주체 = 물리·입력·짐벌 (2026-09-23, 시나리오 재시작에도 같이 적용)**
+> 드론은 이 프로젝트에서 **유일하게 서버가 아닌 쪽이 물리를 돌리는 액터**다. 어떤 상태를 되돌리거나
+> 바꾸는 코드든 이 선을 따라 나눠야 한다 — `DroneFollowPath` 가 그랬고, `IScenarioResettable::
+> ResetForScenarioRestart`(시나리오 재시작)도 2026-09-23에 같은 규약으로 나눴다:
+> **서버(`HasAuthority`)** = `FramingSet` · `SetDetectionPhase(InitialDetectionPhase)` ·
+> `CommandedPathId`/카운터 · `RepEngagementFocusLocations`/카운터. **시뮬 주체(`bSimulationAuthority`)** =
+> `Flight->ResetTo(SpawnLocation, SpawnYawDegrees)` · Autopilot `Disengage` · 수동 해제 · 짐벌 각도 원위치 ·
+> **짐벌 배율 `SetZoomLevel(InitialZoomLevel)`** · 정찰 단계 · `bParachuteObserved`.
+> 시뮬 주체가 아닌 쪽은 위치를 안 건드린다(`TickRemoteInterpolation` 이 따라옴).
+> 서버에서만 `Flight->ResetTo` 를 부르면 **다음 `Server_ReportState` 에 즉시 덮이고** 클라 드론은 날던 자리에 남는다(실사고).
+> **`bParachuteObserved`(낙하산 관측 래치, 13.1-1절의 `IsParachuteCurrentlyDetected` 소비자) 는 복제되지 않고
+> 시뮬 주체에서만 갱신된다**(드론 Tick 이 권한으로 게이트돼 있다) —
+> 그래서 그 초기화도 시뮬 주체 몫이다. 단일 프로세스(단독·데모 리슨서버)는 둘 다 자신이라 구분이 무의미해진다.
+> 전제: 레벨 GameMode 가 titan 계열이어야 축/데모 플래그가 정해진다 — `GM_SoldierLab` 오버라이드면
+> 서버·클라가 **둘 다 시뮬 주체**가 된다(`../../level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md` §5).
+
+> **짐벌 배율(`ZoomLevel`)도 되돌린다 — 시뮬 주체 몫** — `ZoomLevel` 은 `EditAnywhere` 저작값(기본 1.0)이지만
+> 자동 정찰/교전 프레이밍이 런타임에 계속 바꾼다(12.3절 `GimbalSearchZoomLevel` ↔ `GimbalZoomInLevel` 램프,
+> 16.3절 광각 `RequiredZoom`, 17절 수동 전환 `BeginManualZoomTransition`). 그래서 **초기 배율을 BeginPlay 에
+> `InitialZoomLevel` 로 스냅샷**(`InitialDetectionPhase` 와 같은 방식)해 두고, 시나리오 재시작의 시뮬 주체 구간에서
+> `SetZoomLevel(InitialZoomLevel)` 로 되돌린다 — 그 함수가 `SyncGimbalLensFromCineCamera` 까지 해서 FOV 가 즉시
+> 따라온다. 수동 전환 값(`ManualZoomStartLevel`/`ManualZoomTargetLevel`)도 같이 초기 배율로 두고 전환 플래그
+> `bManualZoomTransitionActive` 를 내린다. **플래그만 내리고 값을 안 되돌리면** 다음 사이클이 지난 사이클이 끝난
+> 배율에서 시작한다(정찰 램프가 천천히 수렴하긴 해도 첫 몇 초 그림이 1회차와 다르다 — 실사고 2026-09-23).
+> 서버의 `RepZoomLevel` 은 시뮬 주체의 다음 `Server_ReportState` 로 따라오므로 서버에서 따로 쓸 것이 없다.
+
+> **★ 예외 — 상태 패널(`StatusHUD`)은 서버/시뮬 주체로 나누지 않고 모든 프로세스가 각자 되돌린다 (2026-09-23)**
+> 드론 상태 패널 `UStatusHUDComponent` 의 **배터리·비행시간·고도/속도 그래프 히스토리**도 재시작 리셋 대상이다
+> (`ElapsedTime` 이 영원히 누적 → `BatteryPercent = 100 − ElapsedTime × 0.05`, `FlightTimeSeconds += DeltaTime`).
+> 이건 위 규약의 **어느 쪽에도 넣으면 안 된다** — `ADronePawn::ResetForScenarioRestart_Implementation` 에서
+> **`HasAuthority` 분기 밖, `bSimulationAuthority` 판정보다 먼저** `StatusHUD->ResetForScenarioRestart()` 를 부른다.
+> 이유: 이 컴포넌트의 `CurrentData` 는 **리플리케이트되지 않고** 틱에 권한 게이트도 없어서 **프로세스마다 자기 값을
+> 따로 누적한다**. 서버에서만 되돌리면 클라(자체방호) 화면의 드론 패널은 지난 사이클 배터리·비행시간을 그대로 이어간다.
+> 되돌리는 것: `ElapsedTime`/샘플·UI 타이머 0, `CurrentData = FUAVStatusData()`(배터리 100 · 비행시간 0 · 그래프 히스토리 비움 —
+> GPS·링크·임무 등은 다음 틱의 `GenerateDummyData` 가 다시 채움), 그래프 평활 필터, 실데이터 오버라이드 플래그
+> (`bHasRealFlightData`/`bHasRealWaypoint`). 대비되는 사례: **UGV 상태 패널(`UUGVStatusComponent`)은 서버에서만** 되돌린다
+> (거긴 `CurrentData` 가 복제되고 틱이 `HasAuthority` 게이트다) — 같은 재시작 안에서 호출 위치가 정반대인 이유는
+> `../../replication/replication_audit.md` §9 · `../../level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md` §5 끝.
+> ⚠ 이 수정은 2026-09-23 기준 **빌드 전**(짐벌 배율과 같이 다음 빌드에 들어간다).
+
+> **`ViewMode` 는 되돌리지 않는다** — `EDroneViewMode`(Chase/Onboard/Gimbal)는 사람이 드론을 **직접 조종할 때**
+> 입력 액션 `OnCameraTogglePressed` 로 바꾸는 **로컬 카메라 모드**(복제되지 않음, `L_DroneTest` 류 워크플로)다.
+> 전시·2-PC 구성에서는 아무도 드론을 빙의하지 않아 값이 바뀌지 않으므로 리셋 대상이 아니다.
+
+> **일부러 안 되돌리는 것들** — 드론·UGV 컨트롤러의 런타임 멤버를 리셋 함수와 전수 대조한 결과(2026-09-23),
+> 위 짐벌 배율 외에 빠진 것은 없었다(같은 날 후속으로 **상태 패널 컴포넌트**가 하나 더 추가됐다 — 폰 멤버가 아니라
+> 별도 컴포넌트라 이 대조에 안 걸렸던 것, 바로 위 블록). 남아 있는 것은 **의도적**이다:
+> ① 진단 누적값(`Diag*` · `*LogAccum` · `StateReports*` · `LastStateReportLogTime`) — 무해.
+> ② **복제 미러(`Rep*`)** — 시뮬 주체 값이 도착하면 덮이므로 로컬로 손대면 오히려 한 틱 어긋난다.
+> ③ **BeginPlay 1회 세팅**(`bAxisResolved` · `bMappingContextApplied` · `bGimbal*BoneValid` ·
+> `bDisableGimbalCapture` · 도로 세그먼트 캐시) — **되돌리면 깨진다**(예: `bAxisResolved` 를 내리면
+> 드론 Tick 이 통째로 조기 리턴한다). ④ `bSnapInProgress=false` 면 무의미해지는 값(`SnapStartLocation`/`SnapStartYawDeg`).
 
 ### 15.3 소유권 함정
 
@@ -1057,7 +1126,51 @@ PostLogin: 레벨에서 ADronePawn을 못 찾아 소유권을 못 넘겼습니�
 시뮬주체=…`(첫 도착 + 5초마다)를 찍는다. 서버에 `수신` 줄이 없으면 송신 단계, `이중 시뮬`이면
 판정 문제.
 
-### 15.4 RTSP
+### 15.4 네트워크 관련성 — 짐벌 씬캡쳐는 네트워크 뷰어가 아니다 (2026-09-23)
+
+**드론 짐벌은 `USceneCaptureComponent2D` 하나가 날아다니는 것이고, 엔진은 그걸 관련성 판정의
+시점으로 치지 않는다.** 기준은 그 연결의 `ViewTarget` — 자체방호 클라에선 **트럭**이다.
+
+실측(New_kadex_0811): 트럭 (57330, 12280, -3920) ↔ 전장/낙하산 (-34870, 13550, 1030) =
+**약 923 m**. 그런데 모든 액터의 `NetCullDistanceSquared`가 엔진 기본 225,000,000(**150 m**)이고
+`bAlwaysRelevant`는 전부 false, `bUseDistanceBasedRelevancy`는 엔진 기본 true
+(`GameNetworkManager.cpp:54`, 프로젝트 ini 오버라이드 없음).
+
+`AActor::IsNetRelevantFor`(`ActorReplication.cpp:388`)에서 살아남던 건 **드론**(PostLogin의
+`SetOwner`로 `IsOwnedBy(RealViewer)`)과 **트럭**(자기가 ViewTarget)뿐이었다. 그래서 자체방호
+클라에서만: 병사가 얼어붙고, 사격/피격 **멀티캐스트가 송신 단계에서 폐기되고**
+(`NetDriver.cpp:8243` — 비신뢰 멀티캐스트는 예외 없음), `bIsRevealed` OnRep이 안 와 적군이
+숨은 채 탐지에서도 빠졌다. 낙하산만 멀쩡했던 건 `bReplicates=false`라 프로세스마다 독립된
+로컬 사본이라서다.
+
+**관련성 판정은 원격 연결에만 존재한다** — 그래서 같은 코드가 셋으로 갈렸다:
+
+| 실행 형태 | 드론 화면의 전장 |
+|---|---|
+| Solo (`?Listen` 없이 open = `NM_Standalone`) | ✅ 넷드라이버가 없어 판정 자체가 없다. 멀티캐스트도 로컬 호출 |
+| 호스트(UGV축) 자기 화면 | ✅ 관련성은 연결마다 계산 — 서버 로컬 플레이어는 연결이 아니다 |
+| **클라이언트 접속** | ❌ 150 m 밖 전부 얼어붙음 + 멀티캐스트 유실 |
+
+**수정 — 훅은 `UDetectableTargetComponent::BeginPlay`**: 서버에서 복제되는 소유 액터를
+`bAlwaysRelevant = true`로 만든다(`bForceAlwaysNetRelevant`, 기본 켬). 이 컴포넌트를 단 액터의
+집합 = 드론/RCWS가 봐야 하는 대상의 집합이라 범위가 정확히 맞고, 병사 BP는 `ACharacter`
+직속이라 생성자 기본값을 둘 C++ 자리가 없으며, SoldierLab 병사는 이 컴포넌트가 런타임에
+붙으므로 새 병사가 추가돼도 자동으로 따라간다. 낙하산은 비복제라 자동 제외.
+
+비용: `NetServerMaxTickRate=30`이 복제를 30 Hz로 묶고 클라 상한은 100 KB/s. 병사 25명 ×
+30 Hz × ~40 B ≈ 30 KB/s로 LAN에선 무의미하고, 포화해도 엔진이 거리 우선순위로 늦출 뿐이다.
+실비용은 클라 CPU(병사 애니/보간)뿐인데 solo가 이미 한 프로세스에서 돌리던 부하다. 클라에
+AI는 안 붙는다(`Pawn.cpp:145`). 더 줄이려면 병사 `NetUpdateFrequency` 100 → 30(무해, 미적용).
+
+> 같은 축의 별건: **클라에서만 `ToggleDebugCamera`가 "Command not recognized"** — 클라엔
+> `AuthGameMode`가 없어 `APlayerController::AddCheats`의 조건이 통째로 false가 되고 치트
+> 매니저가 안 생긴다(`AGameModeBase::AllowCheats` = `NM_Standalone || GIsEditor`,
+> `GameModeBase.cpp:1413`). `Atitan_examplePlayerController::BeginPlay`에서 로컬 컨트롤러면
+> `EnableCheats()`(비-쉬핑). 패키징 **호스트**도 원래 같이 막혀 있었는데 함께 풀린다.
+
+상세: `replication/2026-09-23_net_relevancy_battlefield.md`.
+
+### 15.5 RTSP
 
 짐벌 캡쳐가 자체방호축 7스트림 중 하나로 나간다 — mount `selfdefense/uav_gimbal`.
 송출 해상도는 `UStreamResolutionSubsystem::SelfDefenseUavResolution`으로 고정하고, 위젯이 창
@@ -1114,9 +1227,44 @@ bAutoRepositionForEngagement`(기본 켜짐).
   자동조준은 대상을 놓쳤다 잡았다 하므로 한 번 켜지면 안 되돌린다.
   ⚠ **Zone3에서만 검사할 것** — UGV도 RCWS를 달고 있어서 1차 전투지에서 래치가 걸린다.
 
-**도주 중인 개체(`EEnemyState::Flee`)는 어느 단계에서도 대상에서 뺀다.** 연출상 "도망친 놈은
-놓아주고 다음 전투지에서 다시 잡는다"가 맞고, 실질적으로도 전장 밖으로 빠르게 멀어져
-프레이밍을 폭주시키는 주범이다(16.5절).
+**도주 중인 개체는 어느 단계에서도 대상에서 뺀다.** 연출상 "도망친 놈은 놓아주고 다음
+전투지에서 다시 잡는다"가 맞고, 실질적으로도 전장 밖으로 빠르게 멀어져 프레이밍을 폭주시키는
+주범이다(16.5절). 2026-09-23부터는 탐지 박스에서도 뺀다 —
+`UTargetDetectionComponent::bIgnoreBreakingContactTargets`(기본 꺼짐, **드론만** 켠다).
+
+> ⚠ **이동형지휘소 RCWS는 그 스위치를 켜면 안 된다.** 그쪽이 도주해 온 3분대를 발견하는 것이
+> 위 6번 국면의 트리거다. 거기서 걸러버리면 래치가 영영 안 걸려 시나리오가 멈춘다.
+
+#### 16.2-1 분대 판정의 근거 (2026-09-23 이관)
+
+"도주 중인가 / 마지막 분대인가" 두 사실의 출처가 SoldierLab 이관으로 바뀌었다.
+
+| 사실 | 구 `BP_Enemy_kadex` | SoldierLab 병사 |
+|---|---|---|
+| 도주 중 | `EEnemyState::Flee` | `UDetectableTargetComponent::bBreakingContact` (복제) |
+| 마지막 분대 | `LastStandZoneIndex == ObservationLastStandZoneIndex`(2) | `::SquadId == ObservationLastStandSquadId`(**`"3"`**) (복제) |
+
+`ADronePawn::ResolveEnemyTrackingFacts()`가 둘을 흡수한다(SoldierLab 우선, 구 컴포넌트 폴백).
+세 판정(`HasLivingNonLastStandEnemies` / `CollectEnemyLocationsForSet` /
+`CollectKnownEnemyLocations`)이 전부 이걸 거친다.
+
+원본(`USoldierIdentityComponent::SquadId`, `FSoldierAssignment::bBreakContact`)은 **복제되지
+않는 서버 전용 지식**인데 이 프레이밍은 풀 시스템에서 **자체방호 클라**가 돌리므로,
+`USoldierLabBridgeSubsystem::SyncSoldiers`가 복제되는 탐지 컴포넌트로 옮겨 싣는다.
+`Quota` 편입으로 `SquadId`가 바뀌면 그것도 그대로 따라간다(편입은 영구).
+
+> ⚠ **함정 둘 — 둘 다 조용히 망가진다(2026-09-23 실사고).**
+> 1. **`Withdraw`는 도주가 아니다.** 현재 표에서 `EnemyFleeToZone2`(적 3명 사망 = 교전 직후)가
+>    2·3분대에, `EnemyFleeToZone3`가 3분대에 `Withdraw`를 준다 — 평범한 전투지 이동이다.
+>    도주로 치면 교전 시작하자마자 2·3분대가 탐지·트래킹에서 사라지고 1분대 전멸 시 드론이
+>    지휘소로 날아가버린다. 진짜 도주는 `Squad3Run`(`BreakContact`, `EnemyFleeToZone3` +6초),
+>    해제는 `Squad3Stand`(`CommandPostFiredNearEnemy` 80 m, `Occupy`=구역 동사라 자동 해제).
+> 2. **분대 이름은 `"3"`이지 `"Squad3"`이 아니다.** 정본은 `AScenarioConfig::SquadZones`
+>    (레벨의 `Squad3Path`는 경로 액터 라벨일 뿐). 안 맞으면 판정이 항상 false인데 기존 폴백이
+>    화면을 채워줘 티가 안 난다 → 불일치 시 경고 로그 1회를 넣어뒀다(16.7절).
+>
+> 근거를 추측하지 말고 **레벨 `AScenarioConfig`가 가리키는 DT의 실제 행을 읽을 것**
+> (`DataTableTools.get_rows`). 상세: `2026-09-23_drone_remote_rotor_and_squad_tracking.md`.
 
 ### 16.3 관측 지점 선정 — 줌이 먼저, 이동은 나중
 
@@ -1203,7 +1351,8 @@ ObservationGuideDistanceCm  거기로 사다리꼴 프로파일로 흘러가는 
 | `ObservationPitchBandHysteresisDeg` | 8.0 | 유지 판정 여유(슈미트 낮은 문턱) |
 | `ObservationEnterFOVSafetyRatio` | 0.9 | 목적지 화각 여유 |
 | `ObservationFallbackImproveMargin` | 0.15 | 차선 모드에서 옮길 최소 개선폭 |
-| `ObservationLastStandZoneIndex` | 2 | 마지막 분대 판정(3분대=2) |
+| `ObservationLastStandSquadId` | `"3"` | 마지막 분대 판정 — **SoldierLab 병사용.** `AScenarioConfig::SquadZones`의 이름과 글자 그대로 같아야 한다(16.2-1절 함정) |
+| `ObservationLastStandZoneIndex` | 2 | 〃 **구 `BP_Enemy_kadex`용 폴백**(`LastStandZoneIndex`, 3분대=2) |
 
 `BP_Drone → Autopilot → Drone|Autopilot|Observation` (이동):
 
@@ -1229,7 +1378,13 @@ ObservationGuideDistanceCm  거기로 사다리꼴 프로파일로 흘러가는 
 [Drone] 실제 적용 프레이밍 세트 2 → 2 (이전 전투지 잔존 적이 있어 3차 전환 보류).
 [Drone] 이동형지휘소 RCWS 교전 개시 포착 — 이제부터 마지막 분대도 프레이밍에 포함합니다.
 Warning: [Drone] 경로 '...' 어디에서도 대상 N개 전원 프레이밍 + 부감 ...을 동시에 만족할 수 없습니다
+Warning: [Drone] 마지막 분대 '3'에 해당하는 생존 적이 하나도 없습니다(생존 적 N명, 실제 분대 이름: 1, 2) — ...
 ```
+
+마지막 줄(2026-09-23 신설)은 **분대 이름 불일치 전용**이다. 이름이 틀리면 마지막 분대 판정이
+항상 false인데 기존 폴백("해당 분대가 없으면 살아있는 적 전원")이 화면을 채워줘 증상이 조용히
+묻힌다 — 1회만 찍고, 설정값과 **실제로 존재하는 분대 이름들**을 같이 보여준다. 이게 뜨면
+`Gimbal|Observation ▸ Observation Last Stand Squad Id`와 `AScenarioConfig::SquadZones`를 대조할 것.
 
 **`대상 N개[적 M]`이 가장 중요한 진단값**이다. N이 30을 넘으면 필요 화각이 90°에 포화하고,
 그러면 "지금 자리 유지" 판정이 영영 거짓이 되어 체류시간 주기마다 관측 지점이 새로 뽑힌다 —
@@ -1389,3 +1544,7 @@ Extreme 3D Pro `Axis_1`은 **앞으로 밀면 -1**, IMC Negate 없음 기준:
 | 2026-09-10 | 수동 해제 시 출발 위치로 576km/h 역주행하던 버그 + 교전 관측 상태 유실 버그(17.4절). **실동작 확인 완료** |
 | 2026-09-15 | **짐벌 2축 안정화**(12.4절) — 짐벌 각도 기준을 기체 → 수평 프레임으로, 자동 추적 목표각도 같은 프레임으로 통일. CineCamera 니어플레인을 씬캡쳐에 복사 |
 | 2026-09-15 | **2대 PC 실환경 첫 검증**(15절, 10.5절) — 데모 이중 주체(판정 순서), AI 자동 빙의로 Server RPC 조용히 폐기(`AutoPossessAI`/`GetNetConnection`), 서버 주체일 때 Rep* 미게시 버그 3건 수정. 풀/데모 양쪽 **실동작 확인 완료** |
+| 2026-09-16 | 10.2절 정정 — "서브스테핑을 UGV 때문에 의도적으로 껐다"는 오독. 엔진 기본값 그대로임(`infra_architecture/2026-09-16_slomo_physics_dt_clamp_investigation.md`). `FRtspAxisGate::ResolveLocalAxis` 호출에 `Owner` 인자 추가(`DronePawn.cpp`, `rtsp/2026-09-16_rtsp_axis_gate_dangling_timer_fix.md`) — 동작 변화 없음 |
+| 2026-09-23 | **네트워크 관련성**(15.4절) — 클라 화면에 전장이 통째로 없던 원인이 거리 기반 관련성(기준=트럭, 전장 923m, 컷 150m). 탐지 대상 액터를 always relevant로(`UDetectableTargetComponent::BeginPlay`). 클라 전용 치트 매니저 부재(`ToggleDebugCamera`)도 같이 수정. **실동작 확인 완료** |
+| 2026-09-23 | **원격 로터 회전 복제**(15.2절) — 원격은 Flight 틱이 꺼져 `RotorThrustN`이 0이라 프로펠러 소리가 idle 고정 + 날개 정지. `RepRotorSpin01/Spread01` 추가, 소리·날개가 `ComputeRotorSpinStats()` 한 소스를 보게 |
+| 2026-09-23 | **분대 트래킹 판정을 SoldierLab로 이관**(16.2-1절) — 구 `UEnemyCombatComponent`가 없는 새 병사에서 "3분대 도주 제외"가 조용히 죽어 있던 것. 복제되는 `SquadId`/`bBreakingContact` 신설 + `ResolveEnemyTrackingFacts()`. ⚠ `Withdraw`를 도주로 본 오판·분대 이름 `"Squad3"` 오기로 두 번 되돌린 이력. **실동작 확인 완료** |

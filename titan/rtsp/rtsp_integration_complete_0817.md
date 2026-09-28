@@ -87,6 +87,9 @@ CineCamera-레퍼런스 패턴(`FrontCineCamera` 등)으로 붙인 건 `ATitanTr
   접속 옵션으로 서버 권위 결정됨)를 확인해서, 맞는 축일 때만 콜백을 호출하는 공용 헬퍼.
   `PlayerAxis`가 액터 `BeginPlay` 시점엔 아직 리플리케이트 안 돼있을 수 있어 0.1초 간격, 최대
   5초까지 재시도.
+- **2026-09-16 추기**: 폴링 타이머가 raw `this`를 캡처해 오너가 5초 안에 파괴되면 크래시하던
+  버그 수정(`ResolveLocalAxis(Owner, World, …)` + `CreateWeakLambda`) —
+  `2026-09-16_rtsp_axis_gate_dangling_timer_fix.md`.
 - `TitanTruck::SetupRtspStreams()`/`AUAVPawn`의 UAV드론뷰 스트림 생성/`VehicleRtspBridgeComponent::
   WireRtspStreams()` 전부 이 게이트를 통과해야만 실행됨. **QuadCam/RCWS/Battlefield 카메라 자체의
   SceneCapture 렌더링은 안 건드림** — 각 프로세스 자기 대시보드 표시용으로 기존부터 필요한 부분이라

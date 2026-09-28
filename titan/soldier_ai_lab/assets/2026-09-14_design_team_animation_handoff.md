@@ -1,6 +1,6 @@
 # 디자인팀 애니메이션 핸드오프 — 실사용 시퀀스 목록과 "시퀀스로 못 고치는 것"
 
-2026-09-14 / **완료 (2026-09-15 갱신 — 디자이너 전달본은 `2026-09-14_designer_guide.html`)** / 새 병사 이동 시스템(GASP MM + Lyra 라이플)이 **지금 실제로 재생하는** 애님 시퀀스 전체 목록(**103개** + 몽타주 2 + 묶음 3), 수정 규칙, 그리고 시퀀스가 아니라 **본을 직접 돌리는 절차 층**의 목록(디자인팀이 시퀀스를 고쳐도 안 바뀌는 것). 왼손 IK 는 토글(`LeftHandIKEnabled`, 기본 OFF)로 전환 완료(5절).
+2026-09-14 / **완료 (2026-09-17 갱신 — ★ 경로가 전부 바뀌었다, 8절 · 디자이너 전달본은 `2026-09-14_designer_guide.html`)** / 새 병사 이동 시스템(GASP MM + Lyra 라이플)이 **지금 실제로 재생하는** 애님 시퀀스 전체 목록(**103개** + 몽타주 2 + 묶음 3), 수정 규칙, 그리고 시퀀스가 아니라 **본을 직접 돌리는 절차 층**의 목록(디자인팀이 시퀀스를 고쳐도 안 바뀌는 것). 왼손 IK 는 토글(`LeftHandIKEnabled`, 기본 OFF)로 전환 완료(5절).
 
 관련 항목: [W7] [W8] [W18] [C-90] [W65] [W66] **[C-120]** / 관련 문서: `IMPLEMENTED.md` 2절(전체 배선), `animation/prototypes/2026-09-04_c34_clip_curve_mapping.md`(커브 규칙), `migration/2026-09-14_asset_cleanup.md`, **`2026-09-14_designer_guide.html`**(디자이너에게 그대로 주는 완성본 — 부록에 103개 전체 경로, 디스크 존재 검증 완료), `2026-09-14_designer_guide_draft.md`(그 초안), `animation/prototypes/2026-09-15_sharp_turn_pop_bf_head_scale_and_weapon_socket.md`(총내림 2차 시험 · 머리 스케일 · 급선회 결론)
 
@@ -26,7 +26,10 @@
 
 ## 2. 실사용 애님 시퀀스 — 역할별 [A]
 
-전부 `/Game/SoldierLab/Animations/` 아래. 스켈레톤은 전부 `SK_UEFN_Mannequin`.
+~~전부 `/Game/SoldierLab/Animations/` 아래.~~ → **정정: 8절 참고.** 2026-09-17 부터 **진영별 2벌**이다 —
+적군 `/Game/SoldierLab/Animations_Enemy/Animations/`(접두 `Enemy_`) · 아군 `/Game/SoldierLab/Animations_Ally/Animations/`(접두 `ALLY_`),
+PSD/Chooser 는 각 세트의 `PoseSearch/` 아래. **아래 2절의 모든 경로에 세트 폴더와 접두사를 붙여 읽을 것.**
+스켈레톤은 **두 세트가 같은 하나**(`SK_UEFN_Mannequin`) — 이것이 분리 설계의 핵심이다.
 
 ### 2.1 로코모션 — Motion Matching 이 고르는 61개
 
@@ -193,7 +196,7 @@ SoldierCharacter_ABP                                                            
 
 - [x] 5절 배선 실행 + `compile_blueprint` (P23) — 2026-09-14 저녁 완료. 캐릭터 BP 쪽 세터는 안 만들었다(7절)
 - [ ] 엔진 레지스트리로 2절 목록 재확인 (`get_dependencies`, PIE 꺼진 뒤) — 바이트 스캔은 과다 보고할 수 있다. ★ 대신 **디스크 존재 검증**은 `2026-09-14_designer_guide.html` 부록의 103개 경로에 대해 완료했다(레지스트리 참조 방향 확인은 아직)
-- [ ] `CHT_Soldier_CharacterAnimations` 가 정말 미사용인지 [B] → **[C-120]** — PIE `a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1` 로 검색 대상 DB 에 GASP 비무장 DB 가 안 나오면 확정. 확정되면 2.6절 갱신
+- [ ] `CHT_Soldier_CharacterAnimations` 가 정말 미사용인지 [B] → **[C-120]** — PIE ~~`a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1`~~ → **`a.AnimNode.MotionMatching.DebugDrawInfo 1`**(→ 정정: 8절 ⑩) 로 검색 대상 DB 에 GASP 비무장 DB 가 안 나오면 확정. 확정되면 2.6절 갱신
 - [x] 피격/사망/체력 배선 ~~[W18]~~ — **2026-09-15 완료**(`ai/2026-09-15_health_hit_death_implementation.md`). 2.7절의 HitReact 13 / Death 6 이 **2.8절**로 올라왔다. 남은 측정은 [C-110]~[C-118]
 - [x] 디자인팀 전달용 문서 — `2026-09-14_designer_guide.html` 로 완성(2026-09-14 저녁). 이메일 형식 재사용은 안 했다
 - [ ] **[W66]** 총내림 로코모션 클립 요청(7절 ③) — 시점 추후
@@ -221,3 +224,33 @@ SoldierCharacter_ABP                                                            
 | # | 규칙 | 왜 |
 |---|---|---|
 | 3.10 | 시퀀서 Bake 전 메시 컴포넌트 **`Disable Post Process Blueprint`** 켜기 | 마네킹 `ABP_UEFN_Mannequin_PostProcess` 의 head 1.15 · thigh 1.12 스케일이 클립에 구워진다. PP 가 없는 메시에서 델타로 드러난다(7절 ④) |
+
+---
+
+## 8. ★ 정정 · 후속 (2026-09-17) — 애니메이션 세트가 진영별로 갈렸다
+
+전문: **`animation/prototypes/2026-09-17_ally_enemy_anim_set_split.md`** · **`ai/2026-09-17_hit_death_three_causes.md`**
+
+⑦ **경로가 전부 바뀌었다.** 아군(`soldier_T`)과 적군(`new_enemy_T`)은 본 길이가 다르고 총기도 갈라질 예정이라 **애니메이션을 두 벌로** 갈랐다. **스켈레톤은 가르지 않았다** — 갈면 ABP(노드 1200) · PSD 17 · Chooser · AO · 몽타주가 전부 두 벌이 되고 **P76**(같은 스켈레톤이면 리매핑 항등)의 이점이 사라진다.
+
+```
+/Game/SoldierLab/Animations_Enemy/{Animations, PoseSearch}   247개 · 전부 Enemy_ 접두사   ← 기준 세트
+/Game/SoldierLab/Animations_Ally/{Animations, PoseSearch}    247개 · 전부 ALLY_ 접두사
+소멸: /Game/SoldierLab/Animations/ · /Game/SoldierLab/PoseSearch/   (옛 Rifle/_MF/ 39개는 사본에 안 따라왔다)
+그대로: /Game/SoldierLab/Animation/ (단수) — SoldierCharacter_ABP · CHT_Soldier_CharacterAnimations
+```
+
+2절 표의 `Animations/Rifle/…` · `PoseSearch/Rifle/…` 는 각 세트 폴더 + 접두사를 붙여 읽는다. 예: `Idles/MM_Rifle_Idle_ADS` → `Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_ADS`.
+
+⑧ ★ **디자인팀의 작업·검수 기준은 적군 세트다** [A, 사용자 전략]. 적군 시나리오가 최우선이라 **모든 애니메이션을 적군 기준으로 먼저 맞추고**, 아군은 그 복제본을 나중에 재피팅한다. **지금 아군 파일을 고쳐 봐야 나중에 덮어써진다** — 디자이너 가이드 0절·4.1절에 그렇게 적었다. 적군 세트 227개는 **프리뷰 메시를 `new_enemy_T` 로 일괄 지정해 두었다**(아군 쪽은 [C-129]).
+⚠ 프리뷰에서 **Preview Scene Settings 로 메시만 바꾸면 총이 안 보인다** — 부착물은 *에셋에 지정된* Preview Mesh 기준으로 에디터를 열 때 한 번만 읽힌다(`AnimationEditorPreviewScene.cpp:504` · `PersonaToolkit.cpp:42`). 다른 몸으로 보려면 에셋의 Preview Mesh 를 바꾸고 **에디터를 다시 연다.**
+
+⑨ **피격·사망(2.8절)이 실제로 재생되기 시작한 것은 2026-09-17 이다.** 09-15 에 배선은 끝났으나 **원인 셋**(C++ 생성자의 콘텐츠 경로 하드코딩 → 몽타주 배열이 전부 빔 · 레벨 배치 인스턴스가 빈 배열을 직렬화 · 사망 몽타주의 슬롯 `FullBody` 가 ABP 에 없음)으로 한 번도 안 나왔다. 지금:
+- **피격 13 = 재생된다.** 2.8절의 설명 그대로(상체 애디티브, 걷는 중 맞아도 다리는 걷는다).
+- **사망 6 = 배선돼 있으나 꺼져 있다**(`bPlayDeathMontage = false`, 순수 래그돌). 몽타주가 눕힌 뒤 물리가 **한 번 더** 눕혀 두 번 넘어졌기 때문. **에셋은 지우지 말 것** — 다시 켤 때는 클립의 **앞 0.25초만** 쓴다([C-128]).
+- 사망 몽타주 12장(적군 6 + 아군 6)의 **슬롯을 `FullBody` → `DefaultSlot` 으로 바꿔 두었다**(되돌리지 않는다).
+- 2.8절의 "① 피격 클립에 다리/골반 델타를 넣으면 발이 미끄러진다"는 **그대로 유효**하다.
+
+⑩ **콘솔 명령 정정** — 3·4절과 디자이너 가이드 5절이 안내하던 `a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1` 은 **단독으로는 아무것도 안 나온다.** 실제 스위치는 **`a.AnimNode.MotionMatching.DebugDrawInfo`** 이고 `…Verbose` 는 **기본값이 이미 true** 인 상세도 옵션이다(`AnimNode_MotionMatching.cpp:121`). → **P141**. [C-120]([C] `CHT_Soldier_CharacterAnimations` 실사용 확인)의 판정 절차도 이 명령으로 바꾼다.
+
+⑪ **피직스 에셋 교체** — `soldier_T` · `new_enemy_T` 가 쓰던 자동 생성 피직스 에셋은 관절 제한이 기본값이라 래그돌에서 **무릎·팔꿈치가 반대로 꺾였다.** 둘 다 `PA_UEFN_Mannequin` 으로 교체(본 이름 매칭). 대가로 바디가 마네킹 체형이라 캡슐이 메시와 약간 어긋난다 → 진영별 복제 + 바디 피팅은 **[W72]**. **시퀀스 작업과는 무관**하지만 사망 연출을 볼 때 알고 있어야 한다.

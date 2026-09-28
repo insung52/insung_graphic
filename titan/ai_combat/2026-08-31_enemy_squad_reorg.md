@@ -3,6 +3,12 @@
 2026-08-31 / 코드+레벨 저작 완료·경로 가중치 근본원인 수정·PIE 재검증 대기 / 적 15명을 5명씩 3분대로 나눌 수 있게 `SquadId`/
 `LastStandZoneIndex`/분대별 NavMesh 필터를 추가하고, "N분대 전멸" 시나리오 트리거를 신설.
 
+> ⚠️ **2026-09-21: New_kadex_0811 의 적군은 이제 SoldierLab 병사(`BP_Soldier_Hostile`)라 이 문서의 `UEnemyCombatComponent`
+> `SquadId`/`LastStandZoneIndex`/`CombatZones` 기제는 그 레벨에서 **superseded** 다** — 구 BP 병사를 쓰는 `kadex_test` 에만 해당.
+> 살아남은 것은 분대별 경로 스플라인 `RoadCenterline_Enemy1/2/3` + `NavQueryFilter_EnemySquad1/2/3`(이제 분대별 `ASoldierZone` 의
+> `NavFilterClass` 로 흐른다). 현재 구조: `../level_new_kadex_0811/2026-09-21_soldierlab_migration_new_kadex_0811.md` ·
+> `../soldier_ai_lab/squad/2026-09-17_command_layer_design.md`.
+
 선행 문서: `enemy_scenario_combat_expansion.md`(Part A~G — 단계적 도주/타겟 전환 캐스케이드,
 선호도 시스템), `../level_new_kadex_0811/scenario_three_stage_combat.md`(DataTable 스텝 구조),
 `../vehicle/ugv/2026-08-27_new_kadex_0811_navmesh_autonomous_driving.md` 3절(`enemypath` =

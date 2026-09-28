@@ -1,6 +1,6 @@
 # 병사 체력 · 피격 반응 · 사망 — 구현 기록
 
-2026-09-15 / **완료** / C++ `USoldierHealthComponent` 하나가 데미지 수신·체력·피격 몽타주·사망 몽타주→래그돌·AI 정지를 전부 맡는다. ABP 에 `AdditiveHitReact` 슬롯 경로 3노드, `BP_SoldierCharacter` 에 컴포넌트 + 총구 보정 게이트 AND. 아군은 `bInvincible` 체크박스로 불사. 사용자 PIE 확인 "잘됨" — **수치는 하나도 안 쟀다**(6절 [C]).
+2026-09-15 / **완료 — 단 ⚠ 2026-09-17 에 큰 정정이 붙었다(8절): 이 구현은 그때까지 한 번도 재생된 적이 없었고, 4.4절은 폐기됐다. 후속은 `ai/2026-09-17_hit_death_three_causes.md`** / C++ `USoldierHealthComponent` 하나가 데미지 수신·체력·피격 몽타주·사망 몽타주→래그돌·AI 정지를 전부 맡는다. ABP 에 `AdditiveHitReact` 슬롯 경로 3노드, `BP_SoldierCharacter` 에 컴포넌트 + 총구 보정 게이트 AND. 아군은 `bInvincible` 체크박스로 불사. 사용자 PIE 확인 "잘됨" — **수치는 하나도 안 쟀다**(6절 [C]).
 
 관련 항목: ~~[W18]~~ 해결 · 신규 [C-110]~[C-118] [W60]~[W63] [Q46] [Q47] [R8] / 관련 문서: **`2026-09-14_hit_death_health_recommendation.md`**(전날 조사·추천 — 구조 파악과 후보 비교는 그쪽이 원본이다), `IMPLEMENTED.md` 0 · 2.4 · 3 · 4 · 5.2절, `assets/2026-09-14_design_team_animation_handoff.md` 2.8절, `weapons/2026-09-12_projectile_port.md`, titan 루트 기준 `../ai_combat/enemy_hit_reaction_physics_system.md`(임펄스 한 틱 지연의 출처)
 
@@ -51,7 +51,7 @@
 | `CorpseFreezeAfterSeconds` | 8 | 래그돌 정착 뒤 `bPauseAnims` + 메시 틱 off. 바디는 sleep 상태로 콜리전만 남는다. 8 s 는 감 → [C-116] | `.cpp:626-635` |
 | `DestroyAfterSeconds` | 0 | 0 = 시체를 남긴다([Q46] 결정 전 기본) | `.cpp:450-456` |
 
-**표 1.2 — 기본 몽타주(생성자가 `ConstructorHelpers::FObjectFinder` 로 로드, `/Game/SoldierLab/Animations/Actions/`)** [A] `.cpp:100-135`
+**표 1.2 — 기본 몽타주(~~생성자가 `ConstructorHelpers::FObjectFinder` 로 로드, `/Game/SoldierLab/Animations/Actions/`~~ → **2026-09-17 부터 BP 템플릿 데이터**, 정정: 8절)** [A] `.cpp:100-135`
 
 ```
 HitReactFront   Light  AM_MM_HitReact_Front_Lgt_01 · _02 · _03 · _04
@@ -217,7 +217,7 @@ NOT ────────┘                                       ├→ Cal
 - 사망 시 멈춰야 하는 것(3.3)이 **컴포넌트 8종 + CMC + 컨트롤러 + ABP 변수 7종**인데, 이걸 BP 에서 하면 노드 수십 개다. C++ 의 `GetOutermost() == /Script/SoldierLab` 판정은 컴포넌트가 늘어도 안 고친다.
 - 델리게이트(`OnDamaged` · `OnDeath`)는 남겨 뒀다 — BP 가 연출을 **더할** 자리(효과음·데칼·인지 되먹임 [W63]).
 
-### 4.4 몽타주 경로를 생성자에 하드코딩 [A]
+### 4.4 몽타주 경로를 생성자에 하드코딩 [A] → ❌ **폐기 (2026-09-17) — 정정: 8절 참고**
 
 `ConstructorHelpers::FObjectFinder` 로 `/Game/SoldierLab/Animations/Actions/AM_MM_*` 19개를 기본값으로(`.cpp:100-135`). P6("튜닝은 데이터")과 어긋나 보이지만:
 - 컴포넌트를 **추가하는 순간 동작**해야 했다 — BP 에서 19개를 손으로 넣는 것은 P53 시절엔 불가능했고 지금도 비싸다.
@@ -313,3 +313,26 @@ P33·P91 은 **산술**(+ − × ÷, 벡터) 노드가 `create_node` 로 안 만
 | [W18] | ✅ 해결 | — |
 
 Perforce: `Source/SoldierLab/AI/SoldierHealth.{h,cpp}` add · `BP_SoldierCharacter` · `SoldierCharacter_ABP` · `BP_Soldier_Friendly` · `BP_Soldier_Hostile` 편집 — 제출 여부는 사용자 [C].
+
+---
+
+## 8. ★ 정정 (2026-09-17) — 이 구현은 **한 번도 재생된 적이 없었다**
+
+전문: **`ai/2026-09-17_hit_death_three_causes.md`**. 6.1절의 "사용자 PIE 확인 [A]" 은 **플레이어 폰에 대해서만 맞았다.**
+
+증상 하나("맞아도 반응이 없다")에 **독립된 원인이 셋**이었다 — **P47** 의 실사례:
+
+| # | 원인 | 이 문서의 어느 서술이 죽는가 |
+|---|---|---|
+| ① | **4.4절의 생성자 하드코딩이 폴더 이동에 깨졌다.** 애니메이션이 진영별로 갈리며 `/Game/SoldierLab/Animations/Actions/` 가 사라져 `FObjectFinder` 19개가 전부 실패, **몽타주 배열이 빈 채**로 남았다. 게다가 그 로드가 옛 몽타주를 **루트셋에 박아** 폴더 이동·삭제까지 막았다 | **4.4절 전체가 폐기**(표 1.2 의 "생성자가 로드" 도) · 5.1 의 "가드를 빼면 해결(다음 빌드)" 도 폐기 — **블록 자체를 걷어냈다** |
+| ② | **레벨 배치 인스턴스가 빈 배열을 직렬화해 들고 있었다.** 템플릿은 채워졌는데 배치된 AI 는 `DeathFront 0 · HitReact{0,0,0}` — 플레이어 폰만 런타임 스폰이라 템플릿 값을 받았다 | 6.1절의 "[A] 확인" 범위 |
+| ③ | **Death 6 의 슬롯 `FullBody` 가 ABP 에 없었다.** 몽타주는 재생되는데 포즈가 출력에 안 실려 "1초 마비 후 갑자기 래그돌" | 2.1·3.2 의 "Death 6 → `DefaultSlot`" 는 **문서가 맞고 에셋이 달랐다** — 에셋 12장을 `DefaultSlot` 으로 고쳐 문서에 맞췄다 |
+
+### 그래서 지금 (2026-09-17 현재)
+
+- **몽타주는 C++ 가 아니라 BP 데이터다** — `BP_SoldierCharacter` 템플릿 = `Enemy_` 19 / `BP_Soldier_Friendly` = `ALLY_` 19 / `BP_Soldier_Hostile` 은 부모 상속. 클립 경로는 `/Game/SoldierLab/Animations_{Enemy,Ally}/Animations/Actions/`. → **P134**
+- **사망 몽타주는 꺼져 있다** — `bPlayDeathMontage = false`, 순수 래그돌(사용자 결정). 켜면 **이중 낙하**([C-117] 의 답, 튜닝은 **[C-128]**). 슬롯 변경은 유지.
+- **피직스 에셋이 두 메시 다 `PA_UEFN_Mannequin`** — 자동 생성본이 무릎·팔꿈치를 반대로 꺾었다. → **[C-127]** · **[W72]**
+- **4.2절(슬롯 그룹을 안 가른다)의 위험이 확인됐다** — `PlayAnimMontage` 는 `bStopAllMontages` 기본값이 **true** 라 사격·재장전이 같은 그룹의 피격 몽타주를 정지시킨다. 이번 증상의 원인은 아니었으나 구조적 위험은 남아 있다 → **[W71]**
+- 7절의 "다음 빌드 — 생성자 가드 제거분" 은 **해소**(블록을 통째로 삭제하고 사용자가 빌드함).
+- 새 원칙 **P134·P136~P140**.

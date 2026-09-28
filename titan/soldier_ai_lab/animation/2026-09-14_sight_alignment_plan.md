@@ -62,6 +62,8 @@ ABP 적용      TwoBoneIK_0 → ModifyBone_6(neck_01) → ModifyBone_9(neck_02) 
 
 **세션 첫 조준**만은 학습된 선이 없어 정착 후 weld 가 시작된다(그 뒤 재견착부터는 옛 선 기준으로 미리 블렌드) → [W48].
 
+**AI 와의 관계 (2026-09-18 확정, P171)**: `bEnabled` 는 **H 키로만** 켜진다 — 플레이어 자기 병사, 또는 관전 중 따라다니는 병사(`bApplyToAI`). **AI 병사에게 자동으로 켜는 로직은 없다**(09-17 에 넣었던 `bEnableForAI`/`bTurnBodyForAI` 는 사용자 결정 "H 는 1인칭 플레이 부가 기능, 노출되면 안 됨" 으로 되돌림). AI 가 총 내리고 서서 볼 곳으로 몸을 돌리는 것은 별개의 `Pose/SoldierScanTurnComponent` 다 — 위 "몸 회전" 단락(플레이어 전용)의 AI 판이며 이 컴포넌트와 상태를 공유하지 않는다 → `animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md` 1절.
+
 **관전 폰과의 관계**(2026-09-15 확인, [W50] 해결): 관전 폰(`Observer/SoldierObserverPawn`)이 1인칭(T)일 때 따라다니는 병사의 이 컴포넌트에 뷰를 **빌린다** — `BeginExternalView()`(소켓→시선 캘리브레이션, `bExternalView` 면 알파 무관 소켓 완전 추종) / `EndExternalView()`, 관전 폰 `CalcCamera` 오버라이드 → `ComputeView()`. 빙의 없음. 관전 **H** = 그 병사의 `ToggleHeadAim()`. HUD `headaim:ON/off · / soldier eyes`. Tab·3인칭 복귀·EndPlay 에서 해제. `bUseSoldierFirstPersonComponent`(기본 on) 를 끄면 옛 head 소켓 간이 뷰.
 
 ---

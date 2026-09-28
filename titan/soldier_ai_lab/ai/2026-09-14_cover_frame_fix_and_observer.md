@@ -14,7 +14,7 @@
 |---|---|
 | [C-95] 기준면 수정 | **빌드됨**(14:36, 사용자 CL 469 에 포함). 수비수 정착 여부는 **아무도 보지 않았다** — 1.6절 기준으로 확인할 것 |
 | 이관 누락 DDCvar | titan `DefaultEngine.ini` 에 추가, 에디터 재시작 후 유효 ([W40] 해결). 원본 SoldierLab 프로젝트는 이 PC `C:\working\works\kadex\anim_test\SoldierLab` 에 있다 |
-| 관전 폰 | `Observer/SoldierObserverPawn`. **F** 추적/해제(AI 계속) · **T** 1/3인칭(V 에서 통일) · **Tab** · 휠. `PickConeDegrees` **15**. `BP_ObserverPawn` 부모 교체 완료. ✅ **2026-09-15 확인**: 1인칭이면 그 병사의 `USoldierFirstPersonComponent` 에 뷰 위임(`BeginExternalView/EndExternalView`, 빙의 없음, `bUseSoldierFirstPersonComponent`) · **H** = 그 병사의 머리 추종 토글(AI 는 `bApplyToAI`) · HUD `headaim:ON/off · / soldier eyes` |
+| 관전 폰 | `Observer/SoldierObserverPawn`. **F** 추적/해제(AI 계속) · **T** 1/3인칭(V 에서 통일) · **Tab** · 휠. `PickConeDegrees` **15**. `BP_ObserverPawn` 부모 교체 완료. ✅ **2026-09-15 확인**: 1인칭이면 그 병사의 `USoldierFirstPersonComponent` 에 뷰 위임(`BeginExternalView/EndExternalView`, 빙의 없음, `bUseSoldierFirstPersonComponent`) · **H** = 그 병사의 머리 추종 토글(AI 는 `bApplyToAI`) · HUD `headaim:ON/off · / soldier eyes`. ★ **09-18**: 자유 비행 시 **휠 = 비행 속도**(`FlySpeedCms 1200` ×/÷1.25) · `bIgnoreTimeDilation`(slomo 무관) · **롤 잔류 수정** → 5절 |
 | 1인칭 | `Camera/SoldierFirstPersonComponent`. **뷰타겟 교환**(GASP 카메라 Deactivate 는 폐기 — P107). `Anchor` Body/Weapon · `CameraSocket=eyes`(사용자 소켓) · `LocationOffset` 은 **0** 이어야 눈 소켓에 정확히 · `RotationMode=FollowSocket` + `bAlignToAimOnEnter`(머리 실제 시선 기준) · `bFollowSocketOnlyWhileHeadAims` · `bHideBodyFromOwner`=`PC->HiddenPrimitiveComponents`. 키 **T** |
 | 머리 추종 | `Pose/SoldierHeadAimComponent`, **기본 OFF**, **H**. 닫힌 루프·월드 Additive(몸 프레임 = spine_03 에 저장), 2단(둘러보기 / weld 가중치+래치), 조준선은 정지 게이트에서 학습·작은 변화는 추적, 눈은 **목 굽힘 60° + 스트레치 5 cm** 로 선 위에, 맹목사격 시 전체 off. **10차까지 사용자 확인 "완벽"(21:30)** — 이 문서 3d 절은 초기 판이고 **최종 설계는 `animation/2026-09-14_sight_alignment_plan.md` 0' 절** |
 | ABP | 변수 `HeadAimRotation`·`NeckAimRotation`·`Neck2AimRotation`·`HeadAimAlpha`·`HeadAimLocation`(항상 0). 체인 `TwoBoneIK_0 → ModifyBone_6(neck_01) → ModifyBone_9(neck_02) → ModifyBone_7(head) → ModifyBone_8(head, Ignore·사용자 잔여) → ComponentToLocalSpace_2`. 회전 **Add to Existing · World Space**(사용자 수동, P108) |
@@ -224,3 +224,16 @@ Rotation 핀 ← 변수 게터, Alpha 핀 ← `HeadAimAlpha` 게터(노드별 �
 - **위협이 없을 때의 엄폐** — 기록이 하나도 없으면 `EvaluatePosition` 이 `bCanHide=true, stance 0` 으로 바로 돌아온다. 접촉 없는 수비수는 서 있는다. "적이 멀어도 엄폐는 필수"는 **보이는 적**에 대해선 이제 성립하고, **한 번도 못 본** 적에 대해선 위협 방향(목표의 접근축 등)이 필요하다 → 별건
 - 관전 1인칭에서 얼굴/헬멧 클리핑 — `FirstPersonForwardCm` 로 다이얼
 - [W32] 조리개 트레이스 예산 · [C-83] 성능 — 그대로
+
+---
+
+## 5. 2026-09-17~18 추기 — 휠 비행 속도 · `slomo` 무관 · 롤 잔류 수정 [A · 사용자 확인]
+
+0' 절 관전 폰 행의 후속. 상세와 AI 포즈 층 3종(같은 라운드)은 **`animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md`** 4절.
+
+| 항목 | 내용 |
+|---|---|
+| **휠 = 비행 속도** (추적 안 할 때) | `FlySpeedCms 1200`, 노치마다 ×/÷ `FlySpeedWheelFactor 1.25`, `MinFlySpeedCms 100`~`MaxFlySpeedCms 20000`. `ApplyFlySpeed()` 가 `UFloatingPawnMovement` MaxSpeed·Accel·Decel 을 같은 비율로. **추적 중엔 휠 = 3인칭 거리(그대로)** |
+| **`bIgnoreTimeDilation` true** | `CustomTimeDilation = 1/월드 배속` → `slomo` 로 전투를 늦춰도 카메라는 실시간(사용자: "slomo 로 낮추면 카메라까지 느려져 불편") |
+| **롤 잔류 수정** | F → T(1인칭) → T/F 해제 뒤 자유 카메라가 기울어져 있던 것. 1인칭 뷰의 머리 시선(린·애니메이션 롤)이 컨트롤 회전에 들어가고 아무도 안 뺐다. ① 외부 뷰 동기화는 **yaw·pitch 만** 쓴다 ② 뷰가 병사 눈을 안 거치게 바뀌는 전환 시점(추적/해제/T)에 롤 0(`SoldierObserverPawn.cpp:109-119`). P169 |
+| **H 와 AI** | 관전 H 는 여전히 "따라다니는 병사의 `ToggleHeadAim()`"(AI 는 `bApplyToAI`). 09-17 에 잠깐 있었던 **AI 자동 활성화(`bEnableForAI`)는 되돌렸다** — H 는 1인칭 부가 기능이고 AI 의 몸 회전은 `Pose/SoldierScanTurnComponent`(P171) |

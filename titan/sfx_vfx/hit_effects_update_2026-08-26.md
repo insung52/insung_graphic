@@ -21,6 +21,16 @@
 `BP_RCWSProjectile` / `BP_RifleProjectile` 둘 다 Dirt/Wood/Hard/Metal/Glass 5종에
 VFX·사운드·데칼·도탄비율이 다 채워져 있다.
 
+> **2026-09-21 후속**: 위 "완성돼 있다"는 titan 구 `/Game/Soldiers/Weapons/BP_RifleProjectile`
+> 얘기다. SoldierLab 쪽 `/Game/SoldierLab/Weapons/Blueprints/BP_RifleProjectile`(09-12 C++
+> 이식 후 0부터 재제작)은 09-21 확인 시 `SurfaceImpactEffects` 5행이 전부 `Dirt/None` 빈
+> 껍데기였다 — titan 구 BP 값(`NS_Rifle_*` + `MS_hit_rifle_*` + `M_Decal_Bullet` 7×7/60s + 도탄
+> 흡수율 0.3/0.7/0.2/0.8/0.1 + `MS_Ricochet`)을 SoldierLab 로컬 사본 애셋으로 다시 채웠다.
+> 같은 날 피격음 감쇠도 바꿈: SoldierLab `BP_RifleProjectile` 1000/150000 → **200/2500**(~27m),
+> `BP_RCWSProjectile` 1500/25000 → **1000/15000**(~160m), 그리고 C++ 런타임 감쇠가 Linear →
+> NaturalSound + LPF로 통일됨. 상세 `sfx_vfx/2026-09-21_combat_audio_voice_budget_and_attenuation.md`
+> §5·§6.
+
 ### SurfaceType 대응표
 
 `Config/DefaultEngine.ini` 의 `[/Script/Engine.PhysicsSettings]` 에 이름 등록됨.

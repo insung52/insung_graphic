@@ -2,6 +2,10 @@
 
 2026-09-14 / **초안 (조작법 확정 — 조준·사격·재장전 키만 확인 필요)** / 새 병사 시스템의 이동·자세 기능 하나하나에 어떤 애님 시퀀스가 짝지어져 있는지, 어떤 것은 시퀀스로 못 고치는지, 어떻게 실행해 보는지를 디자이너 기준으로 정리.
 
+> ⚠ **2026-09-17 — 이 초안은 대체됐다.** 배포본은 `2026-09-14_designer_guide.html` 이고 그쪽만 갱신한다.
+> 이 문서의 **경로는 전부 구형**이다 — 클립은 진영별 2벌(`Animations_Enemy/`+`Enemy_` · `Animations_Ally/`+`ALLY_`)이 됐고
+> 옛 `/Game/SoldierLab/Animations/` 는 소멸했다 → `animation/prototypes/2026-09-17_ally_enemy_anim_set_split.md`.
+
 > 내부 배선 상세는 `2026-09-14_design_team_animation_handoff.md`(같은 폴더)와 `IMPLEMENTED.md` 2절에 있다. 이 문서는 디자이너에게 **그대로 전달하는 문서**이므로 내부 용어를 최소화한다.
 
 ---
@@ -188,19 +192,34 @@ PIE 를 켜면 플레이어 병사 하나가 스폰되고 아군(`Ally_*`)·적�
 | W A S D / Q E / 마우스 | 자유 비행 (벽 통과) |
 | **F** | 조준선 아래 병사(머리 위에 `[F] follow` 표시) 따라다니기 / 해제. **병사는 AI 그대로** 움직인다 |
 | **T** | 따라다니는 중 1인칭 ↔ 3인칭 (병사 조작과 같은 키). 1인칭은 그 병사의 `eyes` 소켓·머리 추종을 그대로 빌려 본다(상태줄에 `/ soldier eyes`) |
-| **H** | 따라다니는 병사의 머리 조준 추종 켜기/끄기 (AI 병사는 `Apply To AI` 가 켜져 있어야 함). 상태줄에 `headaim:ON/off` |
+| **H** | 따라다니는 병사의 머리 조준 추종 켜기/끄기 (AI 병사는 `Apply To AI` 가 켜져 있어야 함). 상태줄에 `headaim:ON/off`. **이 키로만 켜진다** — AI 병사에게 저절로 켜지는 일은 없다 |
 | **Tab** | 다음 병사 |
-| 마우스 휠 | 3인칭 거리 |
+| 마우스 휠 | **따라다니는 중** = 3인칭 거리 · **자유 비행 중** = 비행 속도 (한 칸마다 ×1.25 / ÷1.25, 기본 12 m/s — 2026-09-18) |
+
+- 자유 비행은 `slomo` 로 전투를 느리게 해도 **카메라는 원래 속도**로 움직인다(2026-09-18, `Ignore Time Dilation`). 느린 전투를 가까이서 보기 위한 것.
+- 비행 속도 기본값·휠 배율은 `BP_ObserverPawn` Details `SoldierLab|Observer|Fly` (`Fly Speed Cms` 1200 · `Fly Speed Wheel Factor` 1.25 · 최소 100 · 최대 20000).
+
+**AI 병사가 스스로 하는 것 (조작 아님, 2026-09-18)** — 관전하다 보이는 거동이 어디서 오는지:
+
+| 거동 | 담당 | Details 위치 (`BP_SoldierCharacter`) |
+|---|---|---|
+| 총 내리고 서 있다가 **몸을 돌려** 다른 쪽을 본다 | `AC_SoldierScanTurn` — 눈(조준)이 몸에서 20° 넘게 벗어나면 캡슐을 돌리고 5° 안에서 멈춤, 180°/s. 제자리 회전 애니메이션은 GASP 가 고른다 | `SoldierLab|ScanTurn` — `Start Degrees` · `Stop Degrees` · `Turn Rate Deg Per Sec` |
+| 위험이 없으면 **조깅이 아니라 걷는다** | `AC_SoldierGaitBridge` — AI 판단(Walk)을 GASP 의 `Wants To Walk` 로 넘김 | `SoldierLab|Gait` (끌 일은 거의 없음) |
+| 앉고 · 기울이고 · 맹목사격 자세로 가는 속도가 **급할수록 빠르고, 앉는 게 서는 것보다 빠르다** | `AC_SoldierPoseSmoother` — 축마다 최고속도(올라갈 때/내려갈 때)·가속, 급박도로 ×0.5~×1.6 | `SoldierLab|PoseSmooth|Axes` — `Stance`(Up 1.6 = 앉는 쪽 · Down 0.9 · Accel 5) · `Lean`/`Blind Fire H`/`Blind Fire V`(1.2/1.2/4) · `…|Urgency` `Scale At Calm` 0.5 / `Scale At Urgent` 1.6. ⚠ `Frozen Rate` 는 0 으로 두지 말 것(0 = 즉시 스냅) |
+
+셋 다 **AI 병사에게만** 작동한다 — 직접 조작하는 병사는 키·마우스가 그대로 몬다.
 
 ### 4.4 확인에 쓸 콘솔 명령
 
 | 명령 | 무엇 |
 |---|---|
 | `slomo 0.1` | 전환 순간(팝)을 눈으로 보려면 |
-| `a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1` | 지금 어느 클립·프레임이 골라졌는지 |
+| ~~`a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1`~~ → **`a.AnimNode.MotionMatching.DebugDrawInfo 1`** | 지금 어느 클립·프레임이 골라졌는지. **2026-09-17 정정** — `…Verbose` 는 기본값이 이미 true 인 상세도 옵션이라 **단독으로는 아무것도 안 나온다**(P141). 더 자세히 보려면 둘 다 켠다 |
 | `SoldierLab.Debug.Axes 1` | 축 값(기울이기·맹목사격·앉기·조준 보정) HUD. 관전 중이면 `SoldierLab.Debug.Axes.All 1` 도 |
 | `SoldierLab.Debug.HeadAim 1` | 머리 추종: 초록=목표 방향, 빨강=실제 머리, 흰색=조준, 시안=목표 눈 위치, 마젠타=실제 눈. 글자의 **`eye-res`(cm)·`look-res`(°)가 0 근처면 정렬된 것**. `weld=1.00L` = 눈 정렬이 붙어서 잠김, `bend=x/60` `stretch=x/5` 가 상한에 붙어 있으면 목이 닿을 수 있는 한계 — 견착 포즈나 조준경 높이로 눈 가까이 가져와야 한다 |
 | `SoldierLab.Debug.Cover 1` · `.Engagement 1` | AI 병사의 엄폐/교전 판단 (관전 시 `SoldierLab.Debug.AI.Self 0` 필요) |
+| `SoldierLab.Debug.ScanTurn 1` | AI 몸 회전: 시안 화살표 = 눈이 보는 방위, 흰색 = 몸(캡슐) 전방, 글자 `scanturn SCAN|contact d=<각도> TURN` — `TURN` 이 붙어 있으면 지금 돌고 있는 것 (관전 시 `AI.Self 0`) |
+| `SoldierLab.Debug.PoseSmooth 1` | AI 자세 축: `st 값(속도)>목표` 식으로 앉기·기울이기·맹목사격 4축. **속도가 0 → 올라갔다 → 0 으로 내려오면 정상**(사다리꼴). 한 프레임에 값이 뛰면 `ext` 를 본다 — 0 이 아니면 다른 것이 축을 쓰는 중 |
 
 ---
 

@@ -1,6 +1,6 @@
 # 탐색 스윕 고각을 차체 기준으로 — 내리막에서 포탑이 하늘 보던 문제
 
-2026-09-15 / 완료(빌드·실차 확인 대기) / 자동정찰 스윕의 고각 목표를 "월드 수평 0°"에서 "차체 기준 `SearchSweepElevationDegrees`(-3°)"로 바꿈.
+2026-09-15 / 완료(2026-09-16 빌드·UGV/TitanTruck 확인) / 자동정찰 스윕의 고각 목표를 "월드 수평 0°"에서 "차체 기준 `SearchSweepElevationDegrees`(-3°)"로 바꿈.
 
 ## 현장 피드백
 
@@ -63,8 +63,18 @@ float SearchSweepElevationDegrees = -3.f;   // 차체(마운트 베이스) 기�
 - 같은 두 파일이 Perforce에서 `user2@user2_jiseong`에게도 동시에 체크아웃되어 있음 — 서브밋 시
   머지 가능성.
 
-## 남은 확인
+## 함정 — 새 UPROPERTY + Live Coding = BP "missing property"
 
-- **빌드**(사용자 직접) 후 실차 경사로에서 내리막/오르막 모두 포탑이 차체 기준 -3°를 유지하는지
-  확인.
+이 변경을 처음엔 **Live Coding**으로 빌드했는데, 그 직후 `BP_TitanTruck::UpdateTurretVisuals`에서
+`Attempted to access missing property 'BarrelSpinGaugeValue'`가 뜨며 **트럭 총열이 안 돌았다.**
+코드 버그가 아니다 — Live Coding 리로드는 새 `UPROPERTY`(여기선 `SearchSweepElevationDegrees`)가
+들어간 클래스 레이아웃을 BP 쪽에 제대로 반영하지 못해, 그 클래스의 기존 프로퍼티를 읽는 BP 노드가
+깨진다. 해결은 **에디터 닫기 → 풀 빌드 → 에디터 재시작 → 해당 BP 컴파일·저장**(2026-09-16 확인).
+새 UPROPERTY/USTRUCT/UENUM이 있는 변경은 Live Coding 말고 풀 빌드로(09-16 RCWS 문서 체크리스트에도
+같은 원칙으로 적어 둠).
+
+## 확인 결과
+
+- [x] 빌드(사용자 직접, 풀 빌드) 후 UGV·TitanTruck 모두 스윕 고각이 차체 기준으로 동작함을
+  2026-09-16 확인. 트럭 카메라 오프셋(-6.1°) 보정도 조준선 기준으로 바꾼 뒤 정상.
 - 관련 가이드: `guide/rcws_fire_control_dev_guide.md` §8.4 갱신함.

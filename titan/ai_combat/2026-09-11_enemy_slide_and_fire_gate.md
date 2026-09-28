@@ -147,3 +147,16 @@ bCoverAllowsFire = bAtCombatPoseMarker && IsFacingSettled(...) && !bFiringBurstT
 - **`Gun` 컴포넌트는 더미가 아니다** — 사망 시 `DetachFromComponent` + `SetSimulatePhysics(true)`로
   **총을 떨어뜨리는 본체**다. 가시성 호출만 보고 "역할 없는 껍데기"로 오판해 삭제했다가
   노드 3개가 끊어졌고, 사용자가 재생성해 복구했다. **컴포넌트 삭제 전에는 참조를 전수 추적할 것.**
+
+## 9. 추기 (2026-09-17) — Chronicle 리플레이에서 §2 증상 재발, 원인은 CDO AnimClass
+
+리플레이 재생에서만 사격→엄폐 미끄러짐이 되살아났다. `Enemy.ClientAnimDiag 1`(§7 `[속도진단]`의
+클라이언트판, `replication/2026-09-17_enemy_anim_death_replication_gaps.md` §5)이 찍은 것:
+`ABP(ABP_Enemy_kadex2_C) 상태=Knee Speed=600 … 슬롯 Fire=1.00` — **AnimClass가 `_New`가 아니라
+옛 `ABP_Enemy_kadex2`**. 레벨 인스턴스 15명은 `_New`였지만 `BP_Enemy_kadex` **CDO**는 옛 ABP 그대로였고,
+리플레이 체크포인트가 레벨 배치 액터를 클래스에서 재스폰하면서 인스턴스 오버라이드가 버려져 CDO
+값으로 돌아갔다(`DemoNetDriver.cpp:3368`). 실기(PIE/2-PC)에선 안 나오는 이유도 그것. CDO
+AnimClass를 `ABP_Enemy_kadex2_New`로 수정.
+→ `replay_chronicle/2026-09-17_replay_respawn_and_physics_proxy_fixes.md` §1. 같은 조사에서 적군
+`GaitTopSpeed`/`IsSprinting`이 클라이언트에 복제되지 않아 **실기 클라이언트에서도 적군이 idle
+포즈로 미끄러지던** 별개 결함이 나왔다(위 `replication/` 문서 §1).

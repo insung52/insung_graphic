@@ -38,6 +38,7 @@
 | LIG 원격통제기 UDP/JSON 프로토콜 | `protocol/` |
 | RTSP 영상 송출 | `rtsp/` |
 | 멀티플레이(리슨서버) 리플리케이션 | `replication/` |
+| Chronicle 리플레이 녹화/재생 에디터 툴(`Plugins/Chronicle`, 2026-09-16 신설) | `replay_chronicle/` |
 | RC 목업/테스트 클라이언트 도구 | `rc_mockup_tools/` |
 | 전체 아키텍처/인프라 결정 기록 | `infra_architecture/` |
 | Genesis 물리엔진 병행 실험(일시중단) | `genesis/` |

@@ -112,6 +112,18 @@ float ForwardPriorityHalfAngleDegrees = 45.f; // 반각 — 45면 좌우 각 45�
 전방에 새 적이 나타나도 바꾸지 않음. "전방 적이 나타나면 즉시 전환"까지 원하면 스티키 조건에
 원뿔 검사를 추가해야 함(2026-08 "사용자 확정 사항"을 뒤집는 것이라 일부러 안 건드림).
 
+**경계도 거리 가중 (2026-09-16)** — 두 갈래 모두 "실거리"가 아니라 **유효거리**로 최근접을 고른다:
+
+```
+유효거리 = 실거리 × (1 − AlertTargetDistanceBias × 경계도)     // Bias 기본 0.5, 0이면 끔
+```
+
+경계도(3.2절 타겟 기억)는 최근에 물고 있던 적일수록 높으므로, 방금 놓친 적이 새로 나타난 더
+가까운 적에게 밀리지 않는다. 전방 원뿔 우선은 그대로 상위 규칙이고, 원뿔 안 후보끼리 / 전체
+후보끼리 각각 이 가중을 쓴다. 클라이언트의 `UpdateAimPointForUI`는 기억이 비어 있어(서버 전용)
+가중 없이 선정되지만 화면 마커용이라 무해. 상세는
+`rcws/2026-09-16_rcws_target_memory_and_body_part_aim.md`.
+
 ### 3.1 표적 고정과 유예 (2026-09-01)
 
 한 번 고른 표적을 계속 물고, **아래 둘 중 하나일 때만** 놓아줌:
@@ -147,6 +159,92 @@ float TargetRetentionGraceSeconds = 1.f;   // 0이면 2026-09-01 이전 동작(�
 `bAligned`가 안 되어 게이지가 안 찬다. 적이 3m/s로 측면 이동할 때 필요한 슬루 속도는 100m에서
 1.7°/s, 20m에서 8.6°/s, **10m에서 17°/s** — `MaxAutoAimSlewRateDegPerSec`가 그보다 낮으면
 근거리 이동 표적은 구조적으로 조준이 안 된다(2026-09-01 기준 UGV 인스턴스 값은 15).
+
+### 3.2 타겟 기억(경계도)과 마지막 위치 응시 (2026-09-16)
+
+3.1절의 유예가 끝나면 예전엔 곧장 탐색 스윕(8.4절)으로 돌아갔다 — 적이 2~3초만 엄폐해도 카메라가
+딴 데 가 있어 1대1에서 치명적이었다. 이제 자동조준은 네 단계를 오간다(`ERCWSAutoAimPhase`,
+`AutoAimPhase`로 리플리케이트, `WatchRemainingSeconds`와 함께 UI/디버그용). **우선순위는 항상
+시각(Tracking) → 기억 응시(WatchingLastKnown) → 총성 조사(InvestigatingGunfire, 2026-09-17) → 스윕(Searching)**:
+
+```
+Searching ──적 탐지──▶ Tracking ──유예(1s) 뒤 상실, 대체 없음──▶ WatchingLastKnown ──4s 만료──▶ (총성 있으면) InvestigatingGunfire ──4s 만료──▶ Searching
+                          ▲                                        │ 누구든 보이면 즉시                      │ 누구든 보이면 즉시
+                          └────────────────────────────────────────┴────────────────────────────────────────┘
+```
+
+- **타겟 기억 `FRCWSTargetMemory`**(`TargetMemories` 맵, 서버 전용) — 타겟별 `LastAimLocation`/
+  `LastAimPart`/`LastSeenTime`/`Alertness`. 보이는 타겟은 경계도가 `AlertnessRiseSeconds`(0.5)로
+  1까지 오르고, 안 보이는 타겟은 `AlertnessDecaySeconds`(15)로 0까지 내려가 0이면 삭제된다.
+  `LastAimLocation`은 **보이는 동안만** 갱신 — 유예 구간에 엄폐물 뒤 실제 위치를 몰래 따라가지 않기
+  위함. 탐지 쪽 짝은 `UTargetDetectionComponent::ReacquireGraceSeconds`(10s, `detection_dev_guide.md`
+  3.4절) — 최근 잡혔던 적은 1점만 다시 보여도 즉시 재획득된다.
+- **응시(`WatchingLastKnown`)** — 살아있는 타겟을 유예 후 놓쳤고 `SelectNearestEnemyTarget`이 대체
+  타겟을 못 내면, 기억의 `LastAimLocation`을 `WatchLastKnownSeconds`(기본 4 — 초기 7에서 PIE 확인 후 조정, 0이면 예전 동작) 동안
+  `SlewSightTowardWorldPoint`로 계속 겨눈다(추적과 같은 슬루 코드, `MaxAutoAimSlewRateDegPerSec`).
+  응시 중에도 매 틱 표적 선정이 돌아 누구든 보이면 즉시 Tracking. `CurrentAutoAimTarget`은 null이라
+  락온 게이지는 0, 발사 없음. 타겟이 **죽은** 경우(`UDetectableTargetComponent::IsIncapacitated`)는
+  응시 없이 즉시 놓는다(부수효과로 죽은 적을 유예 1초 물고 있던 동작도 사라짐).
+- **스윕 복귀 블렌드 아웃** — 응시 만료/추적 종료 시 `ResumeSearchSweepFromCurrentAim()`이 스윕
+  오프셋을 "현재 조준 방위 − 차체 heading"(범위 클램프, 진행은 중앙 쪽)으로 맞춰 큰 되돌림 없이
+  `SearchSweepSpeedDegPerSec`로 이어진다.
+- **락온 충전 단축** — `LockOnGaugeChargeSeconds × Lerp(1, AlertLockOnChargeMultiplier(0.5), 경계도)`.
+  다시 나타난 적은 더 빨리 쏜다. 타겟 identity 변경 시 게이지 0 리셋 규칙은 그대로.
+- 로그: `타겟 X 시야 상실(경계도 N) → 마지막 조준점 7.0초 응시`, `응시 종료 → 탐색 스윕 복귀`,
+  `추적 종료 → 탐색 스윕 복귀`. `bLogAutoFireReadiness` 출력에 `Phase=/Watch=/Alert=` 추가됨.
+
+Remote/AutoSurveillance 분기는 항상 `Searching`으로 리셋. 상세·튜닝값 표·검증 체크리스트는
+`rcws/2026-09-16_rcws_target_memory_and_body_part_aim.md`(**빌드·PIE 검증 전**).
+
+**청각 보조 — 총성 방향 조사 (2026-09-17, 코드 완료·빌드 전)** — 시각 탐지도 응시할 기억도 없을
+때만(`UpdateAutoAim` `!Target` 분기에서 응시 `return` 뒤), `UDetectableTargetSubsystem`의 총성 이벤트
+버스(`GetRecentGunfire()`, `detection_dev_guide.md` §2)에서 **총구 기준 `GunfireHearingRangeCm`(50m, 09-21 확정)
+안, `GunfireMemorySeconds`(3s) 안, 아직 조사 안 한, 가장 최근 적 총성**을 `PickGunfireToInvestigate`로
+골라 그 지점을 `GunfireInvestigateSeconds`(4s) 동안 `SlewSightTowardWorldPoint`로 겨눈다
+(`InvestigatingGunfire`). **LOS 검사 없음** — 엄폐물 뒤 총성도 그 방향을 본다(적이 나오는 순간 탐지가
+잡게). 조사 중 더 새 총성이 반경 안에서 나면 지점/타이머 갱신, 만료는 응시와 같은
+`ResumeSearchSweepFromCurrentAim()` 블렌드 아웃. 아군/RCWS 총성은 보고 자체가 안 된다(적군
+`UEnemyCombatComponent`의 두 사격 멀티캐스트만 서버에서 보고 — **2026-09-18부터 SoldierLab 적군 병사의
+총성도** `USoldierLabBridgeSubsystem`이 `USoldierRegistrySubsystem::OnGunshot`을 받아 발마다 보고한다,
+`detection_dev_guide.md` §2). `bRespectEnemyTargetingExclusion`(도주
+분대 제외)은 여기서도 지킨다. 사격자의 경계도는 최소 `GunfireAlertnessFloor`(0.5)까지 올라가되
+`LastAimLocation`은 안 넣는다 — `FRCWSTargetMemory::bHasLastAimLocation`로 구분해 총성으로만 아는
+적은 응시 지점으로 안 쓴다. `bInvestigateGunfire=false`면 예전 동작. 로그: `근처 적 총성(NNm) → 총성 방향
+4.0초 조사`, `총성 조사 종료 → 탐색 스윕 복귀`. 상세·검증 체크리스트:
+`rcws/2026-09-17_rcws_gunfire_hearing.md`.
+
+### 3.3 시나리오 표적 제외 — `bRespectEnemyTargetingExclusion` (2026-09-01, SoldierLab 경로 2026-09-17 → 09-21)
+
+3차 전투지로 도주하는 적 분대를 **UGV 는 안 쏘고 이동형지휘소만 쏘게** 하는 연출 스위치. `SelectNearestEnemyTarget`
+순회(`RCWSFireControlComponent.cpp:449-460`)와 총성 조사 후보(`:828`)에서 두 플래그 중 하나라도 "제외"면 그 적을 건너뛴다:
+
+```
+if (bRespectEnemyTargetingExclusion)
+{
+    구 BP 적군:      UEnemyCombatComponent::IsTargetableByAlliesAndUGV()  == false → continue
+    SoldierLab 적군: UDetectableTargetComponent::IsTargetableByFriendlyForces() == false → continue   // 2026-09-17
+}
+```
+
+- **`bRespectEnemyTargetingExclusion` 은 인스턴스 기본 `false`** (`.h:685-690`) — 레벨의 UGV/트럭 둘 다 false 로 놓고
+  **런타임에 시나리오가 UGV 것만 true 로 켠다.** 트럭은 영영 false — 도망쳐 오는 분대와 싸우는 게 3차 전투지의 시나리오라
+  트럭까지 지키면 아무도 안 쏜다.
+- **켜는 곳 둘**(둘 다 `UScenarioStateSubsystem`, `ResolveUGVPawn` 으로 UGV 를 찾아 `FindComponentByClass<URCWSFireControlComponent>`):
+  구 이펙트 `ExcludeFleeingEnemiesFromAllyTargeting`(`ScenarioStateSubsystem.cpp:1502-1509`, 구 BP 병사 레벨 `kadex_test`) ·
+  **`IssueSquadOrder` 행의 `SetTargetable` + `bTargetable=false`**(`:1914-1928`, 2026-09-21 — SoldierLab 레벨 New_kadex_0811).
+  ⚠ 09-21 첫 New_kadex 실행에서 뒤의 것이 없어 브리지가 `bTargetableByFriendlyForces=false` 를 잘 써 줘도 UGV 가 도주
+  분대(대타 포함)를 계속 물었다 — `[RCWSFireControl] BP_UGV_0901_C_1: 타겟 BP_Soldier_Hostile_C_4 …` 가 그 증상.
+- 플래그의 출처(SoldierLab): 분대 배정 `FSoldierAssignment::bTargetableByOwnSideWeapons` → `USoldierLabBridgeSubsystem::SyncSoldiers`
+  가 매 틱 `SetTargetableByFriendlyForces` 로 복사(`SoldierLabBridgeSubsystem.cpp:200-201`). 같은 플래그를 SoldierLab **아군 보병**은
+  브리지 없이 `USoldierEngagementComponent::IsContactExcluded` 로 직접 읽는다(09-21) — RCWS 와 보병이 같은 명령 한 줄로 같은 적을
+  뺀다. 제외된 적은 탐지 목록(`DetectedTargets`)에는 **그대로 남는다**(HUD 박스는 보임) — 표적 선정에서만 빠진다.
+- ⚠ **스티키 표적(3.1절)은 제외를 안 본다** — 유지 조건은 "`DetectedTargets` 에 아직 있는가"뿐(`UpdateAutoAim`
+  `:584-613`, `bTargetDetectedNow` 는 액터·진영만 비교). 제외 순간 이미 물고 있던 적은 **시야를 1 s 넘게 잃을 때까지
+  계속 쏜다**, 그 뒤 새로 고를 때에야 제외가 먹는다. 구 이펙트 때부터 같은 틈(도주 병사가 곧 사선을 끊어 실무에선 짧다).
+  막으려면 `:613` 의 놓아주는 조건에 제외 검사 한 줄 → `soldier_ai_lab/OPEN_ITEMS.md` [W106].
+- **시나리오 재시작이 초기값(false)으로 되돌린다**(2026-09-22, `ResetForScenarioRestart` — 8.10절). 안 되돌리면 2회차부터
+  UGV 가 `SetTargetable false` 행 전에도 일부 적을 건너뛴다.
+- 관련: `level_new_kadex_0811/2026-09-21_soldierlab_migration_new_kadex_0811.md` 5절 · `soldier_ai_lab/squad/2026-09-21_break_contact_and_targeting_exclusion.md` 5절.
 
 ## 4. 탄도학
 
@@ -189,7 +287,23 @@ tan(θ) = (v² − √(v⁴ − g(gR² + 2dv²))) / (gR)
 
 표적이 없으면: **탐색 스윕**(`UpdateSearchSweep`, 8.2절)으로 대체 — 원래는 "조준 중"이라는
 별도 모드였다가, 8절에서 "자동 조준/자동 발사 모드가 표적 없을 때 취하는 폴백 동작"으로
-재정의됨.
+재정의됨. (2026-09-16부터는 스윕 전에 "마지막 위치 응시" 단계가 끼어든다 — 3.2절.)
+
+**조준점 — 부위 기반 (2026-09-16)** — 카메라가 겨누는 지점 `GetTargetAimWorldLocation`은 다음
+순서로 정해진다:
+
+1. `AimTargetBoneName`(2026-09-02, 엎드린 적 조준용)이 지정돼 있고 그 뼈가 있으면 그 위치 — 최우선.
+2. 탐지 컴포넌트가 이번 스캔에서 잰 부위별 가시성(`FDetectedTarget::Parts`, `detection_dev_guide.md`
+   3.4절) 중 **지금 보이는** 부위를 `AimPartPriority`(기본 `[Chest, Pelvis, Head]`) 순으로 고른다.
+   가슴이 먼저인 이유는 탄 퍼짐(13.1절) 대비 명중 확률이고, 머리는 다른 부위가 안 보일 때(머리만
+   내놓은 적)만 자연히 선택된다. 뼈 위치는 스캔 시점(최대 0.1초 묵음) 값이 아니라
+   `UTargetDetectionComponent::ResolvePartLocation`으로 **지금** 메시에서 다시 읽는다 — 움직이는 적의
+   리드 계산이 어긋나지 않게.
+3. 탐지 목록에 없거나(3.1절 유예 구간) 보이는 부위가 없으면 타겟 기억(3.2절)의 `LastAimPart` —
+   바운드 중심으로 튀면 유예 1초 동안 조준선이 출렁이고 락온 게이지가 정렬을 잃는다.
+4. 그것도 없으면 스켈레탈 메시 월드 바운드 중심(2026-09-02 동작), 메시가 없으면 액터 위치.
+
+슬루 자체는 `SlewSightTowardWorldPoint`로 분리돼 3.2절의 응시와 공유한다.
 
 ## 6. 조준점 UI (`UAimPointWidget` / `UpdateAimPointForUI`)
 
@@ -220,7 +334,7 @@ UWidget으로 감싸는" 패턴을 그대로 재사용. `RCWSViewImage`/`RCWSDet
 직접 구성):
 
 ```cpp
-CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);   // 2026-09-16까지는 QueryAndPhysics — 아래 참고
 CollisionComponent->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 CollisionComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
 CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
@@ -232,6 +346,14 @@ CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera,
 방지(정확한 시선 카메라 마운트 위치에 따라 필요할 수 있음). 범용적으로 설계해서 나중에
 적군 자체 사격 기믹에도 재사용 가능. `LaunchFrom` 시점에 `MoveIgnoreActors`에 발사
 차량을 추가해서 자기 자신과의 즉시 충돌도 방지.
+
+> **[2026-09-16] `QueryAndPhysics` → `QueryOnly`.** `MoveIgnoreActors`는 게임 스레드 스윕에만
+> 적용되고 물리 스레드 충돌 필터에는 반영되지 않는다. QueryAndPhysics였을 때 이 구체는 PT에
+> 속도 850m/s·무한질량 키네마틱 강체로도 존재해서, UGV 자기 탄(또는 그 도탄)이 차체 `Hull1`
+> 콜리전을 지나가면 GT는 무시하고 PT는 접촉을 만들어 **차체를 한 스텝에 튕겨 뒤집고 스핀**시켰다
+> (UGV_0901 교전 중 "팡 뒤집힘" 버그). 피격 판정(`OnComponentHit`→`OnHit`)은 스윕 결과만 쓰므로
+> QueryOnly에서도 동일 — 적→UGV/트럭→UGV/전 발사→적 피격 전부 유지. 상세는
+> `vehicle/ugv/2026-09-16_ugv_flip_spin_projectile_physics_body.md`.
 
 ### 7.2 데미지 — 표준 엔진 데미지 파이프라인 사용
 
@@ -562,6 +684,35 @@ Truck->RCWS->AddPanTiltInput(PanDeltaBase / ZoomScale, TiltDeltaBase / ZoomScale
 `CameraFOV/ZoomLevel` 공식을 쓰므로 동일하게 보정 — 세 타겟 전부 `DoCameraLook`의
 `switch` 안에서 각자 대상의 `GetZoomLevel()`로 나눔.
 
+### 8.10 시나리오 재시작 리셋 — `ResetForScenarioRestart` (2026-09-22)
+
+시나리오 재시작(적 전멸 → 확인창 → `UScenarioStateSubsystem::RequestScenarioRestart()`, 상세
+`level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md`)은 **레벨 리로드가 아니라
+인플레이스 리셋**이라, RCWS 를 가진 차량은 재스폰되지 않고 제자리에서 초기 상태로 되돌아간다
+(RTSP 인코더 세션이 컴포넌트에 살아 있어서). 계약은 `IScenarioResettable`
+(`UI/ScenarioResettable.h`, BlueprintNativeEvent `ResetForScenarioRestart`) — `AUGV0901Pawn` /
+`ATitanTruck` / `ADronePawn` 이 구현하고, 시나리오 서브시스템이 월드의 구현체를 전부 호출한다.
+RCWS 두 컴포넌트에는 각각 리셋 함수가 있다:
+
+| 함수 | 되돌리는 것 | 남기는 것 |
+|---|---|---|
+| `URCWSComponent::ResetForScenarioRestart` | 탄약 `AmmoMax` 리필, 마운트 원위치(`AddPanTiltInput` 델타), 줌·카메라 모드·발사 모드·장전 상태 → BeginPlay 때 찍은 초기값 | — |
+| `URCWSFireControlComponent::ResetForScenarioRestart` | 조작 모드 초기값(**`Remote`** — 데모 UGV 는 `UGVArriveZone1` 에서 다시 AutoFire 로 켜진다), 표적/스티키 표적/락온 게이지/타겟 기억(3.2)/총성 조사/배럴 스핀/발사 사이클, **`bRespectEnemyTargetingExclusion` → 초기값(false)**(3.3 — 안 되돌리면 2회차부터 UGV 가 일부 적을 영영 안 쏨), ARM 초기값 | **`ShotsFiredCount` 는 유지**(시나리오 `UGVFireWatch` 가 기준선을 다시 잡으므로 리셋 불필요) |
+
+호출 순서(UGV): `AUGVAIController::ResetForScenarioRestart` → 스폰 트랜스폼 텔레포트 + Chaos
+`ResetVehicleState` → `URCWSComponent` → `URCWSFireControlComponent`. 트럭은 RCWS 두 컴포넌트만.
+나는 탄은 `ARCWSProjectile::Park()` 로 풀에 주차된다(7.1). RCWS 에 새 런타임 상태(새 게이지·모드·표적
+캐시 등)를 추가하면 **이 두 함수에도 넣어야** 2회차 시나리오가 1회차와 같아진다.
+
+**(2026-09-23, 2-PC)** 리셋 호출은 GameState 멀티캐스트 `Multicast_ScenarioRestartApply` 로 **모든
+프로세스에서** 돌고, 각 프로세스는 **자기가 시뮬하는 것만** 되돌린다. RCWS 차량은 서버가 시뮬하므로
+`AUGV0901Pawn`/`ATitanTruck::ResetForScenarioRestart_Implementation` 맨 앞에 **`if (!HasAuthority()) return;`**
+이 있다(클라가 복제 액터를 로컬로 건드려 봐야 다음 복제에 덮인다). 예외는 드론 하나 —
+시뮬 주체가 클라일 수 있어 권한별로 나눠 리셋한다(`vehicle/drone/drone_flight_dev_guide.md` 15.2절).
+**코스메틱 투사체 주차(`ARCWSProjectile::Park`)는 반대로 프로세스마다 로컬로** 한다(풀이 프로세스별) —
+`Multicast_ScenarioRestartBegin` → `RunLocalRestartBegin`. 전제: 레벨 GameMode 가 titan 계열이어야
+이 멀티캐스트가 클라에 간다(`GM_SoldierLab` 오버라이드면 서버-로컬 폴백, 2-PC 에서만 깨짐).
+
 ## 9. 트러블슈팅 기록 (겪은 순서대로)
 
 ### 9.1 `bLoaded`/`bFireReady` 기본값이 `false`라 수동 사격이 아예 안 됨
@@ -787,6 +938,38 @@ if (UAudioComponent* AC = UGameplayStatics::SpawnSoundAtLocation(World, FireSoun
 `FalloffDistanceCm`(피격음) 둘 다 `EditAnywhere`로 튜닝 가능(C++ 기본 반경 1000cm, 페이드
 거리 150000cm=1.5km). `BP_UGV_Vehicle_new`는 발사음을 3000cm / 250000cm(2.5km)로 더 키워
 오버라이드해 놓은 상태 — 총성이 멀리까지 들리는 건 의도된 것.
+**2026-09-21 갱신**: `L_SoldierScenario`의 UGV·트럭 인스턴스는 발사음 폴오프를 250000 →
+**150000cm**(1.5km)로 내림(레벨 인스턴스 값, 사용자 저장).
+
+**2026-09-21 — 런타임 감쇠가 NaturalSound + LPF로 바뀜, 발사음 Concurrency 8 신설.**
+위 코드처럼 반경/폴오프 두 값만 넣으면 나머지는 엔진 기본값 = **Linear 폴오프 · LPF 없음**
+(`Attenuation.cpp:18`, `SoundAttenuation.cpp:18`)이라, 애셋 감쇠 `SA_Weapon`(NaturalSound
+-60dB + LPF)을 쓰는 소총 총성은 300m에서 먹먹해지는데 RCWS 발사음(리니어)은 89% 볼륨으로
+또렷하게 들리는 역전이 있었다. 지금은 파일별 static 헬퍼가 `FSoundAttenuationSettings`를
+채운다 — `RCWSFireControl_ConfigureRuntimeAttenuation`(`RCWSFireControlComponent.cpp`, 발사음),
+`RCWSProjectile_ConfigureRuntimeAttenuation`(`RCWSProjectile.cpp`, 휘즈·피격음),
+`SoldierProjectile_ConfigureRuntimeAttenuation`(`Source/SoldierLab/Weapons/SoldierProjectile.cpp`,
+SoldierLab 쪽 동일). 셋 다 `DistanceAlgorithm = NaturalSound`(-60dB) + `bAttenuateWithLPF`
+2m→50m 20kHz→500Hz(`SA_Weapon`과 같은 절대값 — 고주파 공기 흡수는 소리 크기와 무관하므로
+반경/폴오프가 달라도 LPF 곡선은 공유). 반경/폴오프 노브는 그대로 살아 있고 헤더 무변경.
+앞으로 런타임 감쇠를 새로 만들 일이 있으면 이 헬퍼 패턴을 따를 것.
+
+발사음에는 Concurrency도 생겼다: `RCWSFireControl_GetSharedFireSoundConcurrency()`가 돌려주는
+정적 공유 `USoundConcurrency`(AddToRoot) **Max 8 / StopOldest / Steal Release 0.05**를
+`SpawnSoundAtLocation`에 넘긴다. `UGV_Gunshot`이 2.07s인데 1200rpm이면 동시 41보이스가
+상한 없이 오디오 보이스 예산(`DefaultEngine.ini` `MaxChannels`, 09-21에 32 → 64)을 잠식했기
+때문. 같은 날 `BP_RCWSProjectile` 피격음도 1500/25000 → 1000/15000(~160m)으로 줄임.
+
+**음속 지연(09-21, PIE 검증 완료)**: 발사음(`RCWSFireControlComponent.cpp:1619`)과
+피격음(`RCWSProjectile.cpp:1075`)은 이제 `UGameplayStatics::SpawnSoundAtLocation` 직접 호출이
+아니라 `USoldierAudioLibrary::SpawnSoundAtLocationSpeedOfSound`(`Source/SoldierLab/Weapons/
+SoldierAudioLibrary`)로 나간다 — 가장 가까운 로컬 플레이어 카메라까지 거리 ÷ 음속만큼
+늦게(발마다 독립 타이머, 지연 중 보이스 0, 위치는 쏜 순간 고정) 스폰. cvar
+`SoldierLab.Audio.SpeedOfSoundCms`(기본 34300, 0이면 지연 끔). 휘즈는 귀 옆이라 지연 없음.
+람다는 오브젝트 강참조 없이 감쇠 설정을 값으로 들고 재생 시점에 재생성한다(PIE 월드 안
+오브젝트를 `TStrongObjectPtr`로 잡으면 PIE 종료 시 어설션 크래시 — 09-21에 1건 겪고 고침).
+배경과 소총 쪽 작업 전체는
+`sfx_vfx/2026-09-21_combat_audio_voice_budget_and_attenuation.md`(음속 지연은 §7b).
 
 단, **배럴 회전음(`UBarrelSpinAudioComponent`)은 이 값을 따라가지 않음**. 원래는 "같은
 무기에서 나는 소리"라는 이유로 위 발사음 기본값(1000/150000)을 복사해 썼는데, 그 결과

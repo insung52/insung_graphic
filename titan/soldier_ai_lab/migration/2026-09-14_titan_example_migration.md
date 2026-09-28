@@ -562,3 +562,56 @@ Source/SoldierLabEditor/ →  titan_example/Source/SoldierLabEditor/
   - [x] `CURRENT_STATE.md` 갱신 → "★ 2026-09-14 — `titan_example` 편입 완료" 절
 - **[W36] 관련 후속**: 4.3절이 "`GM_SoldierLab` 의 캐릭터 목록을 비웠다"고 적은 것은 **실제로 안 비워져 있었다** — `PawnClasses_Soft` 에 `[BP_SoldierCharacter, SandboxCharacter_CMC, SandboxCharacter_Mover]` 가 2026-09-15 까지 남아 있었고, GASP GM 은 `GetDefaultPawnClassForController` 오버라이드로 그 0번을 스폰한다(`CLAUDE.md` P126). 이관 폐포 절단 자체는 `AC_VisualOverrideManager` · `PC_Sandbox` 절단으로 이미 성립했으므로 용량 결과(3511 MB)는 그대로다. 사용자가 09-15 에 고침(방식 미확인 [C]). `OPEN_ITEMS.md` [W36] 정정 참고.
 - **[W34] 관련 후속**: "Mover 계열 5개는 끌 수 없다(GASP 초이서 2개가 `SandboxCharacter_Mover` 참조)" 에 더해, `/MoverExamples/Characters/Mannequins/Rigs/CR_Mannequin_Body` 가 에디터 기동마다 컴파일 에러를 낸다. `/Game` 쪽 참조는 `/Game/NewLevelSequence`([W38]) 하나. 처분은 **[Q48]** (미결정).
+
+---
+
+## 11. 정정 (2026-09-17) — ★ 세 번째 Config 누락: `DefaultGameplayTags.ini` [A]
+
+6.1절은 Config 에서 옮겨야 할 것으로 **콜리전 채널**만 적었다. 그 뒤 3b절이 **DDCvar**(데이터
+구동 콘솔 변수 27줄)를 빠뜨렸다고 정정했다. 세 번째가 나왔다 — **게임플레이 태그 선언 전체**다.
+
+**증상 (2026-09-17, 사용자 보고)**: `BP_Soldier_Friendly` 를 레벨에 처음 배치하면
+
+```
+Ensure condition failed: !IsValid()  [GameplayTagContainer.cpp:1250]
+MatchesTag called on an invalid gameplay tag SmartObject.ObjectType.Player,
+only registered tags can be used in containers
+Stack: ... UnrealEditor-StateTreeEditorModule.dll ...
+```
+
+**원인 [A]**: `titan_example/Config/` 에 **`DefaultGameplayTags.ini` 가 아예 없었다** — 즉 등록된
+태그가 0개다. 원본 `anim_test/SoldierLab/Config/DefaultGameplayTags.ini` 에는 **태그 39개 +
+리다이렉트 4개**가 선언돼 있고 그중 47~54행이 `SmartObject.ObjectType.{Bench,NPC,Player,
+QueSmartObject,...}` · `StateTree.SmartObject.*` 다. Migrate 는 Content 만 옮기므로 이 파일은
+따라오지 않는다(플러그인 · 채널 · DDCvar 와 같은 부류).
+
+**왜 배치할 때 터지나 (참조 사슬, `.uasset` 문자열 실측)**:
+
+```
+BP_Soldier_Friendly  → AC_SmartObjectAnimation      (GASP 컴포넌트, 태그 참조 4건)
+BP_SoldierCharacter  → AIC_Soldier → ST_Soldier_SmartObject   (GASP ST 복제본)
+태그 문자열을 가진 에셋: Blueprints/AI/StateTree/ST_{Player,NPC}_SandboxCharacter_SmartObject ·
+                         Blueprints/SmartObjects/{AC_SmartObjectAnimation, TasksAndConditions/STT_ClaimSlot} ·
+                         SoldierLab/AI/ST_Soldier_SmartObject
+```
+
+배치 → 그 사슬이 로드 → `StateTreeEditorModule` 이 트리를 컴파일·검증하며 태그 쿼리를 돌린다 →
+미등록 태그라 ensure. **크래시가 아니라 에디터 검증 단계의 ensure 이고 진행은 된다.**
+
+**실질 영향 [A]**: 그 태그 조건은 영원히 false 이므로 상속받은 스마트오브젝트 거동(벤치로 걸어가
+앉기)은 어차피 안 돈다 — `AIC_Soldier` 의 `StartLogic` 을 지워 둬서 ST 자체가 실행되지도 않는다
+(`IMPLEMENTED.md` 5.3). **전투 AI 에는 영향 없음.** 다만 같은 파일의 `Foley.*`(발소리 · 랙돌)
+태그도 전부 미등록이었으므로, 그쪽에서 조용히 꺼져 있던 것이 있을 수 있다 [C].
+
+**조치 (2026-09-17, 적용됨)**: 원본 ini 를 그대로 복사 → `titan_example/Config/DefaultGameplayTags.ini`
+(p4 add, 바이트 동일 확인, 읽기 전용 속성 해제). **게임플레이 태그는 기동 시 등록되므로 에디터
+재시작이 필요하다** — 재시작 후 사용자 확인 "해결".
+
+> **교훈 (P100 계열의 반복)**: Migrate 가 안 옮기는 Config 는 하나가 아니다. 지금까지 셋 —
+> **콜리전 채널**(6.1) · **DDCvar**(3b) · **게임플레이 태그**(여기). 공통점은 **셋 다 에러 없이
+> 조용히 틀리거나, 엉뚱한 모듈의 ensure 로만 드러난다**는 것이다. 다음에 프로젝트를 합칠 때는
+> `Config/*.ini` 를 **파일 단위로 diff** 해서 없는 파일부터 세는 것이 순서다.
+
+**남은 선택지 (미적용)**: 죽은 참조를 실제로 끊는 쪽 — `AIC_Soldier` 의 `ST_Soldier_SmartObject`
+참조 제거 + `BP_Soldier_Friendly` 의 `AC_SmartObjectAnimation` 컴포넌트 제거. 정리 세션의 몫이고,
+그때도 `Foley.*` 는 ini 에 남아야 한다.

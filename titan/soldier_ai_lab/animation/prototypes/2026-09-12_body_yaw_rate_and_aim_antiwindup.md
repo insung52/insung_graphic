@@ -495,3 +495,11 @@ pitch 표본 3장(−90 / 0 / +90)이 보간을 감당하지 못하는 것으로
 | [C-74] | `maxRotationError 90` ↔ `Enable_AO 70`에 이제 **`WeaponLowerAngleFull 65`가 추가로 묶였다.** 셋을 함께 재야 한다 |
 | [W6] | 계측·잔해 정리는 여전히 미완. 이번에 계측이 더 늘었다(`BodyErr` / `WpnLow` / `WpnTgt` / `AimGain`) |
 | — | `YawRate_Up 90` · `YawRate_Down 720`은 **PIE에서 눈으로 정한 값**이다. 실제 병사가 조준 자세로 낼 수 있는 각속도를 재서 정한 값이 아니다 |
+
+---
+
+## 19. 정정 (2026-09-18) — 5.3절의 "보장되는 순서"는 보장이 아니었다
+
+5.3절의 `CharacterMovement.AddTickPrerequisiteActor(self)` 는 엔진이 CMC 에 기본으로 거는 **반대 방향** 엣지(`UMovementComponent::bTickBeforeOwner = true` → 액터 틱이 CMC 뒤, `MovementComponent.cpp:186-188`)와 **순환**을 만들었다. `FTickTaskManager` 는 순환 엣지를 **매 프레임 버리고** `LogTick: … CharMoveComp … would form a cycle` 을 찍는다(`TickTaskManager.cpp:2658`) — 시험 레벨(병사 35명)에서 초당 600줄. 경고의 주어가 CMC 라 버려진 쪽은 **우리 엣지**로 보이고, 그러면 실제 순서는 CMC → 우리 Tick, 즉 5절이 진단한 "조용히 무시" 상태 그대로다. 5.3절이 기록한 `BodyErr` 최대 75 와는 양립하지 않는다 — 어느 쪽이 맞는지는 5.1·5.2절 서명 시험을 **다시** 해야 안다.
+
+수정(2026-09-18): BP 노드는 두고 `CharMoveComp` **`Tick Before Owner = false`**. 경고는 사라졌고 서명 시험은 대기 → **[C-146]**. 전문: `2026-09-18_tick_cycle_warning_charmovecomp.md`.

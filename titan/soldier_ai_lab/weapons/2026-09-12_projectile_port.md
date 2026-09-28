@@ -161,7 +161,7 @@ CDO 배선:
 | 적 명중 | `NS_Blood` + `MS_hit_rifle_enemy` |
 | 혈흔 데칼 | `MI_Blood` (적 + 지면 혈흔 양쪽) |
 | 휘파람 | `MS_bullet_whizz` |
-| `surfaceImpactEffects` | **5행** — Wood/Hard/Dirt/Metal/Glass. 행마다 이펙트 + 사운드 + `M_Decal_Bullet` + `MS_Ricochet` |
+| `surfaceImpactEffects` | ~~**5행** — Wood/Hard/Dirt/Metal/Glass. 행마다 이펙트 + 사운드 + `M_Decal_Bullet` + `MS_Ricochet`~~ ⚠ **09-21 정정**: 디스크 CDO 확인 시 5행이 전부 `Dirt/None` 빈 껍데기였다(왜 비어 있었는지는 미확인). titan 구 BP 값으로 다시 채움 → `sfx_vfx/2026-09-21_combat_audio_voice_budget_and_attenuation.md` §6 |
 
 ### 6.2 `BP_AR4Rifle` — 순수 블루프린트
 

@@ -1,5 +1,12 @@
 # 3단계 전투 시나리오 — 구현 현황 / 설계 (2026-08-23)
 
+> ⚠️ **[2026-09-21] New_kadex_0811 의 적군/아군은 이제 SoldierLab 병사(`BP_Soldier_Hostile`/`BP_Soldier_Friendly`)이고
+> 적/아군 행동 행은 전부 `IssueSquadOrder` 이펙트다.** 아래 본문의 `EnemyCombatComponent`/`AllyFormationComponent`
+> 흐름(`CombatZones` 마커 · `LastStandZoneIndex` · `BeginEnemyEngage`/`BeginEnemyFleeZone2/3` · `RetargetEnemies*` ·
+> `ExcludeFleeingEnemiesFromAllyTargeting` · `HoldFleeingEnemyFire` · `BroadcastAmbush`)은 **구 BP 병사를 쓰는 다른 레벨
+> (`kadex_test`)에만 해당**한다. New_kadex_0811 의 현재 DT 는 `DT_ScenarioSteps_ThreeStage_SoldierLab`(26행) —
+> `2026-09-21_soldierlab_migration_new_kadex_0811.md`. SoldierLab 시대의 행·필드 목록은 `scenario_authoring_guide.md` 2.6절.
+
 저작/세팅 실무 가이드: `scenario_authoring_guide.md`
 요구사항 원본: `C:\working\insung_grapic\titan\newlevel\scenario.md`
 (1차 전투지 = UGV 단독 교전 → 도주 → 2차 = UGV+아군 → 도주 → 3차 = 이동형지휘소 RCWS)

@@ -43,7 +43,16 @@
 <div class="page">
 
 <h1>병사 애니메이션 가이드</h1>
-<p class="sub">2026-09-14 · 새 병사 시스템에서 "어떤 기능이 어떤 애니메이션 파일을 쓰는가", "무엇을 고쳐도 되고 무엇은 고쳐도 안 바뀌는가", "어떻게 실행해 보는가"</p>
+<p class="sub">2026-09-14 작성 · <b>2026-09-17 개정</b> · 새 병사 시스템에서 "어떤 기능이 어떤 애니메이션 파일을 쓰는가", "무엇을 고쳐도 되고 무엇은 고쳐도 안 바뀌는가", "어떻게 실행해 보는가"</p>
+
+<div class="box bad"><b>2026-09-17 개정 — 파일 경로가 전부 바뀌었습니다.</b> 아군과 적군이 <b>서로 다른 애니메이션 세트</b>를 쓰게 되어, 클립 247개가 두 벌로 복제됐습니다.
+<ul>
+  <li><b>적군</b> <code>/Game/SoldierLab/Animations_Enemy/…</code> — 파일 이름 앞에 <code>Enemy_</code></li>
+  <li><b>아군</b> <code>/Game/SoldierLab/Animations_Ally/…</code> — 파일 이름 앞에 <code>ALLY_</code></li>
+  <li>옛 <code>/Game/SoldierLab/Animations/</code> · <code>/Game/SoldierLab/PoseSearch/</code> 는 <b>없어졌습니다.</b></li>
+</ul>
+<b>★ 작업·검수는 적군 세트(<code>Animations_Enemy</code> · <code>Enemy_</code>)로 해 주세요.</b> 아군 세트는 지금 같은 내용의 복제본이고, 적군 쪽이 확정된 뒤 그것을 아군 체형에 맞춰 다시 맞출 예정입니다. <b>이 문서의 모든 경로는 적군 세트 기준</b>으로 적혀 있습니다 — 아군을 보시려면 <code>Animations_Enemy</code>→<code>Animations_Ally</code>, <code>Enemy_</code>→<code>ALLY_</code> 로 바꿔 읽으시면 됩니다.
+그 밖에 바뀐 것: 피격/사망이 실제로 재생되기 시작했고(2.9절 추가), 5절 콘솔 명령 하나가 틀려 있던 것을 고쳤습니다.</div>
 
 <div class="toc">
   <div><a href="#s0">0. 한눈에</a></div>
@@ -61,7 +70,8 @@
 <ul>
   <li>병사는 <b>모션 매칭</b>으로 움직입니다. 이동 클립 61개 중에서 매 순간 가장 잘 맞는 프레임을 골라 이어 붙입니다. 그래서 <b>"이 상황엔 이 클립"이 고정돼 있지 않고</b>, 클립 하나를 고치면 그 클립이 골라지는 순간의 모습이 바뀝니다.</li>
   <li>조준·총내림·기울이기·맹목사격·앉기 같은 <b>자세</b>는 이동 클립 <b>위에 얹힙니다.</b> 얹히는 재료 중 파일인 것(고칠 수 있음)과 코드가 본을 직접 움직이는 것(고쳐도 안 바뀜)을 2절·3절에서 기능마다 나눠 적었습니다.</li>
-  <li>모든 클립은 <code>/Game/SoldierLab/Animations/</code> 아래, 스켈레톤은 <code>SK_UEFN_Mannequin</code>입니다. <b>이름·경로를 바꾸지 말고 리임포트로 덮어써 주세요.</b></li>
+  <li>클립은 <b>진영별로 두 벌</b>입니다 — 적군 <code>/Game/SoldierLab/Animations_Enemy/Animations/</code>(<code>Enemy_</code>) · 아군 <code>/Game/SoldierLab/Animations_Ally/Animations/</code>(<code>ALLY_</code>). <b>스켈레톤은 두 세트가 같은 하나</b>(<code>SK_UEFN_Mannequin</code>)를 씁니다. <b>이름·경로를 바꾸지 말고 리임포트로 덮어써 주세요.</b></li>
+  <li>★ <b>검수·수정의 기준은 적군 세트</b>입니다. 아군 세트는 지금 같은 내용의 복제본이고 나중에 적군 기준에 맞춰 재피팅합니다 — <b>지금 아군 파일을 고치셔도 그 작업은 나중에 덮어써집니다.</b></li>
   <li>테스트는 <b><code>/Game/SoldierLab/Levels/L_SoldierTest</code></b> 레벨에서 합니다 (→ 1절).</li>
 </ul>
 
@@ -124,17 +134,17 @@
 <h3>2.1 서서 이동 — 걷기 · 조깅 <span class="tag ok">고칠 수 있음</span></h3>
 <div class="wrap"><table>
 <tr><th>상황</th><th>파일 (전체 경로)</th><th>수</th></tr>
-<tr><td>제자리 (견착)</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_ADS</code></td><td class="n">1</td></tr>
-<tr><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_Hipfire</code><br><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_IdleBreak_Fidget</code><br><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_IdleBreak_Scan</code></td><td class="n">3</td></tr>
-<tr><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_TurnLeft_90</code> · <code>…/MM_Rifle_TurnLeft_180</code><br><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_TurnRight_90</code> · <code>…/MM_Rifle_TurnRight_180</code></td><td class="n">4</td></tr>
-<tr><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Walk_Fwd</code> · <code>…_Bwd</code> · <code>…_Left</code> · <code>…_Right</code></td><td class="n">4</td></tr>
-<tr><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Walk_Fwd_Start</code> · <code>…_Bwd_Start</code> · <code>…_Left_Start</code> · <code>…_Right_Start</code></td><td class="n">4</td></tr>
-<tr><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Walk_Fwd_Stop</code> · <code>…_Bwd_Stop</code> · <code>…_Left_Stop</code> · <code>…_Right_Stop</code></td><td class="n">4</td></tr>
-<tr><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Walk_Fwd_Pivot</code> · <code>…_Bwd_Pivot</code> · <code>…_Left_Pivot</code> · <code>…_Right_Pivot</code></td><td class="n">4</td></tr>
-<tr><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Jog_Fwd</code> · <code>…_Bwd</code> · <code>…_Left</code> · <code>…_Right</code></td><td class="n">4</td></tr>
-<tr><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Jog_Fwd_Start</code> · <code>…_Bwd_Start</code> · <code>…_Left_Start</code> · <code>…_Right_Start</code></td><td class="n">4</td></tr>
-<tr><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Jog_Fwd_Stop</code> · <code>…_Bwd_Stop</code> · <code>…_Left_Stop</code> · <code>…_Right_Stop</code></td><td class="n">4</td></tr>
-<tr><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Jog_Fwd_Pivot</code> · <code>…_Bwd_Pivot</code> · <code>…_Left_Pivot</code> · <code>…_Right_Pivot</code></td><td class="n">4</td></tr>
+<tr><td>제자리 (견착)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_ADS</code></td><td class="n">1</td></tr>
+<tr><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_Hipfire</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_IdleBreak_Fidget</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_IdleBreak_Scan</code></td><td class="n">3</td></tr>
+<tr><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_TurnLeft_90</code> · <code>…/Enemy_MM_Rifle_TurnLeft_180</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_TurnRight_90</code> · <code>…/Enemy_MM_Rifle_TurnRight_180</code></td><td class="n">4</td></tr>
+<tr><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Walk_Fwd</code> · <code>…_Bwd</code> · <code>…_Left</code> · <code>…_Right</code></td><td class="n">4</td></tr>
+<tr><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Walk_Fwd_Start</code> · <code>…_Bwd_Start</code> · <code>…_Left_Start</code> · <code>…_Right_Start</code></td><td class="n">4</td></tr>
+<tr><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Walk_Fwd_Stop</code> · <code>…_Bwd_Stop</code> · <code>…_Left_Stop</code> · <code>…_Right_Stop</code></td><td class="n">4</td></tr>
+<tr><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Walk_Fwd_Pivot</code> · <code>…_Bwd_Pivot</code> · <code>…_Left_Pivot</code> · <code>…_Right_Pivot</code></td><td class="n">4</td></tr>
+<tr><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Jog_Fwd</code> · <code>…_Bwd</code> · <code>…_Left</code> · <code>…_Right</code></td><td class="n">4</td></tr>
+<tr><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Jog_Fwd_Start</code> · <code>…_Bwd_Start</code> · <code>…_Left_Start</code> · <code>…_Right_Start</code></td><td class="n">4</td></tr>
+<tr><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Jog_Fwd_Stop</code> · <code>…_Bwd_Stop</code> · <code>…_Left_Stop</code> · <code>…_Right_Stop</code></td><td class="n">4</td></tr>
+<tr><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Jog_Fwd_Pivot</code> · <code>…_Bwd_Pivot</code> · <code>…_Left_Pivot</code> · <code>…_Right_Pivot</code></td><td class="n">4</td></tr>
 </table></div>
 <ul>
   <li>대각선 이동 클립은 <b>없습니다.</b> 4방향 클립을 코드가 비틀어(워핑) 만듭니다 — 대각선에서 발이 가끔 꼬이는 원인입니다.</li>
@@ -145,12 +155,12 @@
 <h3>2.2 앉아서 이동 <span class="tag ok">고칠 수 있음</span></h3>
 <div class="wrap"><table>
 <tr><th>상황</th><th>파일 (전체 경로)</th><th>수</th></tr>
-<tr><td>앉은 제자리</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Crouch_Idle</code></td><td class="n">1</td></tr>
-<tr><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_Crouch_TurnLeft_90</code> · <code>…_TurnLeft_180</code><br><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_Crouch_TurnRight_90</code> · <code>…_TurnRight_180</code></td><td class="n">4</td></tr>
-<tr><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Crouch_Walk_Fwd</code> · <code>…_Bwd</code> · <code>…_Left</code> · <code>…_Right</code></td><td class="n">4</td></tr>
-<tr><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Crouch_Walk_Fwd_Start</code> · <code>…_Bwd_Start</code> · <code>…_Left_Start</code> · <code>…_Right_Start</code></td><td class="n">4</td></tr>
-<tr><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Crouch_Walk_Fwd_Stop</code> · <code>…_Bwd_Stop</code> · <code>…_Left_Stop</code> · <code>…_Right_Stop</code></td><td class="n">4</td></tr>
-<tr><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Crouch_Walk_Fwd_Pivot</code> · <code>…_Bwd_Pivot</code> · <code>…_Left_Pivot</code> · <code>…_Right_Pivot</code></td><td class="n">4</td></tr>
+<tr><td>앉은 제자리</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Crouch_Idle</code></td><td class="n">1</td></tr>
+<tr><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_Crouch_TurnLeft_90</code> · <code>…_TurnLeft_180</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_Crouch_TurnRight_90</code> · <code>…_TurnRight_180</code></td><td class="n">4</td></tr>
+<tr><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Crouch_Walk_Fwd</code> · <code>…_Bwd</code> · <code>…_Left</code> · <code>…_Right</code></td><td class="n">4</td></tr>
+<tr><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Crouch_Walk_Fwd_Start</code> · <code>…_Bwd_Start</code> · <code>…_Left_Start</code> · <code>…_Right_Start</code></td><td class="n">4</td></tr>
+<tr><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Crouch_Walk_Fwd_Stop</code> · <code>…_Bwd_Stop</code> · <code>…_Left_Stop</code> · <code>…_Right_Stop</code></td><td class="n">4</td></tr>
+<tr><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Crouch_Walk_Fwd_Pivot</code> · <code>…_Bwd_Pivot</code> · <code>…_Left_Pivot</code> · <code>…_Right_Pivot</code></td><td class="n">4</td></tr>
 </table></div>
 <ul>
   <li>앉아서 뛰는 클립은 <b>없습니다.</b> 앉으면 속도가 걷기로 묶입니다.</li>
@@ -160,8 +170,8 @@
 <h3>2.3 조준 (견착) <span class="tag ok">고칠 수 있음</span></h3>
 <div class="wrap"><table>
 <tr><th>재료</th><th>파일 (전체 경로)</th><th>묶는 에셋 · 기준</th></tr>
-<tr><td>서서 조준 방향 15장</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_CC</code><br><code>…/MM_Rifle_Idle_ADS_AO_CU</code> · <code>…_CD</code> · <code>…_LC</code> · <code>…_LU</code> · <code>…_LD</code> · <code>…_RC</code> · <code>…_RU</code> · <code>…_RD</code><br><code>…/MM_Rifle_Idle_ADS_AO_LBC</code> · <code>…_LBU</code> · <code>…_LBD</code> · <code>…_RBC</code> · <code>…_RBU</code> · <code>…_RBD</code></td><td>묶음 <code>/Game/SoldierLab/Animations/Rifle/AO_Rifle_ADS</code><br>기준 <code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_ADS</code> 프레임 0</td></tr>
-<tr><td>앉아 조준 방향 15장</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_CC</code><br><code>…/MM_Rifle_Crouch_Idle_AO_CU</code> · <code>…_CD</code> · <code>…_LC</code> · <code>…_LU</code> · <code>…_LD</code> · <code>…_RC</code> · <code>…_RU</code> · <code>…_RD</code><br><code>…/MM_Rifle_Crouch_Idle_AO_LBC</code> · <code>…_LBU</code> · <code>…_LBD</code> · <code>…_RBC</code> · <code>…_RBU</code> · <code>…_RBD</code></td><td>묶음 <code>/Game/SoldierLab/Animations/Rifle/AO_Rifle_Crouch</code><br>기준 <code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Crouch_Idle</code> 프레임 0</td></tr>
+<tr><td>서서 조준 방향 15장</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_CC</code><br><code>…/Enemy_MM_Rifle_Idle_ADS_AO_CU</code> · <code>…_CD</code> · <code>…_LC</code> · <code>…_LU</code> · <code>…_LD</code> · <code>…_RC</code> · <code>…_RU</code> · <code>…_RD</code><br><code>…/Enemy_MM_Rifle_Idle_ADS_AO_LBC</code> · <code>…_LBU</code> · <code>…_LBD</code> · <code>…_RBC</code> · <code>…_RBU</code> · <code>…_RBD</code></td><td>묶음 <code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Enemy_AO_Rifle_ADS</code><br>기준 <code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_ADS</code> 프레임 0</td></tr>
+<tr><td>앉아 조준 방향 15장</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_CC</code><br><code>…/Enemy_MM_Rifle_Crouch_Idle_AO_CU</code> · <code>…_CD</code> · <code>…_LC</code> · <code>…_LU</code> · <code>…_LD</code> · <code>…_RC</code> · <code>…_RU</code> · <code>…_RD</code><br><code>…/Enemy_MM_Rifle_Crouch_Idle_AO_LBC</code> · <code>…_LBU</code> · <code>…_LBD</code> · <code>…_RBC</code> · <code>…_RBU</code> · <code>…_RBD</code></td><td>묶음 <code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Enemy_AO_Rifle_Crouch</code><br>기준 <code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Crouch_Idle</code> 프레임 0</td></tr>
 </table></div>
 <ul>
   <li>이름: C / L / R / LB / RB = 좌우 0 / −90 / +90 / −180 / +180°, C / U / D = 상하 0 / 위 / 아래.</li>
@@ -173,7 +183,7 @@
 <p>전용 클립이 <b>없습니다.</b> 두 가지의 합성입니다:</p>
 <div class="wrap"><table>
 <tr><th>상황</th><th>무엇이 보이나</th><th>고칠 수 있는 파일</th></tr>
-<tr><td>제자리</td><td><code>MM_Rifle_Idle_Hipfire</code>(+IdleBreak 2장) 위에 "정면·완전 아래" 조준 델타를 얹음</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_Hipfire</code><br><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_IdleBreak_Fidget</code><br><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_IdleBreak_Scan</code><br><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_Hipfire_AO_CD</code> (델타 끝)<br><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_Hipfire_AO_CC</code> (델타 기준)</td></tr>
+<tr><td>제자리</td><td><code>MM_Rifle_Idle_Hipfire</code>(+IdleBreak 2장) 위에 "정면·완전 아래" 조준 델타를 얹음</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_Hipfire</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_IdleBreak_Fidget</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_IdleBreak_Scan</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_Hipfire_AO_CD</code> (델타 끝)<br><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_Hipfire_AO_CC</code> (델타 기준)</td></tr>
 <tr><td>이동 중</td><td>견착 이동 클립(2.1) 위에 <b>같은 델타</b>를 얹음</td><td>델타 두 장(<code>…_AO_CD</code> / <code>…_AO_CC</code>)만. 이동 클립 자체를 총내림용으로 고치면 견착 이동이 같이 바뀝니다</td></tr>
 </table></div>
 <ul>
@@ -186,9 +196,9 @@
 <h3>2.5 맹목사격 (블라인드 파이어) <span class="tag ok">고칠 수 있음</span></h3>
 <div class="wrap"><table>
 <tr><th>포즈</th><th>파일 (전체 경로)</th><th>기준</th></tr>
-<tr><td>왼쪽으로 총 내밀기</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_L</code></td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_ADS</code> 프레임 0</td></tr>
-<tr><td>오른쪽</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_R</code></td><td>동</td></tr>
-<tr><td>위로 (담 너머)</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_U</code></td><td>동</td></tr>
+<tr><td>왼쪽으로 총 내밀기</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_BlindFire_L</code></td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_ADS</code> 프레임 0</td></tr>
+<tr><td>오른쪽</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_BlindFire_R</code></td><td>동</td></tr>
+<tr><td>위로 (담 너머)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_BlindFire_U</code></td><td>동</td></tr>
 </table></div>
 <ul>
   <li>150프레임짜리 파일이지만 <b>프레임 0만 씁니다.</b> 프레임 0에만 키를 찍어 주세요.</li>
@@ -199,10 +209,10 @@
 <h3>2.6 사격 · 재장전 <span class="tag ok">고칠 수 있음</span></h3>
 <div class="wrap"><table>
 <tr><th>동작</th><th>몽타주</th><th>클립 (전체 경로)</th><th>비고</th></tr>
-<tr><td>사격 (반동)</td><td><code>/Game/SoldierLab/Animations/Actions/AM_MM_Rifle_Fire</code></td><td><code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Fire</code> (애디티브)<br>미리보기 기준 <code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Idle_Hipfire</code></td><td>탄이 실제로 나갈 때만 재생</td></tr>
-<tr><td>재장전</td><td><code>/Game/SoldierLab/Animations/Actions/AM_MM_Rifle_Reload</code></td><td><code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Reload</code><br><code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Reload_Additive</code></td><td>상체만. 재생 중 조준 오프셋이 꺼집니다</td></tr>
+<tr><td>사격 (반동)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_AM_MM_Rifle_Fire</code></td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Fire</code> (애디티브)<br>미리보기 기준 <code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Idle_Hipfire</code></td><td>탄이 실제로 나갈 때만 재생</td></tr>
+<tr><td>재장전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_AM_MM_Rifle_Reload</code></td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Reload</code><br><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Reload_Additive</code></td><td>상체만. 재생 중 조준 오프셋이 꺼집니다</td></tr>
 </table></div>
-<div class="box warn">⚠ <code>/Game/SoldierLab/Animations/<b>Actions</b>/MM_Rifle_Idle_ADS</code> · <code>…/<b>Actions</b>/MM_Rifle_Idle_Hipfire</code>는 <code>…/<b>Rifle/Idles</b>/</code>의 같은 이름과 <b>다른 파일</b>입니다(사격 몽타주의 미리보기 기준용). 병사가 실제로 서 있을 때 재생되는 것은 <code>Rifle/Idles/</code> 쪽입니다. 헷갈리지 않게 주의해 주세요.</div>
+<div class="box warn">⚠ <code>…/<b>Actions</b>/Enemy_MM_Rifle_Idle_ADS</code> · <code>…/<b>Actions</b>/Enemy_MM_Rifle_Idle_Hipfire</code>는 <code>…/<b>Rifle/Idles</b>/</code>의 같은 이름과 <b>다른 파일</b>입니다(사격 몽타주의 미리보기 기준용). 병사가 실제로 서 있을 때 재생되는 것은 <code>Rifle/Idles/</code> 쪽입니다. 헷갈리지 않게 주의해 주세요.</div>
 
 <h3>2.7 좌우 기울이기 (린) <span class="tag no">파일 없음</span></h3>
 <p>코드가 척추 5마디를 직접 기울입니다. 이동 중 몸이 자연스럽게 기우는 것(뱅킹)은 별도 파일이고 기본 제공 에셋이라 건드리지 않습니다:</p>
@@ -214,14 +224,24 @@
 
 <h3>2.8 반입만 되고 아직 안 쓰는 것 <span class="tag no">고쳐도 화면에 안 나옴</span></h3>
 <ul>
-  <li><code>/Game/SoldierLab/Animations/Actions/</code> 안의 <b>부록에 없는 전부</b> — 피격 13장(<code>MM_HitReact_*</code>) · 사망 6장(<code>MM_Death_*</code>) · 대시(<code>MM_Dash_*</code>) · 장착/해제 · 근접 · 수류탄 · 권총/샷건 계열과 그 몽타주(<code>AM_MM_*</code>)</li>
-  <li><code>/Game/SoldierLab/Animations/Rifle/_Extra/</code> 12장 전부 (점프 · 앉기 전환 · 린 클립)</li>
-  <li><code>/Game/SoldierLab/Animations/Rifle/AO_Rifle_Aim</code></li>
-  <li><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_LowReady</code> · <code>…/MM_Rifle_Crouch_OverridePose</code> · <code>…/MM_Rifle_Hipfire_OverridePose</code></li>
-  <li><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_Hipfire_AO_*</code> 중 <code>_CD</code> · <code>_CC</code>를 뺀 나머지 13장</li>
-  <li><code>/Game/SoldierLab/Animations/AO_Rifle_Stand_Additive</code> · <code>BS_Rifle_AO_Stand_Test</code> · <code>Rifle_Aiming_Idle_Anim</code> · <code>Turning_Right_90_Degrees_Anim</code> · <code>Walking_Anim</code> (초기 실험 잔재)</li>
+  <li><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/</code> 안의 <b>부록에 없는 전부</b> — 대시(<code>Enemy_MM_Dash_*</code>) · 장착/해제 · 근접 · 수류탄 · 권총/샷건 계열과 그 몽타주(<code>Enemy_AM_MM_*</code>). <b>피격 13장(<code>Enemy_MM_HitReact_*</code>)은 2026-09-15에 배선됐고 지금 게임에서 재생됩니다</b>(→ 2.9절). 사망 6장(<code>Enemy_MM_Death_*</code>)은 배선돼 있으나 <b>현재 꺼져 있습니다</b>(2.9절).</li>
+  <li><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/_Extra/</code> 12장 전부 (점프 · 앉기 전환 · 린 클립)</li>
+  <li><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Enemy_AO_Rifle_Aim</code></li>
+  <li><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_LowReady</code> · <code>…/Enemy_MM_Rifle_Crouch_OverridePose</code> · <code>…/Enemy_MM_Rifle_Hipfire_OverridePose</code></li>
+  <li><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_Hipfire_AO_*</code> 중 <code>_CD</code> · <code>_CC</code>를 뺀 나머지 13장</li>
+  <li><code>/Game/SoldierLab/Animations_Enemy/Animations/Enemy_AO_Rifle_Stand_Additive</code> · <code>Enemy_BS_Rifle_AO_Stand_Test</code> · <code>Enemy_Rifle_Aiming_Idle_Anim</code> · <code>Enemy_Turning_Right_90_Degrees_Anim</code> · <code>Enemy_Walking_Anim</code> (초기 실험 잔재)</li>
 </ul>
-<p>피격/사망은 곧 붙일 예정이라 그때 목록을 갱신하겠습니다.</p>
+<h3>2.9 피격 · 사망 <span class="tag">2026-09-17 추가</span></h3>
+<div class="wrap"><table>
+<tr><th>동작</th><th>몽타주 (전체 경로)</th><th>상태</th></tr>
+<tr><td>피격 반응 13장</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_AM_MM_HitReact_*</code><br><span class="small">방향 4(앞/뒤/좌/우) × 세기 3(Lgt/Med/Hvy)</span></td><td><span class="tag ok">재생됩니다</span> 상체 애디티브라 <b>걷는 중 맞으면 다리는 계속 걷습니다</b></td></tr>
+<tr><td>사망 6장</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_AM_MM_Death_*</code></td><td><span class="tag no">지금은 꺼져 있습니다</span> 사망은 <b>물리(래그돌)만</b>으로 처리 중</td></tr>
+</table></div>
+<ul>
+  <li>어느 클립이 나오는지는 <b>탄이 날아온 방향</b>과 <b>데미지</b>가 정합니다(머리·목이 크게, 팔이 작게).</li>
+  <li>⚠ 피격 클립에 <b>다리·골반 움직임을 넣지 말아 주세요</b> — 얹히는 방식이라 걷는 중에 발이 미끄러집니다.</li>
+  <li>사망 몽타주를 껀 이유: 몽타주로 눕힌 뒤 물리가 <b>한 번 더</b> 눕혀서 두 번 넘어졌습니다. 나중에 다시 켤 수 있으므로 <b>파일은 그대로 두시면 됩니다.</b> 그때는 클립의 <b>앞부분 0.25초</b>만 쓰이게 됩니다.</li>
+</ul>
 
 <!-- ============================================================ -->
 <h2 id="s3">3. 파일을 고쳐도 안 바뀌는 것 — 코드가 본을 직접 움직이는 층</h2>
@@ -250,9 +270,11 @@
   <li>스켈레톤(<code>SK_UEFN_Mannequin</code>)에 본을 추가하지 않습니다.</li>
 </ol>
 
-<h3>4.1 아군/적군 외형으로 작업하기</h3>
+<h3>4.1 아군/적군 외형으로 작업하기 <span class="tag">2026-09-17 개정</span></h3>
+<div class="box ok"><b>★ 기준은 적군입니다.</b> 적군(<code>Animations_Enemy</code> · <code>Enemy_</code>) 세트를 <code>new_enemy_T</code> 외형으로 맞춰 주시면 됩니다. 아군 세트(<code>Animations_Ally</code> · <code>ALLY_</code>)는 같은 내용의 복제본이고, 적군이 확정된 뒤 저희가 아군 체형(<code>soldier_T</code>)에 맞춰 다시 맞춥니다. <b>같은 작업을 두 벌 하실 필요가 없습니다.</b></div>
 <ul>
-  <li>애니메이션 파일의 프리뷰 메시가 지금은 전부 마네킹인데, 이건 <b>에디터 표시용</b>일 뿐 게임에 영향이 없습니다. 아군(<code>soldier_T</code>)·적군(<code>new_enemy_T</code>) 메시가 같은 스켈레톤을 쓰므로 애니메이션 에디터의 <b>Preview Scene Settings → Preview Mesh</b>에서 바꿔 놓고 보셔도 됩니다.</li>
+  <li><b>적군 세트의 프리뷰 메시는 이미 <code>new_enemy_T</code>로 지정해 두었습니다</b>(227개 일괄). 파일을 열면 적군 몸으로 보입니다. 이건 <b>에디터 표시용</b>일 뿐 게임에 영향이 없습니다.</li>
+  <li>⚠ <b>Preview Scene Settings에서 메시만 바꾸면 총이 안 보입니다.</b> 애님 에디터의 부착물은 <b>에셋에 지정된 Preview Mesh</b> 기준으로 한 번만 읽히기 때문입니다. 다른 몸으로 보셔야 하면 그 에셋의 Preview Mesh 자체를 바꾸고 <b>에디터를 다시 여세요.</b> 총은 Skeleton Tree의 소켓 <code>weapon_r</code>에 <b>Add Preview Asset</b>으로 붙입니다(런타임과 같은 위치).</li>
   <li>FBX로 내보내 외부 툴에서 작업하실 때도 마찬가지입니다 — 내보낼 때 <b>Export Preview Mesh</b>를 켜면 아군/적군 몸이 같이 나가고, 다시 들여올 땐 원래 파일에 <b>Reimport</b>(스켈레톤 <code>SK_UEFN_Mannequin</code> 유지)로 덮어쓰면 됩니다. 본 이름·계층을 바꾸지 않는 것만 지켜 주세요.</li>
   <li>아군과 적군은 마네킹보다 키가 크고 비율이 조금 다릅니다. 두 외형에서 다르게 보이는 부분이 있으면 알려 주세요 — 어느 쪽 기준으로 맞출지 같이 정하겠습니다.</li>
 </ul>
@@ -262,115 +284,116 @@
 <div class="wrap"><table>
 <tr><th>명령</th><th>무엇</th></tr>
 <tr><td><code>slomo 0.1</code></td><td>전환 순간(팝)을 눈으로 보려면</td></tr>
-<tr><td><code>a.AnimNode.MotionMatching.DebugDrawInfoVerbose 1</code></td><td>지금 어느 클립·프레임이 골라졌는지</td></tr>
+<tr><td><code>a.AnimNode.MotionMatching.DebugDrawInfo 1</code></td><td>지금 어느 클립·프레임이 골라졌는지. <b>2026-09-17 정정</b> — 앞서 안내드린 <code>…DebugDrawInfoVerbose 1</code>은 <b>이것만으로는 아무것도 안 나옵니다</b>(그쪽은 상세도 옵션이고 이미 켜져 있습니다). 더 자세히 보시려면 두 개를 <b>같이</b> 켜세요</td></tr>
 <tr><td><code>SoldierLab.Debug.Axes 1</code></td><td>축 값(기울이기·맹목사격·앉기·조준 보정) HUD. 관전 중이면 <code>SoldierLab.Debug.Axes.All 1</code>도</td></tr>
 </table></div>
 
 <!-- ============================================================ -->
 <h2 id="sA">부록. 실제로 재생되는 애니메이션 시퀀스 전체 목록 (103개, 전체 경로)</h2>
-<p class="small">여기 없는 파일은 지금 게임에서 재생되지 않습니다(2.8절). 몽타주 2개(<code>/Game/SoldierLab/Animations/Actions/AM_MM_Rifle_Fire</code> · <code>…/AM_MM_Rifle_Reload</code>)와 묶음 에셋 3개(<code>/Game/SoldierLab/Animations/Rifle/AO_Rifle_ADS</code> · <code>…/AO_Rifle_Crouch</code> · <code>/Game/Characters/UEFN_Mannequin/Animations/Poses/BS1D_Additive_Lean_Run</code>)는 시퀀스가 아니라 이 표에서 뺐습니다.</p>
+<div class="box warn"><b>2026-09-17 — 아래 103개 경로는 전부 적군 세트 기준으로 갱신했습니다.</b> 아군은 <code>Animations_Enemy</code>→<code>Animations_Ally</code>, <code>Enemy_</code>→<code>ALLY_</code>. 그리고 이 표에는 <b>피격 13장이 빠져 있습니다</b> — 2026-09-15에 배선돼 지금은 재생되므로 <b>2.9절과 함께 보셔야</b> 합니다(사망 6장은 배선돼 있으나 현재 꺼짐).</div>
+<p class="small">여기 없는 파일은 지금 게임에서 재생되지 않습니다(2.8절). 몽타주 2개(<code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_AM_MM_Rifle_Fire</code> · <code>…/AM_MM_Rifle_Reload</code>)와 묶음 에셋 3개(<code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Enemy_AO_Rifle_ADS</code> · <code>…/AO_Rifle_Crouch</code> · <code>/Game/Characters/UEFN_Mannequin/Animations/Poses/BS1D_Additive_Lean_Run</code>)는 시퀀스가 아니라 이 표에서 뺐습니다.</p>
 <div class="wrap"><table>
 <tr><th>#</th><th>역할</th><th>전체 경로</th></tr>
-<tr><td class="n">1</td><td>제자리 (견착)</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_ADS</code></td></tr>
-<tr><td class="n">2</td><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Idle_Hipfire</code></td></tr>
-<tr><td class="n">3</td><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_IdleBreak_Fidget</code></td></tr>
-<tr><td class="n">4</td><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_IdleBreak_Scan</code></td></tr>
-<tr><td class="n">5</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_TurnLeft_90</code></td></tr>
-<tr><td class="n">6</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_TurnLeft_180</code></td></tr>
-<tr><td class="n">7</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_TurnRight_90</code></td></tr>
-<tr><td class="n">8</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_TurnRight_180</code></td></tr>
-<tr><td class="n">9</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Walk_Fwd</code></td></tr>
-<tr><td class="n">10</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Walk_Bwd</code></td></tr>
-<tr><td class="n">11</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Walk_Left</code></td></tr>
-<tr><td class="n">12</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Walk_Right</code></td></tr>
-<tr><td class="n">13</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Walk_Fwd_Start</code></td></tr>
-<tr><td class="n">14</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Walk_Bwd_Start</code></td></tr>
-<tr><td class="n">15</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Walk_Left_Start</code></td></tr>
-<tr><td class="n">16</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Walk_Right_Start</code></td></tr>
-<tr><td class="n">17</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Walk_Fwd_Stop</code></td></tr>
-<tr><td class="n">18</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Walk_Bwd_Stop</code></td></tr>
-<tr><td class="n">19</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Walk_Left_Stop</code></td></tr>
-<tr><td class="n">20</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Walk_Right_Stop</code></td></tr>
-<tr><td class="n">21</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Walk_Fwd_Pivot</code></td></tr>
-<tr><td class="n">22</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Walk_Bwd_Pivot</code></td></tr>
-<tr><td class="n">23</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Walk_Left_Pivot</code></td></tr>
-<tr><td class="n">24</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Walk_Right_Pivot</code></td></tr>
-<tr><td class="n">25</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Jog_Fwd</code></td></tr>
-<tr><td class="n">26</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Jog_Bwd</code></td></tr>
-<tr><td class="n">27</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Jog_Left</code></td></tr>
-<tr><td class="n">28</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Jog_Right</code></td></tr>
-<tr><td class="n">29</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Jog_Fwd_Start</code></td></tr>
-<tr><td class="n">30</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Jog_Bwd_Start</code></td></tr>
-<tr><td class="n">31</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Jog_Left_Start</code></td></tr>
-<tr><td class="n">32</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Jog_Right_Start</code></td></tr>
-<tr><td class="n">33</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Jog_Fwd_Stop</code></td></tr>
-<tr><td class="n">34</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Jog_Bwd_Stop</code></td></tr>
-<tr><td class="n">35</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Jog_Left_Stop</code></td></tr>
-<tr><td class="n">36</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Jog_Right_Stop</code></td></tr>
-<tr><td class="n">37</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Jog_Fwd_Pivot</code></td></tr>
-<tr><td class="n">38</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Jog_Bwd_Pivot</code></td></tr>
-<tr><td class="n">39</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Jog_Left_Pivot</code></td></tr>
-<tr><td class="n">40</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Jog_Right_Pivot</code></td></tr>
-<tr><td class="n">41</td><td>앉은 제자리</td><td><code>/Game/SoldierLab/Animations/Rifle/Idles/MM_Rifle_Crouch_Idle</code></td></tr>
-<tr><td class="n">42</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_Crouch_TurnLeft_90</code></td></tr>
-<tr><td class="n">43</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_Crouch_TurnLeft_180</code></td></tr>
-<tr><td class="n">44</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_Crouch_TurnRight_90</code></td></tr>
-<tr><td class="n">45</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations/Rifle/TurnInPlace/MM_Rifle_Crouch_TurnRight_180</code></td></tr>
-<tr><td class="n">46</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Crouch_Walk_Fwd</code></td></tr>
-<tr><td class="n">47</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Crouch_Walk_Bwd</code></td></tr>
-<tr><td class="n">48</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Crouch_Walk_Left</code></td></tr>
-<tr><td class="n">49</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations/Rifle/Loops/MM_Rifle_Crouch_Walk_Right</code></td></tr>
-<tr><td class="n">50</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Crouch_Walk_Fwd_Start</code></td></tr>
-<tr><td class="n">51</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Crouch_Walk_Bwd_Start</code></td></tr>
-<tr><td class="n">52</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Crouch_Walk_Left_Start</code></td></tr>
-<tr><td class="n">53</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations/Rifle/Starts/MM_Rifle_Crouch_Walk_Right_Start</code></td></tr>
-<tr><td class="n">54</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Crouch_Walk_Fwd_Stop</code></td></tr>
-<tr><td class="n">55</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Crouch_Walk_Bwd_Stop</code></td></tr>
-<tr><td class="n">56</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Crouch_Walk_Left_Stop</code></td></tr>
-<tr><td class="n">57</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations/Rifle/Stops/MM_Rifle_Crouch_Walk_Right_Stop</code></td></tr>
-<tr><td class="n">58</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Crouch_Walk_Fwd_Pivot</code></td></tr>
-<tr><td class="n">59</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Crouch_Walk_Bwd_Pivot</code></td></tr>
-<tr><td class="n">60</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Crouch_Walk_Left_Pivot</code></td></tr>
-<tr><td class="n">61</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations/Rifle/Pivots/MM_Rifle_Crouch_Walk_Right_Pivot</code></td></tr>
-<tr><td class="n">62</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_CC</code></td></tr>
-<tr><td class="n">63</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_CU</code></td></tr>
-<tr><td class="n">64</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_CD</code></td></tr>
-<tr><td class="n">65</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_LC</code></td></tr>
-<tr><td class="n">66</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_LU</code></td></tr>
-<tr><td class="n">67</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_LD</code></td></tr>
-<tr><td class="n">68</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_RC</code></td></tr>
-<tr><td class="n">69</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_RU</code></td></tr>
-<tr><td class="n">70</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_RD</code></td></tr>
-<tr><td class="n">71</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_LBC</code></td></tr>
-<tr><td class="n">72</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_LBU</code></td></tr>
-<tr><td class="n">73</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_LBD</code></td></tr>
-<tr><td class="n">74</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_RBC</code></td></tr>
-<tr><td class="n">75</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_RBU</code></td></tr>
-<tr><td class="n">76</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_ADS_AO_RBD</code></td></tr>
-<tr><td class="n">77</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_CC</code></td></tr>
-<tr><td class="n">78</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_CU</code></td></tr>
-<tr><td class="n">79</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_CD</code></td></tr>
-<tr><td class="n">80</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_LC</code></td></tr>
-<tr><td class="n">81</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_LU</code></td></tr>
-<tr><td class="n">82</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_LD</code></td></tr>
-<tr><td class="n">83</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_RC</code></td></tr>
-<tr><td class="n">84</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_RU</code></td></tr>
-<tr><td class="n">85</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_RD</code></td></tr>
-<tr><td class="n">86</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_LBC</code></td></tr>
-<tr><td class="n">87</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_LBU</code></td></tr>
-<tr><td class="n">88</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_LBD</code></td></tr>
-<tr><td class="n">89</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_RBC</code></td></tr>
-<tr><td class="n">90</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_RBU</code></td></tr>
-<tr><td class="n">91</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Crouch_Idle_AO_RBD</code></td></tr>
-<tr><td class="n">92</td><td>총내림 델타 (끝)</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_Hipfire_AO_CD</code></td></tr>
-<tr><td class="n">93</td><td>총내림 델타 (기준)</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_Idle_Hipfire_AO_CC</code></td></tr>
-<tr><td class="n">94</td><td>맹목사격 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_L</code></td></tr>
-<tr><td class="n">95</td><td>맹목사격 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_R</code></td></tr>
-<tr><td class="n">96</td><td>맹목사격 포즈</td><td><code>/Game/SoldierLab/Animations/Rifle/Poses/MM_Rifle_BlindFire_U</code></td></tr>
-<tr><td class="n">97</td><td>사격 (반동)</td><td><code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Fire</code></td></tr>
-<tr><td class="n">98</td><td>사격 미리보기 기준</td><td><code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Idle_Hipfire</code></td></tr>
-<tr><td class="n">99</td><td>재장전</td><td><code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Reload</code></td></tr>
-<tr><td class="n">100</td><td>재장전 (애디티브)</td><td><code>/Game/SoldierLab/Animations/Actions/MM_Rifle_Reload_Additive</code></td></tr>
+<tr><td class="n">1</td><td>제자리 (견착)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_ADS</code></td></tr>
+<tr><td class="n">2</td><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Idle_Hipfire</code></td></tr>
+<tr><td class="n">3</td><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_IdleBreak_Fidget</code></td></tr>
+<tr><td class="n">4</td><td>제자리 (총내림)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_IdleBreak_Scan</code></td></tr>
+<tr><td class="n">5</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_TurnLeft_90</code></td></tr>
+<tr><td class="n">6</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_TurnLeft_180</code></td></tr>
+<tr><td class="n">7</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_TurnRight_90</code></td></tr>
+<tr><td class="n">8</td><td>제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_TurnRight_180</code></td></tr>
+<tr><td class="n">9</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Walk_Fwd</code></td></tr>
+<tr><td class="n">10</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Walk_Bwd</code></td></tr>
+<tr><td class="n">11</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Walk_Left</code></td></tr>
+<tr><td class="n">12</td><td>걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Walk_Right</code></td></tr>
+<tr><td class="n">13</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Walk_Fwd_Start</code></td></tr>
+<tr><td class="n">14</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Walk_Bwd_Start</code></td></tr>
+<tr><td class="n">15</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Walk_Left_Start</code></td></tr>
+<tr><td class="n">16</td><td>걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Walk_Right_Start</code></td></tr>
+<tr><td class="n">17</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Walk_Fwd_Stop</code></td></tr>
+<tr><td class="n">18</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Walk_Bwd_Stop</code></td></tr>
+<tr><td class="n">19</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Walk_Left_Stop</code></td></tr>
+<tr><td class="n">20</td><td>걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Walk_Right_Stop</code></td></tr>
+<tr><td class="n">21</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Walk_Fwd_Pivot</code></td></tr>
+<tr><td class="n">22</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Walk_Bwd_Pivot</code></td></tr>
+<tr><td class="n">23</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Walk_Left_Pivot</code></td></tr>
+<tr><td class="n">24</td><td>걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Walk_Right_Pivot</code></td></tr>
+<tr><td class="n">25</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Jog_Fwd</code></td></tr>
+<tr><td class="n">26</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Jog_Bwd</code></td></tr>
+<tr><td class="n">27</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Jog_Left</code></td></tr>
+<tr><td class="n">28</td><td>조깅 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Jog_Right</code></td></tr>
+<tr><td class="n">29</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Jog_Fwd_Start</code></td></tr>
+<tr><td class="n">30</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Jog_Bwd_Start</code></td></tr>
+<tr><td class="n">31</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Jog_Left_Start</code></td></tr>
+<tr><td class="n">32</td><td>조깅 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Jog_Right_Start</code></td></tr>
+<tr><td class="n">33</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Jog_Fwd_Stop</code></td></tr>
+<tr><td class="n">34</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Jog_Bwd_Stop</code></td></tr>
+<tr><td class="n">35</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Jog_Left_Stop</code></td></tr>
+<tr><td class="n">36</td><td>조깅 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Jog_Right_Stop</code></td></tr>
+<tr><td class="n">37</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Jog_Fwd_Pivot</code></td></tr>
+<tr><td class="n">38</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Jog_Bwd_Pivot</code></td></tr>
+<tr><td class="n">39</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Jog_Left_Pivot</code></td></tr>
+<tr><td class="n">40</td><td>조깅 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Jog_Right_Pivot</code></td></tr>
+<tr><td class="n">41</td><td>앉은 제자리</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Idles/Enemy_MM_Rifle_Crouch_Idle</code></td></tr>
+<tr><td class="n">42</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_Crouch_TurnLeft_90</code></td></tr>
+<tr><td class="n">43</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_Crouch_TurnLeft_180</code></td></tr>
+<tr><td class="n">44</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_Crouch_TurnRight_90</code></td></tr>
+<tr><td class="n">45</td><td>앉은 제자리 회전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/TurnInPlace/Enemy_MM_Rifle_Crouch_TurnRight_180</code></td></tr>
+<tr><td class="n">46</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Crouch_Walk_Fwd</code></td></tr>
+<tr><td class="n">47</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Crouch_Walk_Bwd</code></td></tr>
+<tr><td class="n">48</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Crouch_Walk_Left</code></td></tr>
+<tr><td class="n">49</td><td>앉은 걷기 루프</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/Enemy_MM_Rifle_Crouch_Walk_Right</code></td></tr>
+<tr><td class="n">50</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Crouch_Walk_Fwd_Start</code></td></tr>
+<tr><td class="n">51</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Crouch_Walk_Bwd_Start</code></td></tr>
+<tr><td class="n">52</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Crouch_Walk_Left_Start</code></td></tr>
+<tr><td class="n">53</td><td>앉은 걷기 출발</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Starts/Enemy_MM_Rifle_Crouch_Walk_Right_Start</code></td></tr>
+<tr><td class="n">54</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Crouch_Walk_Fwd_Stop</code></td></tr>
+<tr><td class="n">55</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Crouch_Walk_Bwd_Stop</code></td></tr>
+<tr><td class="n">56</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Crouch_Walk_Left_Stop</code></td></tr>
+<tr><td class="n">57</td><td>앉은 걷기 정지</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Stops/Enemy_MM_Rifle_Crouch_Walk_Right_Stop</code></td></tr>
+<tr><td class="n">58</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Crouch_Walk_Fwd_Pivot</code></td></tr>
+<tr><td class="n">59</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Crouch_Walk_Bwd_Pivot</code></td></tr>
+<tr><td class="n">60</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Crouch_Walk_Left_Pivot</code></td></tr>
+<tr><td class="n">61</td><td>앉은 걷기 방향전환</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Pivots/Enemy_MM_Rifle_Crouch_Walk_Right_Pivot</code></td></tr>
+<tr><td class="n">62</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_CC</code></td></tr>
+<tr><td class="n">63</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_CU</code></td></tr>
+<tr><td class="n">64</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_CD</code></td></tr>
+<tr><td class="n">65</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_LC</code></td></tr>
+<tr><td class="n">66</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_LU</code></td></tr>
+<tr><td class="n">67</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_LD</code></td></tr>
+<tr><td class="n">68</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_RC</code></td></tr>
+<tr><td class="n">69</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_RU</code></td></tr>
+<tr><td class="n">70</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_RD</code></td></tr>
+<tr><td class="n">71</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_LBC</code></td></tr>
+<tr><td class="n">72</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_LBU</code></td></tr>
+<tr><td class="n">73</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_LBD</code></td></tr>
+<tr><td class="n">74</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_RBC</code></td></tr>
+<tr><td class="n">75</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_RBU</code></td></tr>
+<tr><td class="n">76</td><td>서서 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_ADS_AO_RBD</code></td></tr>
+<tr><td class="n">77</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_CC</code></td></tr>
+<tr><td class="n">78</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_CU</code></td></tr>
+<tr><td class="n">79</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_CD</code></td></tr>
+<tr><td class="n">80</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_LC</code></td></tr>
+<tr><td class="n">81</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_LU</code></td></tr>
+<tr><td class="n">82</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_LD</code></td></tr>
+<tr><td class="n">83</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_RC</code></td></tr>
+<tr><td class="n">84</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_RU</code></td></tr>
+<tr><td class="n">85</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_RD</code></td></tr>
+<tr><td class="n">86</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_LBC</code></td></tr>
+<tr><td class="n">87</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_LBU</code></td></tr>
+<tr><td class="n">88</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_LBD</code></td></tr>
+<tr><td class="n">89</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_RBC</code></td></tr>
+<tr><td class="n">90</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_RBU</code></td></tr>
+<tr><td class="n">91</td><td>앉아 조준 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Crouch_Idle_AO_RBD</code></td></tr>
+<tr><td class="n">92</td><td>총내림 델타 (끝)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_Hipfire_AO_CD</code></td></tr>
+<tr><td class="n">93</td><td>총내림 델타 (기준)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_Idle_Hipfire_AO_CC</code></td></tr>
+<tr><td class="n">94</td><td>맹목사격 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_BlindFire_L</code></td></tr>
+<tr><td class="n">95</td><td>맹목사격 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_BlindFire_R</code></td></tr>
+<tr><td class="n">96</td><td>맹목사격 포즈</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Poses/Enemy_MM_Rifle_BlindFire_U</code></td></tr>
+<tr><td class="n">97</td><td>사격 (반동)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Fire</code></td></tr>
+<tr><td class="n">98</td><td>사격 미리보기 기준</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Idle_Hipfire</code></td></tr>
+<tr><td class="n">99</td><td>재장전</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Reload</code></td></tr>
+<tr><td class="n">100</td><td>재장전 (애디티브)</td><td><code>/Game/SoldierLab/Animations_Enemy/Animations/Actions/Enemy_MM_Rifle_Reload_Additive</code></td></tr>
 <tr><td class="n">101</td><td>이동 뱅킹 (기본 제공)</td><td><code>/Game/Characters/UEFN_Mannequin/Animations/Poses/M_Neutral_Run_Lean_Pose_Base</code></td></tr>
 <tr><td class="n">102</td><td>이동 뱅킹 (기본 제공)</td><td><code>/Game/Characters/UEFN_Mannequin/Animations/Poses/M_Neutral_Run_Lean_Pose_Left</code></td></tr>
 <tr><td class="n">103</td><td>이동 뱅킹 (기본 제공)</td><td><code>/Game/Characters/UEFN_Mannequin/Animations/Poses/M_Neutral_Run_Lean_Pose_Right</code></td></tr>

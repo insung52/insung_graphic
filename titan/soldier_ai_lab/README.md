@@ -1,8 +1,14 @@
 # soldier_ai_lab — 고사실감 병사 AI/애니메이션 R&D
 
-2026-09-15 기준 / **애니메이션 층(L4) · 무기/투사체 · AI 층 동작 확인 · 아군·적군 메시 교체 · 디자이너 가이드 완성 · 목표 층이 돌기 시작** · 분대 착수 전
+2026-09-17 기준 / **애니메이션 층(L4) · 무기/투사체 · AI 층 동작 확인 · 아군·적군 메시 교체 · 디자이너 가이드 완성 · 목표 층이 돌기 시작 · ★ 애니메이션 세트 진영별 2벌 · ★ 피격/사망 동작 · L0/L1 분대 명령 층 코드 완료(빌드 대기)**
 
-⚠ **하나 미해결이 크다**: 수비수가 **자리를 잡고 쓰지 못한다.** 두 번 시도했고 둘 다 실패했다 → **[C-95]**
+> ★★ **2026-09-17 — 애니메이션 경로가 전부 바뀌었다.** 클립·PSD·Chooser 가 **진영별 2벌**이 됐다:
+> `/Game/SoldierLab/Animations_Enemy/`(접두 `Enemy_`) · `/Game/SoldierLab/Animations_Ally/`(접두 `ALLY_`),
+> 각 247개. **옛 `/Game/SoldierLab/Animations/` · `/Game/SoldierLab/PoseSearch/` 는 소멸했다** —
+> 그 경로를 적은 문서는 전부 구형이다. **스켈레톤과 ABP 는 1벌 그대로**이고 ABP 안에서 `UseAllyAnimSet` 이 분기한다.
+> → `animation/prototypes/2026-09-17_ally_enemy_anim_set_split.md`
+
+~~⚠ **하나 미해결이 크다**: 수비수가 **자리를 잡고 쓰지 못한다.**~~ → **해결 (2026-09-14~15)**, [C-95]
 
 > ★ **2026-09-14 — `titan_example` 본체 편입 완료.** 에디터·PIE·`L_SoldierTest` 정상.
 > **이후 작업은 `C:\working\kadex	itan_example` 에서 한다** — `anim_test/SoldierLab` 은 이관 원본으로만 남는다.
@@ -43,9 +49,11 @@
 | **AI 층 — 인지·무전·제압·교전·엄폐** | ✅ **동작 확인** (2026-09-13) — C++ 9쌍. **초안(`*/drafts/`)과는 다른 형태로** 구현됐다 |
 | **목표(objective) 층** | ✅ **2026-09-14에 처음 실제로 돌았다** — `ASoldierObjective` + 세 비용 위치 스코어러. 레벨에 1개 배치했고, 더 큰 것은 액터가 **루트 컴포넌트가 없어 영원히 월드 원점에 서 있었다**는 것이다(P90). 남은 것: 마커 하나 · 소유권 변경 없음 → **[W25]** |
 | **교전의 사다리 · 위치 비용 교정** | ✅ **구현 완료 (2026-09-14) · 플레이 확인 전** — 조리개/사격자세 · 반동 · 조준 선회 · `FightingCost` · 110m × 90m 레벨. ⚠ 수비수 정착 문제 [C-95]는 **원인(높이 기준면) 잡고 빌드됨 · 정착 여부 미확인** |
-| **관전 · 1인칭 · 머리 조준 추종** | ✅ **사용자 확인 "완벽" (2026-09-14 21:30)** — 관전 폰(F 추적·T·Tab), 1인칭(T, `eyes` 소켓, 니어플레인), 머리 추종(H, 기본 OFF, 닫힌 루프 + 목 굽힘·스트레치로 눈을 조준선 위에, 견착 중 총이 올라올 때 가중치로 붙고 래치). **2026-09-15**: 관전 1인칭이 병사 1인칭 컴포넌트를 빌려 씀 + 관전 H · H 켜면 정지 시 카메라 60° 밖에서 몸이 따라 돎(GASP TIP). 최종 설계 `animation/2026-09-14_sight_alignment_plan.md` 0' 절 |
-| **분대(L1) · 명령(L0)** | ⬜ 초안만 |
-| **데미지·사망** | ⬜ 없음 — 병사는 죽지 않는다 |
+| **관전 · 1인칭 · 머리 조준 추종** | ✅ **사용자 확인 "완벽" (2026-09-14 21:30)** — 관전 폰(F 추적·T·Tab), 1인칭(T, `eyes` 소켓, 니어플레인), 머리 추종(H, 기본 OFF, 닫힌 루프 + 목 굽힘·스트레치로 눈을 조준선 위에, 견착 중 총이 올라올 때 가중치로 붙고 래치). **2026-09-15**: 관전 1인칭이 병사 1인칭 컴포넌트를 빌려 씀 + 관전 H · H 켜면 정지 시 카메라 60° 밖에서 몸이 따라 돎(GASP TIP). 최종 설계 `animation/2026-09-14_sight_alignment_plan.md` 0' 절. **2026-09-18**: 관전 휠 = 비행 속도(자유 비행) · slomo 무관 · 롤 잔류 수정. **H 는 수동 토글뿐, AI 에 자동으로 켜지지 않는다**(P171) |
+| **AI 포즈 층 (계약 소비)** | ✅ **사용자 PIE 확인 (2026-09-17~18)** — AI 세션의 `GetAimPoint()/IsScanning()` · `GetDesiredGait()` · `GetPoseUrgency()` 를 `Pose/` 컴포넌트 셋이 읽는다: **ScanTurn**(총 내린 idle 의 몸이 볼 곳으로 돎) · **GaitBridge**(안정 상태면 걷기) · **PoseSmoother**(자세 축 사다리꼴 × 급박도, 앉는 쪽이 빠름). 스무더의 "급하면 1프레임 스냅"은 `RampAxisTo` rate 0 = 즉시(P167) → 0.0001 로 해결. 셋 다 AI 전용 → `animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md` |
+| **애니메이션 세트 분리** | ✅ **완료 (2026-09-17)** — 스켈레톤 1벌 유지 + 클립 247개를 진영별 2벌로. `UseAllyAnimSet` 하나가 로코모션·AO·총내림·BF·몽타주 **5축을 분기**. 작업 기준은 **적군 세트** |
+| **분대(L1) · 명령(L0)** | ⚠ **코드 완료 · 빌드/PIE 미검증 (2026-09-17)** — `Squad/` 3파일 + 개인 AI 훅 + titan 브리지 → `squad/2026-09-17_command_layer_design.md` |
+| **데미지·사망** | ✅ **동작 확인 (2026-09-17)** — 09-15 에 배선했으나 **원인 셋**으로 한 번도 안 나왔다(C++ 경로 하드코딩 · 배치 인스턴스의 빈 배열 · 사망 슬롯 부재). 지금은 피격 O, 사망은 **순수 래그돌**. 아군은 무적 → `ai/2026-09-17_hit_death_three_causes.md` |
 
 무엇이 실제로 존재하는지: **`IMPLEMENTED.md`**
 
@@ -109,14 +117,21 @@ soldier_ai_lab/
 │   ├── 2026-09-02_pose_pipeline_spec.md  축별 정의, 합성 순서, 권한 규칙, 디버깅
 │   ├── 2026-09-02_gasp_abp_analysis.md   GASP 전수 분석 — 무엇을 건드리면 무엇이 바뀌나
 │   ├── 2026-09-14_sight_alignment_plan.md ★ 머리 조준 추종 · 1인칭 눈–조준선 정렬 (닫힌 루프, 0' 절이 최종)
+│   ├── 2026-09-18_ai_pose_layer_scanturn_gait_smoother.md
+│   │                                     ★ AI 포즈 층 3종 — ScanTurn(몸 회전) · GaitBridge(걷기) · PoseSmoother(축 사다리꼴)
+│   │                                       + RampAxisTo rate 0 스냅 함정 · 관전 폰 휠 비행 속도/롤 잔류
 │   └── prototypes/                       실험 기록 19건 + TEMPLATE.md
 │       ├── 2026-09-04_c34_clip_curve_mapping.md   ★ 커브 매핑의 유일한 기준
 │       ├── 2026-09-09_lyra_rifle_migration.md     ★ 현행 로코모션의 전말
 │       ├── 2026-09-13_ally_mesh_on_mannequin_skeleton.md  ★ 메시 교체 절차·근거·기각 경로
 │       ├── 2026-09-14_enemy_mesh_on_mannequin_skeleton.md 적군 new_enemy_T (납품 3회 · ARP 리그 기각 · 본 호환 규칙)
-│       └── 2026-09-15_sharp_turn_pop_bf_head_scale_and_weapon_socket.md
-│                                         ★ 급선회 스냅(maxRotationError −1) · BF 머리 스케일(ModifyBone_8) ·
-│                                           무기 소켓 오프셋 흡수 · 왼손 그립 런타임 산출 · 총내림 클립 2차 실패 (P121~P126)
+│       ├── 2026-09-15_sharp_turn_pop_bf_head_scale_and_weapon_socket.md
+│       │                                 ★ 급선회 스냅(maxRotationError −1) · BF 머리 스케일(ModifyBone_8) ·
+│       │                                   무기 소켓 오프셋 흡수 · 왼손 그립 런타임 산출 · 총내림 클립 2차 실패 (P121~P126)
+│       └── 2026-09-17_ally_enemy_anim_set_split.md
+│                                         ★★ 아군/적군 애니메이션 세트 분리 — 스켈레톤을 가르지 않은 근거 ·
+│                                           Advanced Copy(파이썬) · 프리뷰 메시 · 런타임 분기 5축 (P134~P141)
+│                                           **클립·PSD·Chooser 경로가 전부 여기서 바뀌었다**
 │
 ├── ai/                L2 판단 · L3 실행 · 엄폐 (2026-09-13부터 엄폐도 여기)
 │   ├── 2026-09-13_perception_stack.md    ★ 기록·감쇠·융합 / 시야·무전·제압 / 디버그 규약
@@ -130,6 +145,9 @@ soldier_ai_lab/
 │   ├── 2026-09-14_hit_death_health_recommendation.md  피격·사망·체력 **구조 조사 + 방식 비교**(A~D) — 8절 후일담
 │   ├── 2026-09-15_health_hit_death_implementation.md ★ **체력·피격·사망 구현 기록** — `USoldierHealthComponent` API ·
 │   │                                      ABP/BP 배선 · 데이터 흐름 · 함정(P127~P129) · [C-110]~[C-118]
+│   │                                      ⚠ **8절 정정 필독** — 4.4절 폐기, 아래 문서가 최신
+│   ├── 2026-09-17_hit_death_three_causes.md ★★ **하나의 증상에 원인이 셋**(P47 실사례) — C++ 경로 하드코딩 ·
+│   │                                      배치 인스턴스의 빈 배열 · 사망 슬롯 부재 → 이중 낙하 · 피직스 에셋 (P134~P141)
 │   ├── 2026-09-13_ai_bridge_and_scene.md AI↔몸 배선, ~~관전 폰~~(7절 폐기), 시험 레벨, 도구 함정 9건
 │   ├── 2026-09-02_upper_layer_plan.md    층 소속 판정, 계층 간 계약, StateTree 구조
 │   ├── 2026-09-10_draft_verification.md  초안의 API 가정을 엔진 소스로 검증한 기록
@@ -158,15 +176,19 @@ soldier_ai_lab/
     ├── 2026-09-14_design_team_animation_handoff.md  ★ 실사용 시퀀스 103개 · 수정 규칙 · 시퀀스로 못 고치는 절차 층 8종 ·
     │                                         왼손 IK 토글 · 7절 정정(총내림 결론 · BF 스케일 · 급선회)  — 내부용
     ├── 2026-09-14_designer_guide_draft.md   디자인팀용 초안 — 기능↔시퀀스 · 조작키 · 콘솔
-    └── 2026-09-14_designer_guide.html       ★ 디자인팀에 그대로 주는 완성본 (부록: 103개 전체 경로, 디스크 검증). 내용 수정 금지
+    └── 2026-09-14_designer_guide.html       ★ 디자인팀에 그대로 주는 완성본 (부록: 103개 전체 경로, 디스크 검증)
+                                             **2026-09-17 개정** — 경로 전면 교체(Animations_Enemy/Enemy_) ·
+                                             검수 기준=적군 세트 명시 · 2.9절(피격/사망) 신설 · 콘솔 명령 정정
 ```
+
+⚠ **`squad/` 는 2026-09-17 부터 초안만이 아니다** — `squad/2026-09-17_command_layer_design.md`(L0/L1 구현, 빌드 대기)가 있다.
 
 **`drafts/` 안의 것은 프로젝트에 한 줄도 들어가 있지 않다.** 그 밖의 것은 구현돼 있다.
 ⚠ **인지와 엄폐는 초안과 *다른 물건*으로 구현됐다** — 이름이 겹치는 자리가 있으나 같은 타입이 아니다.
 
 ### 읽는 순서 (처음 오는 경우)
 
-1. `CLAUDE.md` — 규칙과 환경, 그리고 **함정 목록(P1~P129)**
+1. `CLAUDE.md` — 규칙과 환경, 그리고 **함정 목록(P1~P141)**
 2. `IMPLEMENTED.md` — 무엇이 이미 존재하는가
 3. `CURRENT_STATE.md` — 지금 상태와 다음 할 일
 4. `design/2026-09-01_architecture.md` 1~4절 — 문제 정의와 층 구조
@@ -174,10 +196,12 @@ soldier_ai_lab/
 
 ### 읽는 순서 (애니메이션 작업)
 
-1. `IMPLEMENTED.md` 2절 — **지금 그래프가 어떻게 생겼고 왜 그 숫자인가**
+0. **`animation/prototypes/2026-09-17_ally_enemy_anim_set_split.md`** — ★ **경로가 바뀌었다.** 클립·PSD·Chooser 는 진영별 2벌
+1. `IMPLEMENTED.md` 2절 — **지금 그래프가 어떻게 생겼고 왜 그 숫자인가**(2.4b = 진영 분기)
 2. `animation/2026-09-02_gasp_abp_analysis.md` — 무엇을 건드리면 무엇이 바뀌는가
 3. `animation/2026-09-02_pose_pipeline_spec.md` — 우리가 만들 것
 4. `animation/prototypes/2026-09-04_c34_clip_curve_mapping.md` 4절 — 클립별 커브 기준
+5. **AI 병사의 몸·걸음·자세 축이 AI 판단을 어떻게 받는가** — `animation/2026-09-18_ai_pose_layer_scanturn_gait_smoother.md`(계약 소비 측) · 머리 추종/1인칭은 `animation/2026-09-14_sight_alignment_plan.md` 0' 절
 
 ---
 

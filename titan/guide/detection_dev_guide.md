@@ -66,6 +66,70 @@ titan_example/Source/titan_example/UI/
   순회 — 지금은 차량 몇 대뿐이라 체감 차이 없지만, 나중에 병사 45명이 추가돼도
   가벼움
 
+**총성 이벤트 버스 (2026-09-17, 코드 완료·빌드 전)** — 같은 서브시스템이 이제 `FGunfireEvent{Location,
+Instigator, Faction, Time}` 버퍼(`RecentGunfire`, 보존 10초/최대 128개)도 든다.
+`ReportGunfire(Location, Instigator, Faction)`은 **적군 사격 트리거**
+(`UEnemyCombatComponent::ReportGunfireToSubsystem` — 두 `Multicast_TriggerFire*_Implementation`에서
+`HasAuthority` 게이트로 서버에서 1회, 위치는 소총 `MuzzlePoint`)만 부르고, 아군/RCWS 사격은 보고하지
+않는다. **(2026-09-18 추가)** 두 번째 호출자 = **SoldierLab 적군 병사**: `USoldierRegistrySubsystem::OnGunshot`
+델리게이트(서버, `USoldierHealthComponent` 보유 액터만)를 `USoldierLabBridgeSubsystem::OnSoldierGunshot`이 받아
+Hostile 총성만 `ReportGunfire(…, EMilitaryFaction::Enemy)`로 넘긴다 — **발마다**(구 경로는 버스트당) 들어오지만
+보존 시간/개수 트림이 알아서 자른다. `soldier_ai_lab/squad/2026-09-18_squad_layer_fixes_quota_engage_range.md` 7절. 소비자는 `URCWSFireControlComponent::PickGunfireToInvestigate`(`GetRecentGunfire()` 순회) —
+시각 탐지도 응시할 기억도 없을 때 50m 안 최근 적 총성 방향을 4초 조사하는 청각 보조
+(`rcws_fire_control_dev_guide.md` §3.2). 서버 전용·리플리케이트 안 함·실제 오디오 감쇠와 무관한
+결정적 데이터(픽셀 게이트 기준 해상도 고정과 같은 원칙). 상세: `rcws/2026-09-17_rcws_gunfire_hearing.md`.
+
+**시나리오 표적 제외 플래그 `bTargetableByFriendlyForces` (2026-09-17, 소비자 정리 2026-09-21)** — 컴포넌트에 하나 더 든
+bool(`DetectableTargetComponent.h:67`, 접근자 `:70-73`, 기본 true). 구 `UEnemyCombatComponent::bTargetableByAlliesAndUGV` 의 탐지 층 판으로,
+SoldierLab 병사에는 이것뿐이다. **쓰는 곳**: `USoldierLabBridgeSubsystem::SyncSoldiers` 가 매 틱 분대 배정
+`FSoldierAssignment::bTargetableByOwnSideWeapons` 를 복사(`SoldierLabBridgeSubsystem.cpp:200-201` — 시나리오 `IssueSquadOrder`
+`SetTargetable false` 행이 원천). **읽는 곳**: `URCWSFireControlComponent` 표적 선정·총성 조사 — 단 **`bRespectEnemyTargetingExclusion`
+이 켜진 RCWS(UGV)만** 읽고 트럭은 안 읽는다(`rcws_fire_control_dev_guide.md` 3.3절). 탐지 스캔·`DetectedTargets`·HUD 박스에는
+**영향 없음** — 제외된 적도 탐지는 된다. SoldierLab 아군 보병은 이 컴포넌트를 거치지 않고 배정 플래그를 직접 읽는다
+(`USoldierEngagementComponent::IsContactExcluded`).
+
+**차량이 SoldierLab 보병의 표적이 되는 경로 (2026-09-23 갱신)** — 차량의 `DetectableTargetComponent`(진영)를
+`USoldierLabBridgeSubsystem`이 읽어 그 차량에 `USoldierIdentityComponent`를 붙인다 — 그래서 보병의 인지·표적 선정에
+차량이 **보병과 같은 자격으로** 들어온다(이 경로는 2026-09-17부터 그대로다). 차량은 `head`/`spine_03` 소켓이 없으므로
+`USoldierIdentityComponent`가 **액터 바운드박스 비율**을 쓴다 — **표적점 = 50%(차체 한가운데), 눈 = 80%(포탑/캡 높이쯤)**.
+**(2026-09-23)** 그 "표적점이 껍데기에서 수 m 안쪽" 이라는 성질 때문에 교전·엄폐 층에서 두 군데가 깨져 있었고 같은 날 고쳤다:
+① 사격 레인 트레이스(`USoldierEngagementComponent::IsShotBlockedByWorld`)가 **표적 차량 자신을 벽으로 읽어** 모든 사격 자세가
+탈락(`[Engage] … aperture 0`) → 표적 액터를 판정까지 넘겨 **표적(또는 그 부착 액터)을 맞히면 "도달"**로 처리.
+② 엄폐 층(`USoldierCoverComponent::GatherThreatEyes`)이 차량 위협의 눈을 차체 한가운데에 둬서 지붕 포탑보다 1 m 이상 낮게
+계산 → **표적 소켓이 없는 위협에 한해** 눈높이 단차를 그 대상의 형상(바운즈 80% − 50%)에서 계산. **탐지 층은 무관·무변경**이고,
+바뀐 것은 SoldierLab 보병이 그 표적을 **실제로 쏘는가**다. 상세: `soldier_ai_lab/ai/2026-09-23_vehicle_target_engagement_fix.md`.
+
+**시나리오 재시작과의 관계 (2026-09-22)** — 재시작(`UScenarioStateSubsystem::RequestScenarioRestart`,
+`level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md`)은 SoldierLab 병사를 Destroy 후 재스폰하므로 등록은
+EndPlay 자동 해제 → 브리지 `USoldierLabBridgeSubsystem::ForceRescan()`(재스폰 완료 직후 명시 호출, 주기 스캔을 안 기다림)이 새
+병사에 `DetectableTargetComponent` 를 다시 붙이고 `bSoldierLabHostilesStartHidden` 대로 적을 hidden 으로 되돌린다. 재시작 검증이
+"탐지 레지스트리 적 수 == 스냅샷 적 수"를 확인하며, 어긋나면 에러 + 확인창 재표시. 차량(UGV/트럭/드론)은 재스폰 안 하고
+`IScenarioResettable::ResetForScenarioRestart` 로 제자리 리셋되므로 그쪽 컴포넌트/브리지가 붙인 Identity 는 그대로다.
+(2026-09-23) 드론의 **탐지 단계(`SetDetectionPhase(InitialDetectionPhase)`)는 복제되는 값이라 서버가 되돌리고**, 짐벌/정찰/`bParachuteObserved`
+처럼 복제 안 되는 것은 **시뮬 주체**(풀 시스템이면 자체방호 클라)가 되돌린다 — `vehicle/drone/drone_flight_dev_guide.md` 15.2절.
+
+**분대 맥락 `SquadId` / `bBreakingContact` (2026-09-23)** — 컴포넌트에 둘 더. 둘 다 **Replicated**,
+`SetSquadContext(SquadId, bBreakingContact)`로 한 번에 쓴다. 채우는 곳은 위 플래그와 같은
+`USoldierLabBridgeSubsystem::SyncSoldiers`(`USoldierIdentityComponent::SquadId`와
+`FSoldierAssignment::bBreakContact`를 복사). **옮겨 싣는 이유**: 원본 둘 다 복제가 안 되는 서버
+전용 지식인데, 이걸 읽는 드론 교전 프레이밍은 풀 시스템에서 **자체방호 클라이언트**가 돌린다
+(시뮬 주체). **읽는 곳**: `ADronePawn::ResolveEnemyTrackingFacts()` — "도주 중인가 / 마지막
+분대인가"를 판정해 트래킹 대상을 고른다(구 `UEnemyCombatComponent`의 `EEnemyState::Flee` /
+`LastStandZoneIndex` 자리, 새 병사엔 그 컴포넌트가 없어 조용히 죽어 있었다).
+`vehicle/drone/drone_flight_dev_guide.md` 16.2-1절.
+
+> ⚠ `bBreakingContact`는 **`BreakContact` 동사 하나**에서만 온다. `Withdraw`는 도주가 아니라
+> 평범한 전투지 이동이다(현재 DT에서 교전 시작 직후 2·3분대에 내려간다) — 도주로 치면
+> 교전하자마자 적 대부분이 탐지에서 사라진다. 실사고 기록:
+> `vehicle/drone/2026-09-23_drone_remote_rotor_and_squad_tracking.md` 3절.
+
+**컴포넌트를 단 액터는 always relevant가 된다 (2026-09-23)** — `BeginPlay`에서 서버가 복제되는
+소유 액터에 `bAlwaysRelevant = true`를 건다(`bForceAlwaysNetRelevant`, 기본 켬). 탐지 자체와는
+무관한 부수효과지만 **여기 달려 있다는 걸 알아야 한다**: 이 컴포넌트를 단 액터의 집합이 곧
+"드론/RCWS가 봐야 하는 대상"이라 관련성 범위로 정확히 맞아떨어지기 때문에 훅을 여기 뒀다.
+안 걸면 자체방호 클라에서 150 m 밖(전장은 트럭에서 923 m) 병사가 얼어붙고 사격 멀티캐스트도
+안 온다 — `replication/2026-09-23_net_relevancy_battlefield.md`.
+
 ## 3. UTargetDetectionComponent — 핵심 스캔 로직
 
 ### 3.1 카메라 참조
@@ -146,6 +210,33 @@ const FTransform ActorTransform = CandidateTarget->GetActorTransform();
    보여야만 탐지가 유지**되고 양쪽으로 여유가 똑같이 남음. (기어 변속 히스테리시스
    — `UUGVMovementComponent::GearHysteresisKmH` — 와 같은 아이디어)
 
+**부위(뼈) 기반 샘플 + 획득 규칙 (2026-09-16, RCWS 성능 업그레이드)** — 위 1번의 수직선 샘플은
+이제 **폴백**이다. 스켈레탈 메시가 있는 대상은 `BodyParts`(`FDetectionBodyPart` 배열, 기본
+Head/Chest/Pelvis)의 **뼈 위치**에서 트레이스한다 — 수직선은 콜리전 박스 중심 XY에 박혀 있어서
+엄폐물 옆으로 상체만 내민(Lean) 적이나 캡슐이 안 따라가는 엎드린 적은 샘플이 엄폐물/허공에
+있었다. 부위마다 후보 뼈를 여러 개 둔다(적군 Mixamo `Head`/`Spine2`/`Hips` ↔ 아군 UE5 마네킹
+`head`/`spine_04`/`pelvis`, 메시에 있는 첫 후보 사용). 머리는 `HeadTop_End` 쪽으로 0.5만큼
+옮긴 두개골 중심(Mixamo `Head` 원점은 턱 높이). 후보 뼈가 전부 없으면 수직선 폴백이고
+`SamplePointCount`는 그때만 쓰인다.
+
+- `AcquireRule` — `VisibleFraction`(기본, 위 3~4번 그대로 — 드론/CCTV 동작 유지) /
+  `AnyVisibleSample`(RCWS용): Confidence가 "1점이라도 보임"의 0/1을 쫓아 머리만 내놓은 적(1/3 =
+  0.33, 예전엔 Acquire 0.6을 영영 못 넘김)도 잡는다. 임계값·`ConfidenceLerpSpeed`는 그대로 시간
+  게이트(기본값 기준 획득 0.4초, 상실 0.33초). **UGV(`BP_UGV_0901`)·트럭(`BP_TitanTruck`)은 BP
+  기본값과 `New_kadex_0811` 레벨 인스턴스 모두 `AnyVisibleSample`로 설정돼 있음(2026-09-16).** 새
+  차량/레벨을 추가하면 같은 값을 다시 켜야 하고, CDO 쓰기는 기존 레벨 인스턴스에 전파 안 되니 인스턴스도
+  따로 확인할 것(BP 기본값과 같은 값은 `.umap`에 델타 직렬화로 안 남으므로 grep이 아니라 MCP
+  `get_properties`로).
+- `ReacquireGraceSeconds`(10) — 최근 이 시간 안에 `DetectedTargets`에 있던 대상은 다시 1점이라도
+  보이면 Confidence를 `AcquireConfidenceThreshold`로 즉시 올려 재획득(`LastActiveTime` 맵). RCWS
+  타겟 기억(`rcws_fire_control_dev_guide.md` 3.2절)의 탐지 쪽 절반. 0이면 끔.
+- `FDetectedTarget`에 `VisibleFraction`(원시 가시 비율 — Confidence는 규칙에 따라 1.0으로 수렴할
+  수 있으니 "얼마나 보이는가"는 이쪽)과 `Parts`(`FDetectedTargetPart` — Label/Bone/TowardBone/
+  TowardFraction/WorldLocation/bVisible, `BodyParts` 순서) 추가. `FindDetectedTarget(Actor)`와 static
+  `ResolvePartLocation(Mesh, Part, Out)`(지금 뼈 위치 재계산)을 파이어컨트롤이 부위 조준에 쓴다.
+
+상세: `rcws/2026-09-16_rcws_target_memory_and_body_part_aim.md`(**빌드·PIE 검증 전**).
+
 ### 3.5 탐지 거리
 
 클래스 기본값 `MaxDetectionRange = 40000.f`(400m, memo.md의 미해결 "UAV 영상 피드의
@@ -161,8 +252,13 @@ const FTransform ActorTransform = CandidateTarget->GetActorTransform();
 |---|---|---|
 | `TSet<EMilitaryFaction> DetectableFactions` | 비어 있음 | 비어 있으면 **전부 탐지**(기존 동작). 값을 넣으면 그 진영만 탐지 |
 | `float MinScreenSizeFraction` | 0 | 화면에서 이 비율보다 작게 보이는 대상은 무시. 0이면 끔 |
+| `bool bIgnoreBreakingContactTargets` (2026-09-23) | false | 철수 중인 대상(`UDetectableTargetComponent::bBreakingContact`)을 스캔에서 통째로 뺀다. **`ADronePawn` 생성자에서만 켠다** |
 
 API: `AddDetectableFaction()` / `SetDetectableFactions()` / `IsFactionDetectable()`.
+
+> ⚠ `bIgnoreBreakingContactTargets`를 **이동형지휘소 RCWS에는 켜지 말 것.** 그쪽이 도주해 온
+> 3분대를 발견하는 것이 드론 시나리오 6번 국면의 트리거(`bTruckEngagementLatched`)라, 거기서
+> 걸러버리면 래치가 영영 안 걸려 시나리오가 멈춘다.
 
 드론은 진영 필터로 **시나리오 진행에 따라 탐지 범위를 넓힌다** — 아군만 → +낙하산
 (EnemyEvidence) → +적군. 상세는 `vehicle/drone/drone_flight_dev_guide.md` 13.1절.

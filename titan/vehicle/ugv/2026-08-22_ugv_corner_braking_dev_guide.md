@@ -6,6 +6,11 @@
 > `2026-08-31_ugv-speed-pi-controller.md` 참고. 커브 목표 속도 산출(제동 곡선) 자체는 유효하되,
 > 각도→속도 매핑은 2026-08-26에 곡률 반경 기반으로 교체됨
 > (`2026-08-26_ugv_obstacle_avoidance.md` 2절).
+>
+> **⚠️ 2026-09-16 — 여기 나오는 "브레이크 0 → 1 램프"는 그동안 실제로는 ON/OFF였다.** Chaos의
+> `bReverseAsBrake`가 3.6km/h 이상에서 브레이크 입력을 크기 무관 1.0으로 바꾸고, 브레이크 중엔 스키드스티어
+> 조향이 0이 되는 엔진 구조 때문. `2026-09-16_ugv_chaos_brake_proportional_and_brake_steer.md` 참고 —
+> 그 수정 뒤에야 `CornerDecelMetersPerSecSq` 같은 값이 실제 감속도를 결정한다.
 
 `AUGVAIController`의 Chaos 추종 주행에 **"꺾이기 전에 미리 감속"** 을 추가한 기록.
 `ugv_driving_dev_guide.md` 9절(Pure Pursuit Lookahead)·12절(오프로드 속도 처리)의 후속이고,

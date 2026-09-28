@@ -42,6 +42,20 @@
   `GetLastPathPointsAsJson`은 그대로 유지).
 - `UScenarioStateSubsystem` + `Atitan_examplePlayerController::BeginScenarioEnemyContact` Exec
   커맨드 — "enemycube" 액터(태그 `EnemyCube` 추가함) 위치를 적 예상 위치로 저장.
+  - (2026-09-22 추가) 시나리오 **재시작** 확인창: `UNotificationSubsystem::ShowRestartPrompt/HideRestartPrompt`
+    (`WBP_RestartPrompt`, 부모 `URestartPromptWidget`, BindWidget `YesButton`/`NoButton`/`AutoRestartCheckBox`)
+    — GameState `Multicast_ShowScenarioRestartPrompt` 가 뿌리고 **자체방호 화면 우선**(UGV 호스트+자체방호
+    클라면 자체방호에만, 단독이면 그 축)으로 뜬다. 클라의 [예]/체크값은 `Atitan_examplePlayerController::
+    RequestScenarioRestart / SetScenarioAutoRestart`(Exec → Server RPC)로 서버에 올라가고, 재시작 시
+    `Multicast_HideScenarioRestartPrompt` + `HideAllToasts` 로 모든 화면의 확인창/토스트가 닫힌다. 미니맵 적 예상
+    위치는 `GameState::ClearEnemyPredictedLocation` 으로 지워진다. 상세
+    `level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md`.
+  - (2026-09-23 추가) **카메라 페이드와 확인창/토스트 닫기는 프로세스마다 로컬로** 한다 — 페이드는 로컬
+    `PlayerCameraManager` 의 일이라 서버에서 걸면 서버 화면만 어두워진다. GameState 멀티캐스트 3종
+    (`Multicast_ScenarioRestartBegin(FadeOut)` / `…Apply()` / `…End(FadeIn)`)이 각 프로세스의
+    `UScenarioStateSubsystem::RunLocalRestartBegin/Apply/End` 를 부른다. ⚠ **레벨 GameMode 오버라이드가
+    titan 계열(`BP_KadexTestGameMode`)이 아니면** `Atitan_exampleGameState` 가 없어 이 멀티캐스트가 전부
+    서버-로컬 폴백이 되고, **2-PC 에서 클라 화면만 페이드가 안 된다**(09-23 실사고, 같은 문서 §5).
 - `UScrollingRulerWidget`/`SScrollingRuler` — 2절에서 설계한 4곳 전부 커버하는 범용 눈금 리본
   (방위각처럼 스크롤하는 wrap 모드 / EL·ZOOM처럼 고정범위+이동 포인터인 non-wrap 모드 둘 다 지원).
 - `ULineGraphWidget` 그라데이션 채우기 옵션 추가(`bShowGradientFill`/`FillOpacityAtLine`) — 3절
@@ -105,6 +119,14 @@ SlateLayoutTransform.h"`를 실제 엔진 경로인 `Rendering/SlateLayoutTransf
   숫자와 그 밖의 소비자가 읽는 값)는 원본 그대로다.
 - 세로축 상한은 아직 고정값(`UAVAltitudeGraphMaxMeters`/`UAVSpeedGraphMaxKmh`). 동적 상한은
   미구현이고, 설계 결론과 실측 근거는 위 devlog에 정리해 둠.
+
+**갱신(2026-09-23) — 시나리오 재시작 시 상태 패널 누적값 초기화**: `UStatusHUDComponent`(드론·트럭)와
+`UUGVStatusComponent`(UGV) 에 `ResetForScenarioRestart()` 가 생겼다 — 둘 다 `ElapsedTime` 을 영원히
+누적해 배터리를 거기서 파생(`100 − ElapsedTime×0.05` / `×0.03`)하고 비행시간·주행거리도 계속 쌓이므로,
+시나리오 재시작 뒤에도 1회차 값이 이어지던 것을 되돌린다(그래프 히스토리·평활 필터·샘플 타이머 포함).
+**호출 위치가 둘이 정반대다** — 드론 패널은 `CurrentData` 가 비복제 + 틱 권한 게이트가 없어 **모든
+프로세스**가 각자 되돌리고, UGV 패널은 `CurrentData` 가 복제 + 서버에서만 생성이라 **서버에서만** 되돌린다.
+상세: `../level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md` §5 끝(2026-09-23 시점 **빌드 전**).
 
 **갱신(2026-07-10) — 리본 4종 세분화**: 디자인 시안 보니 리본 스타일이 4가지로 갈림. 클래스는
 2개로 정리(완전히 4개로 쪼개진 않음 — EL/ZOOM은 로직이 90% 겹쳐서 플래그로 처리):

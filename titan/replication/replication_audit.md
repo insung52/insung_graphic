@@ -1,6 +1,6 @@
 # 리플리케이션 준비도 감사 (1단계: 조사) + 구현 현황
 
-- 조사일: 2026-08-06 (최초 조사) / **2026-08-13 최신화 — 아래 §0-1 참고**
+- 조사일: 2026-08-06 (최초 조사) / **2026-08-13 최신화 — 아래 §0-1 참고** / **2026-09-23 §9 추가(레벨 GameMode 오버라이드 함정)**
 - 대상: `titan_example` (UE5.8), 레벨 `/Game/kadex_demo_0716` (+ 이후 `kadex_lobby`/`kadex_test` 추가)
 - 방법: Unreal MCP(에디터 도구)로 레벨/액터/클래스 프로퍼티 조회 + `Source/titan_example` C++ 전수
   grep/read. **§0~7은 최초 조사(2026-08-06) 당시 "코드/레벨 수정 없이 순수 조사" 스냅샷이라 지금은
@@ -28,6 +28,14 @@
   레퍼런스 리플리케이션 자체의 원인 불명 버그(우회만 함, §8 RCWS/발사 섹션 참고), **UAV 카메라 줌
   버튼(`SelfDefenseDashboardWidget` 추정)의 Server RPC 라우팅 미확인 — 클라이언트에서 이 버튼이
   조용히 안 먹을 가능성 있음, 실기 테스트로 확인 필요(§8 UAV 섹션 참고)**.
+- **2026-09-17 추기** — Chronicle 리플레이(`replay_chronicle/`)로 §8의 "Blueprint 자세/애니메이션
+  변수 복제" 목록에 빠진 것들이 드러남: 08-25 gait 재설계로 생긴 **`GaitTopSpeed`/`IsSprinting`
+  미복제**(적군이 클라이언트에서 idle 포즈로 미끄러짐), **피격 스프링 트리거/적분 서버 전용**,
+  **사망 래그돌/총 낙하 BP 체인 서버 전용**(클라이언트엔 `IsDead`만 감 → 서서 죽음). 세 건 모두
+  수정 완료(변수 Replicated 전환, Multicast, `FEnemyDeathReplicationInfo` 복제 프로퍼티 + OnRep C++
+  코스메틱), 리플레이 검증됨, **2-PC 실기 재검증 대기**. 상세
+  `2026-09-17_enemy_anim_death_replication_gaps.md`. 위 `physicsReplicationMode` 미해결 항목은
+  리플레이 월드에 한해 Chronicle이 `PredictiveInterpolation`을 강제(실기 UGV 모드는 여전히 `Default`).
 
 ## 0. 한눈에 보기 (TL;DR, 2026-08-06 최초 조사 당시 스냅샷 — 지금은 대부분 해소됨, §0-1/§8 참고)
 
@@ -628,3 +636,60 @@ Q1/Q4/Q5/Q6 답변 반영(2026-08-06, `architecture_decisions.md` §1.4 참고).
       기존 `BP_TestGameMode`(`DefaultAxisWhenUnspecified=Unspecified`)를 그대로 써서 Host/Client
       선택 화면(`AxisSelectionWidget`)이 계속 뜸 — 두 레벨의 역할(하나는 빠른 단독 테스트용, 하나는
       실제 Host/Client 선택이 필요한 진입점)에 맞게 분리 완료.
+
+---
+
+## 9. ⚠ 레벨 GameMode 오버라이드가 titan 계열이 아니면 2-PC 가 조용히 깨진다 (2026-09-23 실사고)
+
+`New_kadex_0811` 의 World Settings GameMode 오버라이드가 2026-09-21 SoldierLab 이관 때
+**`GM_SoldierLab`**(부모 순정 `AGameModeBase`, `GameStateClass=AGameStateBase`,
+`PlayerControllerClass=APlayerController` — 실측)로 바뀌어 있었고, 2-PC 테스트에서 **클라이언트만**
+① 시나리오 재시작 시 카메라 페이드가 안 되고 ② 재시작 후 드론이 원위치로 안 돌아왔다.
+
+| 없어진 클래스 | 결과 |
+|---|---|
+| `Atitan_exampleGameState` | 이 GameState 를 쓰는 코드는 전부 null 가드라 **조용히 서버-로컬 폴백**으로 빠진다 — 재시작 멀티캐스트 3종이 클라에 안 간다. 단일 프로세스에서는 폴백이 곧 정답이라 **2-PC 에서만** 드러난다 |
+| `Atitan_examplePlayerController` | `PlayerAxis` 가 안 정해지고 데모 플래그(GameState 리플리케이트)도 클라에 안 간다 → `ADronePawn::ResolveShouldSimulateDrone` 에서 서버(데모→리슨서버)·클라(Unspecified→true)가 **둘 다 시뮬 주체**가 되어 각자 물리를 돌린다 |
+
+**해결**: 오버라이드를 `BP_KadexTestGameMode`(부모 `Atitan_exampleGameMode`)로 복구 → 정상.
+P4 `Content/New_kadex_0811.umap#43`(09-18, 이관 직전)에는 `BP_KadexTestGameMode` 하나뿐이었다.
+**운용 규칙**: `GM_SoldierLab` 은 병사 거동 자유 관전용 — **단일 프로세스에서만**. 2-PC·전시 구성은 항상 titan 계열 GM.
+진단: 재시작 시 `[ScenarioStateSubsystem] 재시작: 이 월드의 GameState 가 Atitan_exampleGameState 가 아님(게임 모드=…)` 경고(Standalone 제외).
+
+**같이 들어간 것 — 재시작의 "각 프로세스가 자기 것을 치운다"**: 카메라 페이드(로컬
+`PlayerCameraManager`) · 병사 손의 소총(`BP_AR4Rifle` `bReplicates=false`) · 코스메틱 투사체 풀은
+프로세스마다 따로라 서버 처리만으로는 못 치운다. `Atitan_exampleGameState` 에 멀티캐스트 3종
+(`Multicast_ScenarioRestartBegin(FadeOut)` / `…Apply()` / `…End(FadeIn)`)을 두고 각 프로세스가
+`UScenarioStateSubsystem::RunLocalRestartBegin/Apply/End` 를 실행한다. 각 프로세스는 **자기가 스폰한
+것만**(`GetLocalRole()==ROLE_Authority`) 파괴/주차하고(복제 액터를 로컬로 지우면 서버와 갈림),
+`Apply` 는 **자기가 시뮬하는** `IScenarioResettable` 만 리셋한다 — 차량은 서버, 드론은 시뮬 주체.
+상세: `../level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md` §5 ·
+드론 권한 규약은 `../vehicle/drone/drone_flight_dev_guide.md` 15.2절.
+
+**후속(2026-09-23) — 드론 짐벌 배율도 시뮬 주체가 되돌린다.** `ADronePawn::ZoomLevel` 은 §8 드론 항목의
+상태 보고(`Server_ReportState` → `RepZoomLevel`) 대상이라, **서버에서 되돌려 봐야 다음 보고에
+덮인다**. 그래서 재시작 리셋도 시뮬 주체 구간에서 `SetZoomLevel(InitialZoomLevel)`(BeginPlay 스냅샷)
+하고, 서버의 `RepZoomLevel` 은 그 다음 보고로 따라오게 둔다 — 위치(`Flight->ResetTo`)와 같은 논리다.
+※ 수정은 2026-09-23 기준 **빌드 전**(다음 빌드 반영 예정). 드론 `ViewMode`(Chase/Onboard/Gimbal)는
+복제되지 않는 **로컬 카메라 모드**라 리셋 대상이 아니다. 같은 전수 대조에서 **일부러 안 되돌리는
+것**으로 확정된 부류: 진단 누적값 · **복제 미러(`Rep*` — 시뮬 주체 값이 오면 덮임)** ·
+BeginPlay 1회 세팅(되돌리면 깨진다).
+
+**후속(2026-09-23) — "복제되는 상태는 서버가, 비복제 로컬 상태는 각 프로세스가" 의 교과서 사례 2개.**
+상태 패널(HUD 대시보드) 누적값이 재시작에서 안 되돌려지던 것을 고치면서, **같은 재시작 안에서 리셋
+호출 위치가 정반대**인 두 컴포넌트가 나왔다. 판단 기준은 "이 액터를 누가 시뮬하는가"가 아니라
+**"이 값이 복제되는가 / 어느 프로세스가 이 값을 만드는가"** 다.
+
+| 컴포넌트 | 복제 여부 · 생성 주체 | 리셋을 어디서 부르나 |
+|---|---|---|
+| 드론(·트럭) `UStatusHUDComponent` — 배터리·비행시간·고도/속도 그래프 | `CurrentData` **비복제**, 틱에 **권한 게이트 없음** → 프로세스마다 자기 값을 따로 누적 | **모든 프로세스** — `ADronePawn::ResetForScenarioRestart_Implementation` 의 `HasAuthority` 분기 밖, **시뮬 주체 판정보다 먼저**. 서버만 되돌리면 클라 화면 패널이 지난 사이클을 그대로 이어간다 |
+| UGV `UUGVStatusComponent` — 배터리·온도·누적 주행거리 | `CurrentData` 가 `ReplicatedUsing = OnRep_CurrentData`, `TickComponent` 가 `bUseDummyData && GetOwner()->HasAuthority()` 일 때만 값을 만듦 | **서버에서만** — `AUGV0901Pawn` 의 `HasAuthority` 게이트 **안**. 서버 한 곳만 되돌리면 클라 대시보드 숫자도 복제로 따라온다 |
+
+트럭은 드론과 **같은 컴포넌트**를 쓰지만 트럭 자체를 서버가 시뮬하므로 현재는 `HasAuthority` 게이트
+안에서 부른다 — **클라 화면의 트럭 패널을 쓰게 되면 게이트 밖으로 옮겨야 한다**(코드 주석에 명시).
+UGV 누적 주행거리의 원본은 `AUGVAIController::TankTotalDistanceTraveledCm`(서버 전용)이고 패널 값은
+매 틱 거기서 파생된다. RCWS 탄약은 이미 `URCWSComponent::ResetForScenarioRestart()` 가 되돌리고 있고
+`CurrentData` 가 복제되므로 클라 대시보드도 따라온다(확인 완료).
+※ 상태 패널 수정도 2026-09-23 기준 **빌드 전**. 상세:
+`../level_new_kadex_0811/2026-09-22_scenario_restart_implementation.md` §5 끝 ·
+`../vehicle/drone/drone_flight_dev_guide.md` 15.2절.

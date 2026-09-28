@@ -1,6 +1,6 @@
 # 데모 모드 UGV RCWS 자동사격(탐색 스윕) 시작 시점 — 레벨 시작 → 1차 목적지 도착
 
-2026-09-15 / 진행중(코드·DT 완료, 빌드 후 EffectType 설정 + PIE 검증 대기) / 데모 모드에서 UGV RCWS를 레벨 시작 1초 뒤에 ARM+AutoFire로 강제하던 것을, 새 DT 행 `UGVArriveZone1`(ActorStopped)이 1차 목적지 도착 시 켜도록 이동. 이동형지휘소는 그대로 레벨 시작 시.
+2026-09-15 / 완료(2026-09-16 PIE 확인) / 데모 모드에서 UGV RCWS를 레벨 시작 1초 뒤에 ARM+AutoFire로 강제하던 것을, 새 DT 행 `UGVArriveZone1`(ActorStopped)이 1차 목적지 도착 시 켜도록 이동. 이동형지휘소는 그대로 레벨 시작 시.
 
 관련: `2026-09-01_scenario_run_modes_demo_fullsystem.md`(데모 모드 §3.2),
 `scenario_authoring_guide.md`(DT 저작 — 이펙트/행 표 갱신됨),
@@ -46,13 +46,14 @@ DT의 `UGVSurveillance`/`UGVAutoFire` 행은 `bEnabled=false`(FullSystem에선 �
 
 | RowName | Prereq | Trigger | 값 | Effect | bEnabled |
 |---|---|---|---|---|---|
-| `UGVArriveZone1` | `UAVSpotted` | `ActorStopped` | 0 | **`None`(⚠️ 임시)** → 빌드 후 `SetDemoUGVAutoFire`로 | true |
+| `UGVArriveZone1` | `UAVSpotted` | `ActorStopped` | 0 | `SetDemoUGVAutoFire` | true |
 
 DebugLabel: "UGV 1차 목적지 도착 -> (데모) RCWS ARM+자동사격, 탐색 스윕(자동정찰) 시작".
 
-> ⚠️ **EffectType이 아직 `None`이다.** 새 enum 값은 C++ 재빌드 전엔 에디터에 존재하지 않아서
-> 넣을 수 없었다. 빌드 뒤 반드시 설정할 것(§6). 그리고 이 DT는 작업 당시
-> `user2@user2_jiseong`도 동시에 열어두고 있었으니 P4 제출 전 충돌 확인.
+> 작업 당일엔 EffectType이 `None`(임시)이었다 — 새 enum 값은 C++ 재빌드 전엔 에디터에 존재하지
+> 않아 넣을 수 없었기 때문. **빌드 후 같은 날(2026-09-15) MCP로 `SetDemoUGVAutoFire`로 설정하고
+> DT 저장 완료.** 이 DT는 작업 당시 `user2@user2_jiseong`도 동시에 열어두고 있었으니 P4 제출 전
+> 충돌 확인.
 
 ## 4. 왜 `ActorStopped`로 되는가
 
@@ -76,12 +77,12 @@ ARM되므로 허용 가능한 폴백.
 - 예전 동작(레벨 시작 즉시)으로 되돌리려면 코드 수정 없이 `UGVArriveZone1` 행을
   **Prereq 없음 + `TimerOnly` 0초**로 바꾸면 된다.
 
-## 6. 남은 작업
+## 6. 남은 작업 → 전부 완료 (2026-09-15 설정, 2026-09-16 PIE 확인)
 
-1. 사용자 빌드(에디터 재시작).
-2. `DT_ScenarioSteps_ThreeStage` ▸ `UGVArriveZone1` 행 ▸ `EffectType = SetDemoUGVAutoFire` (DT 에디터 또는 MCP).
-3. DT 저장 (+ P4 충돌 확인).
-4. PIE 로그 순서 확인:
+1. [x] 사용자 빌드(에디터 재시작) — 2026-09-15.
+2. [x] `DT_ScenarioSteps_ThreeStage` ▸ `UGVArriveZone1` 행 ▸ `EffectType = SetDemoUGVAutoFire` — 빌드 후 MCP로 설정.
+3. [x] DT 저장 — 2026-09-15 (P4 충돌 확인은 서브밋 시).
+4. [x] PIE 확인 — 2026-09-16 사용자 "잘됨"(도착 전 정지, 도착 후 스윕 시작). 기대했던 로그 순서(참고용):
    ```
    데모 실행 모드 — ... UGV=켬[1차 목적지 도착 시 ...]
    데모 자동사격: 이동형지휘소(...) RCWS를 ARM + AutoFire...      ← 시작 시 UGV 줄이 없어야 함
@@ -91,6 +92,9 @@ ARM되므로 허용 가능한 폴백.
    데모 자동사격: UGV(...) RCWS를 ARM + AutoFire + FireMode=...로 전환.
    ```
    그리고 UGV 포탑이 도착 전엔 가만히 있고 도착 후 스윕을 시작하는지 육안 확인.
+
+남은 것은 §7의 재시작 설계 메모(재시작 구현 시 UGV RCWS 모드를 `Remote`로 되돌리기)만 — 이번
+작업 범위 밖, 향후 재시작 구현 때 처리.
 
 ## 7. 재시작 설계와의 관계
 
