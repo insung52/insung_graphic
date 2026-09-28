@@ -18,6 +18,21 @@
 빠졌다는 걸 모른다.** 그래서 아래 §7의 검증(패키징 로그의 `[RtspEncoder]` 경고 확인)을 반드시
 할 것.
 
+### 준비해둔 스크립트 (2026-09-15)
+
+| 파일 | 용도 |
+|---|---|
+| `C:\SDK\check_linux_packaging_env.ps1` | **환경 점검.** Build.cs가 실제로 확인하는 경로/파일과 1:1로 맞춰 전부 검사하고 OK/FAIL로 출력. 패키징 전에 돌릴 것 |
+| `C:\SDK\make_gst_bundle.sh` | §5의 GStreamer Linux 번들 생성 (WSL에서 실행) |
+| `C:\SDK\make_cuda_bundle.sh` | §6의 CUDA Linux 번들 생성 (WSL에서 실행) |
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\SDK\check_linux_packaging_env.ps1
+```
+
+> `.ps1`은 **UTF-8 BOM**으로 저장해야 한다. Windows PowerShell 5.1은 BOM 없는 파일을 ANSI(949)로
+> 읽어서 한글 주석/문자열이 깨지고 파서 에러가 난다.
+
 ---
 
 ## 1. 현재 상태 점검 (2026-09-15 실측)
@@ -31,12 +46,31 @@
 | Windows CUDA Toolkit | `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3` / `CUDA_PATH` | ✅ v13.3 (env var도 설정됨) |
 | **Linux GStreamer 벤더링 번들** | `C:\SDK\gstreamer-1.24.2-linux-x86_64` / `GSTREAMER_1_0_ROOT_LINUX_X86_64` | ❌ **없음** |
 | **Linux CUDA 벤더링 번들** | `C:\SDK\cuda-13.3-linux-x86_64` / `CUDA_LINUX_X86_64_DIR` | ❌ **없음** |
-| WSL Ubuntu | — | ✅ 있음 (번들 생성에 필요) |
+| WSL Ubuntu | — | ⚠️ **26.04 LTS** — 번들 기준(24.04)과 다름, dev 패키지도 미설치 (§5-1) |
+| `Config/BootstrapPreamble.sh` | 프로젝트 체크아웃 | ✅ 있음 (§8-4) |
+| `DefaultGame.ini` 패키징 설정 4종 | 프로젝트 체크아웃 | ✅ MapsToCook 2개 + Input + ProjectCustomBuilds |
 
 → **해야 할 일은 4개: §2 툴체인, §3 Video Codec SDK, §5 Linux GStreamer 번들, §6 Linux CUDA 번들.**
 
 경로들은 전부 `RtspEncoder.Build.cs`에 하드코딩된 기본값이다. 기본 경로에 그대로 깔면 환경변수를
 따로 만들 필요가 없다(§4는 다른 위치에 깔았을 때만).
+
+### 1-1. 다운로드 링크 모음 (2026-09-15 확인)
+
+| # | 받을 것 | 링크 | 로그인 | 크기 | 설치 위치 |
+|---|---|---|---|---|---|
+| ① | UE 리눅스 크로스컴파일 툴체인 | https://cdn.unrealengine.com/CrossToolchain_Linux/v26_clang-20.1.8-rockylinux8.exe | 불필요 | 967MB | `C:\UnrealToolchains\v26_clang-20.1.8-rockylinux8` (자동) |
+| ② | NVIDIA Video Codec SDK **13.0.37** | https://developer.nvidia.com/video-codec-sdk-archive → "Video Codec SDK 13.0"의 `Windows & Linux` | **필요** | ~80MB | `C:\SDK\Video_Codec_SDK_13.0.37\` (수동 압축해제) |
+| ③ | WSL Ubuntu **24.04** | `wsl --install -d Ubuntu-24.04` | — | ~600MB | WSL |
+| ④ | GStreamer dev (24.04 안에서) | `apt` — §5-1b | — | — | 번들 → `C:\SDK\gstreamer-1.24.2-linux-x86_64` |
+| ⑤ | CUDA Linux dev (WSL 안에서) | `apt`(wsl-ubuntu repo) — §6-1 | — | — | 번들 → `C:\SDK\cuda-13.3-linux-x86_64` |
+
+이미 갖춰져 있어 **다시 받을 필요 없는 것**: Windows GStreamer(MSVC x86_64, Complete),
+Windows CUDA Toolkit v13.3, UE 5.8 — 셋 다 §7 점검 스크립트에서 OK 확인됨.
+
+②의 직링크는 `https://developer.nvidia.com/downloads/video-codec-sdk/13.0.37/video_codec_sdk_13.0.37.zip`
+이지만 로그인 세션이 있어야 하므로 브라우저로 아카이브 페이지를 거쳐 받는 게 확실하다.
+**메인 페이지는 최신 13.1을 주니 주의**(§3).
 
 ---
 
@@ -66,9 +100,21 @@ Min == Max이므로 다른 버전을 깔면 UBT가 그냥 거부한다. 기존 P
 
 ### 설치
 
-1. Epic 공식 문서 **"Linux Development Requirements for Unreal Engine"** 페이지에서
-   `native-linux-v26_clang-20.1.8-rockylinux8.exe`(1GB대)를 받는다.
-   (CDN 직링크는 브라우저 외 요청에 403을 주므로 문서 페이지의 링크를 쓸 것.)
+1. 다운로드 (로그인 불필요, 2026-09-15 `HTTP 200` 확인 — 967MB):
+
+   **https://cdn.unrealengine.com/CrossToolchain_Linux/v26_clang-20.1.8-rockylinux8.exe**
+
+   출처: Epic 공식 문서 [Linux Development Requirements for Unreal
+   Engine](https://dev.epicgames.com/documentation/en-us/unreal-engine/linux-development-requirements-for-unreal-engine).
+   참고로 경로는 `Toolchain_Linux`가 아니라 **`CrossToolchain_Linux`**다.
+
+   | UE | 툴체인 |
+   |---|---|
+   | **5.7 / 5.8** | `v26_clang-20.1.8-rockylinux8.exe` |
+   | 5.6 | `v25_clang-18.1.0-rockylinux8.exe` |
+   | 5.5 | `v23_clang-18.1.0-rockylinux8.exe` |
+   | 5.3 / 5.4 | `v22_clang-16.0.6-centos7.exe` |
+
 2. 실행 → 기본 경로 `C:\UnrealToolchains\v26_clang-20.1.8-rockylinux8`에 설치되고,
    설치 프로그램이 `LINUX_MULTIARCH_ROOT`를 시스템 환경변수로 자동 등록한다.
 3. **에디터와 Epic Launcher를 완전히 종료 후 재시작.** 환경변수라서 실행 중인 프로세스엔 반영이
@@ -107,8 +153,19 @@ Build.cs 주석 그대로: *"ThirdParty/NvCodec의 벤더링 헤더/샘플도 �
 
 ### 설치
 
-1. NVIDIA Developer 사이트에서 **Video Codec SDK 13.0.37** 아카이브를 받는다(로그인 필요).
-2. `C:\SDK\Video_Codec_SDK_13.0.37\`에 압축을 푼다. 기존 `13.1.15` 폴더는 지울 필요 없다
+1. **Video Codec SDK 13.0.37** 다운로드 — **NVIDIA Developer 계정 로그인 필요**:
+
+   - 아카이브 페이지: **https://developer.nvidia.com/video-codec-sdk-archive**
+     → 목록의 **"Video Codec SDK 13.0"** 줄의 `Windows & Linux` 링크
+   - 직링크: `https://developer.nvidia.com/downloads/video-codec-sdk/13.0.37/video_codec_sdk_13.0.37.zip`
+     (로그인 안 돼 있으면 인증 페이지로 튕긴다 — 브라우저에서 받을 것)
+   - ⚠️ 메인 페이지(`developer.nvidia.com/video-codec-sdk`)는 **최신(13.1)**을 준다. 반드시
+     아카이브에서 13.0을 받을 것.
+   - 13.0.37 요구 드라이버: **570.0 이상** (NVIDIA 공식 시스템 요구사항)
+
+2. `C:\SDK\Video_Codec_SDK_13.0.37\`에 압축을 푼다.
+   압축 안에 폴더가 한 겹 더 있으면 `Lib`/`Interface`/`Samples`가 이 경로 **바로 밑**에 오도록
+   맞출 것(Build.cs가 `<경로>\Lib\win\x64\nvencodeapi.lib`를 그대로 찾는다). 기존 `13.1.15` 폴더는 지울 필요 없다
    (Build.cs가 13.0.37만 보므로 공존해도 무해).
 3. Build.cs가 실제로 확인하는 파일 **2개**가 그 자리에 있는지 확인:
 
@@ -153,10 +210,23 @@ Build.cs가 보는 오버라이드 변수. **기본 경로를 쓰면 전부 불�
 SONAME으로 연결되어 실행 시점엔 타겟 머신에 apt로 깔린 진짜 GStreamer가 채워준다. 그래서
 **번들 버전과 타겟 머신 버전이 호환돼야 한다** — 현재 양쪽 다 Ubuntu 24.04 / GStreamer 1.24.2 기준.
 
-### 5-1. WSL Ubuntu에 dev 패키지 설치
+### 5-1. ⚠️ 이 노트북의 WSL은 Ubuntu **26.04**다 — 24.04를 따로 깔아야 한다
 
-WSL 배포판이 **Ubuntu 24.04**인지 먼저 확인(`lsb_release -d`). 22.04면 GStreamer가 1.20대라
-번들 버전이 달라지므로, 24.04 배포판을 따로 설치해서 쓰는 걸 권장한다.
+2026-09-15 확인 결과 기본 WSL 배포판이 **Ubuntu 26.04 LTS**이고, GStreamer dev 패키지는 아직
+설치조차 안 돼 있다.
+
+**26.04로 번들을 만들면 안 된다.** 납품 대상은 Ubuntu 22.04 / 24.04다. 번들보다 **낮은** 버전의
+GStreamer가 깔린 머신에서는 링커가 기록한 심볼을 런타임에 못 찾을 수 있고, 그러면 RTSP만 꺼지는
+게 아니라 **로더 단계에서 프로세스가 즉사**한다(§9의 `DT_NEEDED` 설명). 검증된 조합은
+**Ubuntu 24.04 / GStreamer 1.24.2** 하나뿐이다.
+
+```powershell
+wsl --install -d Ubuntu-24.04
+```
+설치 후 사용자 계정 생성 프롬프트가 한 번 뜬다. 기존 26.04는 지울 필요 없다(공존 가능,
+`wsl -d Ubuntu-24.04`로 지정 실행).
+
+### 5-1b. dev 패키지 설치
 
 ```bash
 sudo apt update
@@ -168,9 +238,18 @@ pkg-config --modversion gstreamer-1.0   # → 1.24.x 확인
 
 ### 5-2. 번들 생성 스크립트
 
-WSL 안에서 아래를 `~/make_bundle.sh`로 저장하고 실행한다. (원본은 기존 PC의
-`C:\SDK\gstreamer-1.24.2-linux-x86_64\make_bundle.sh`에 있었다 — 새 노트북엔 없어서 §10.2의
-번들 명세대로 재작성한 것.)
+**`C:\SDK\make_gst_bundle.sh`에 이미 만들어 뒀다.** WSL Ubuntu 24.04에서:
+
+```bash
+bash /mnt/c/SDK/make_gst_bundle.sh
+```
+
+버전이 1.24.x가 아니면 경고하고 확인을 받으며, 파일 11개 + 헤더 4폴더를 자체 검증하고,
+성공하면 스크립트 사본을 번들 폴더에 같이 남긴다.
+
+아래는 그 내용(기존 PC의 `C:\SDK\gstreamer-1.24.2-linux-x86_64\make_bundle.sh`가 새 노트북엔
+없어서 `rtsp_poc_findings.md` §10.2의 번들 명세대로 재작성한 것 — 디스크의 스크립트가 최신본이고
+이건 설명용):
 
 ```bash
 #!/bin/bash
@@ -242,16 +321,24 @@ Get-ChildItem C:\SDK\gstreamer-1.24.2-linux-x86_64\include  # 폴더 4개
 
 ### 6-1. WSL에 CUDA Toolkit 13.3 설치
 
-NVIDIA CUDA apt 저장소(ubuntu2404/x86_64)를 등록한 뒤:
+**`wsl-ubuntu` 저장소를 쓴다** — WSL 전용 저장소라 드라이버 패키지가 아예 없어서 실수로 깔 위험이
+없다(2026-09-15에 `cuda-keyring_1.1-1_all.deb`, `cuda-toolkit-13-3`, `cuda-driver-dev-13-3`,
+`cuda-cudart-dev-13-3` 존재 확인).
 
 ```bash
-sudo apt install -y cuda-toolkit-13-3
-# 최소 구성으로 가려면 드라이버 API 헤더 + stub만 있으면 된다:
-#   sudo apt install -y cuda-driver-dev-13-3 cuda-cudart-dev-13-3
+wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+sudo apt update
+
+# 최소 구성 권장 — Build.cs가 필요로 하는 건 cuda.h와 stub libcuda.so뿐이다
+sudo apt install -y cuda-driver-dev-13-3 cuda-cudart-dev-13-3
+
+# (전체 툴킷이 필요하면) sudo apt install -y cuda-toolkit-13-3
 ```
 
 > WSL에는 **NVIDIA 드라이버를 설치하지 말 것** (`cuda-drivers` 계열 금지). WSL2는 윈도우 호스트
 > 드라이버를 `/usr/lib/wsl/lib`로 패스스루받으므로 게스트에 드라이버를 깔면 깨진다. 툴킷만 깐다.
+> `wsl-ubuntu` 저장소를 쓰면 이 실수가 원천적으로 불가능하다.
 
 설치 후 실제 경로를 확인한다(버전에 따라 `targets/x86_64-linux/` 밑일 수 있다):
 
@@ -261,6 +348,14 @@ find /usr/local/cuda-13.3 -name 'libcuda.so' -path '*stubs*'
 ```
 
 ### 6-2. 번들 생성
+
+**`C:\SDK\make_cuda_bundle.sh`에 이미 만들어 뒀다.** WSL에서:
+
+```bash
+bash /mnt/c/SDK/make_cuda_bundle.sh
+```
+
+툴킷 위치를 자동 탐색하고 `CUDA_VERSION`이 13030이 아니면 경고한다. 아래는 그 요지(설명용):
 
 ```bash
 #!/bin/bash
@@ -310,6 +405,15 @@ echo "[cuda bundle] OK -> $OUT"
 패키지에 플러그인이 실제로 들어갔는지는 산출물 매니페스트에 `RtspEncoder.uplugin`이 있는지로
 확인할 수 있다(§10.2.1에서 쓴 방법).
 
+**패키징 전 사전 점검**은 `C:\SDK\check_linux_packaging_env.ps1`로 한 번에 된다(§0).
+**패키징 후 산출물 점검**(쿡 로그 MCP 8001, `[RtspEncoder]` 경고, 폴더 구성, 프리앰블 블록)은
+`2026-09-02_linux_package_ugv_host_rc_test_guide.md` **§2-5 체크리스트 5개**를 따를 것.
+
+> **[2026-09-15] 마운트 등록 시점이 바뀌었다.** 예전엔 인코더 생성보다 먼저 마운트를 등록해서,
+> 인코더가 실패해도 클라이언트는 접속에 성공하고 "접속은 되는데 영상만 안 나오는" 모양이 됐다
+> (LIG에서 20초 DESCRIBE 타임아웃으로 나타나 IP 문제로 오인). 지금은 **인코더 성공 후에만 마운트를
+> 등록**해서 실패 시 즉시 404가 떨어진다. 상세: `rtsp/2026-09-15_lig_rtsp_describe_timeout_analysis.md`.
+
 ---
 
 ## 8. 패키징 실행 — 기본 Package Project 메뉴를 쓰면 안 된다
@@ -346,14 +450,20 @@ echo "[cuda bundle] OK -> $OUT"
 확인용 로그가 전부 `titan_example.log`에 찍혀야 하기 때문. Shipping으로 뽑으면
 `2026-09-02_...md` §6의 검증 절차를 대부분 못 쓴다.
 
-### 8-4. 산출물에 `run_titan_example.sh` 수동 복사
+### 8-4. Wayland/X11 폴백 — **래퍼 수동 복사는 2026-09-15부로 폐지**
 
-프로젝트 루트에 있고 **UE 패키징이 자동으로 넣어주지 않는다.** 세션 종류(Wayland/X11)를 자동
-판별해서 SDL 드라이버를 고르는 래퍼다. `LinuxEngine.ini`가 `VideoDriver=wayland`를 **폴백 없이**
-강제하므로, 순수 X11 머신에서 이게 없으면 `Could not initialize SDL: wayland not available`로
-0.04초 만에 죽는다(외부 테스터가 이걸로 4회 연속 실패한 이력).
+`Config/BootstrapPreamble.sh`가 도입되면서, UAT(`LinuxPlatform.Automation.cs`의
+`StageBootstrapExecutable`)가 리눅스 스테이징 때 그 내용을 생성되는 `titan_example.sh` 맨 앞에
+자동으로 끼워 넣는다. 더 이상 `run_titan_example.sh` / `titan_example_x11_fallback.sh`를 손으로
+복사하지 않는다(레거시로 남겨두고, 넣어도 무해).
 
-`titan_example_x11_fallback.sh`는 X11 강제용 구버전 래퍼로, 같이 복사해두면 무해하다.
+- 이 노트북 체크아웃에 파일 존재 확인됨: `C:\working\kadex\titan_example\Config\BootstrapPreamble.sh`
+  (읽기 전용 = P4 관리 중) ✅
+- **⚠️ 이 파일이 체크아웃에 빠져 있으면 패키징은 조용히 성공하고 폴백 없는 스크립트가 나온다.**
+  산출물의 `titan_example.sh`를 열어 `### Added from project Config BootstrapPreamble.sh` 마커
+  블록이 있는지 반드시 확인할 것.
+
+절차 원문과 검증 이력은 `2026-09-02_linux_package_ugv_host_rc_test_guide.md` §2-4 / §2-5 / §2-6.
 
 ---
 
@@ -389,6 +499,10 @@ RTSP 실제 수신 확인:
 gst-launch-1.0 rtspsrc location=rtsp://<UGV IP>:8554/ugv/rcws latency=0 drop-on-latency=true protocols=tcp \
   ! rtph264depay ! h264parse ! avdec_h264 ! videoconvert ! autovideosink sync=true qos=true
 ```
+> 전송은 **TCP interleaved / UDP 둘 다 된다**(2026-09-15 정정 — `RtspServerSubsystem`에
+> `gst_rtsp_media_factory_set_protocols` 제한 호출이 없어 gst-rtsp-server 기본값이 그대로 적용).
+> 다만 UDP를 고르면 RTP/RTCP 포트가 접속 시 동적 협상되므로, 방화벽이 있으면 8554만 열면 되는
+> TCP를 권장한다.
 > `videoconvert`를 빼면 `avdec_h264`(I420)와 `ximagesink`(RGB) 사이 caps 협상이 실패하고,
 > GStreamer가 그걸 소스까지 거슬러 `not-negotiated (-4)`로 보고해서 네트워크 문제로 오해하기 쉽다
 > (2026-09-04에 실제로 겪음).
@@ -397,15 +511,59 @@ gst-launch-1.0 rtspsrc location=rtsp://<UGV IP>:8554/ugv/rcws latency=0 drop-on-
 
 ## 10. 요약 체크리스트
 
-- [ ] `C:\UnrealToolchains\v26_clang-20.1.8-rockylinux8` 설치 + `LINUX_MULTIARCH_ROOT` 확인 + 에디터 재시작
-- [ ] `C:\SDK\Video_Codec_SDK_13.0.37` (13.1.15 아님) — win lib + linux stub 2개 파일 확인
-- [ ] `C:\SDK\gstreamer-1.24.2-linux-x86_64` — include 4폴더 + lib `.so` 11개
-- [ ] `C:\SDK\cuda-13.3-linux-x86_64` — `include/cuda.h` + `lib/libcuda.so`(stub)
-- [ ] Windows GStreamer Complete 설치 확인 (`gstrtspserver-1.0.lib` 존재) ✅ 이미 됨
-- [ ] Windows CUDA v13.3 ✅ 이미 됨
-- [ ] 패키징 로그에 `[RtspEncoder]` 경고 **0줄**
+**환경 구성 — 2026-09-15 전부 완료** (상세는 §10-1):
+
+- [x] 툴체인 `C:\UnrealToolchains\v26_clang-20.1.8-rockylinux8`
+- [x] `C:\SDK\Video_Codec_SDK_13.0.37` — win lib + linux stub
+- [x] WSL `Ubuntu-24.04` (24.04.5 LTS) 등록
+- [x] `C:\SDK\gstreamer-1.24.2-linux-x86_64` — lib 11개 / include 4폴더
+- [x] `C:\SDK\cuda-13.3-linux-x86_64` — cuda.h(13030) + stub libcuda.so
+- [x] Windows GStreamer Complete / Windows CUDA v13.3
+- [x] `Config/BootstrapPreamble.sh`, `DefaultGame.ini` 설정 4종
+- [x] 스크립트 `C:\SDK\{check_linux_packaging_env.ps1, make_gst_bundle.sh, make_cuda_bundle.sh, setup_wsl_bundles.sh}`
+- [x] `check_linux_packaging_env.ps1` 전부 OK
+
+**남은 것**:
+
 - [ ] Platforms ▸ Project Custom Builds ▸ "Package Linux (MCP 8000 회피)" / Development
-- [ ] 산출물에 `run_titan_example.sh` 복사
+- [ ] 산출물 §2-5 체크리스트 5개(쿡 로그 MCP 8001 / `[RtspEncoder]` 경고 0줄 / 폴더 구성 /
+      `titan_example.sh`의 프리앰블 마커 블록 / 실행 가이드 동봉)
+
+---
+
+## 10-1. 실제 구성 기록 (2026-09-15, 이 노트북)
+
+**결과: 전 항목 통과.** `check_linux_packaging_env.ps1` → "전부 통과 — 패키징 가능 (RTSP 포함)".
+
+| 단계 | 결과 |
+|---|---|
+| ① 툴체인 | `C:\UnrealToolchains\v26_clang-20.1.8-rockylinux8\`, `clang++` 확인, 버전 일치 |
+| ② Video Codec SDK | `C:\SDK\Video_Codec_SDK_13.0.37` — win lib + linux stub 둘 다 존재, 벤더링 헤더(13.0)와 일치 |
+| ③ WSL | `wsl --install -d Ubuntu-24.04 --no-launch` → **Ubuntu 24.04.5 LTS (noble)** 등록. `--no-launch`라 계정 생성 프롬프트 없이 끝나고, 이후 `-u root`로 작업. 기존 26.04(`Ubuntu`)는 그대로 공존 |
+| ④ GStreamer 번들 | **1.24.2** — 검증 기준과 정확히 동일. `lib/` 11개, `include/` 4폴더 |
+| ⑤ CUDA 번들 | `CUDA_VERSION = 13030`, stub `libcuda.so` 74,464 bytes, 헤더 81개. 툴킷 경로는 `/usr/local/cuda-13.3/targets/x86_64-linux/` 밑이었다 |
+
+WSL에서 쓴 명령:
+```powershell
+wsl --install -d Ubuntu-24.04 --no-launch
+wsl -d Ubuntu-24.04 -u root -- bash /mnt/c/SDK/setup_wsl_bundles.sh
+```
+
+### 겪은 셸 버그 2건 (스크립트에 수정 반영됨)
+
+1. **`$SUDO VAR=x cmd` 형태를 쓰면 안 된다.** root로 실행해 `$SUDO`가 빈 문자열이 되면
+   `DEBIAN_FRONTEND=noninteractive apt-get install ...`이 되는데, **환경변수 접두사 판정은
+   확장 전 파싱 시점에 끝나므로** 이미 첫 단어가 `$SUDO`였던 이 명령은 접두사로 인정받지 못하고
+   `DEBIAN_FRONTEND=noninteractive: command not found`가 난다. → `export`로 위에서 잡을 것.
+
+2. **`set -o pipefail` + `yes yes | bash script.sh`는 성공을 실패로 만든다.** 스크립트가 먼저
+   끝나면 `yes`가 SIGPIPE(141)로 죽고, pipefail이 그걸 파이프라인 실패로 올린다. 번들은 정상
+   생성됐는데 래퍼만 "실패"를 찍었다. → `bash script.sh < <(yes yes)` 로 바꿈.
+
+### 주의: `titan_example.uproject`는 UE 5.8
+
+`EngineAssociation: "5.8"`. 5.7도 깔려 있지만 툴체인 버전은 두 엔진이 같아서(`Linux_SDK.json`
+동일) 이 항목으로는 문제가 안 생긴다.
 
 ---
 
