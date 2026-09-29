@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>병사 이동 속도 조정 방법 안내</title>
+</head>
+<body style="margin:0; padding:0; background-color:#eef0f2;">
+
+<!-- 이메일 본문: 인라인 스타일 + 테이블 레이아웃 (메일 클라이언트 호환) -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eef0f2; padding:24px 12px;">
+<tr><td align="center">
+
+<table role="presentation" width="680" cellpadding="0" cellspacing="0" border="0" style="width:680px; max-width:680px; background-color:#ffffff; border:1px solid #d8dcdf; border-radius:6px; font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif; color:#20242a;">
+
+  <!-- 머리말 -->
+  <tr>
+    <td style="padding:22px 28px 16px 28px; border-bottom:3px solid #2f6f4f;">
+      <div style="font-size:12px; color:#6b7280; letter-spacing:.04em;">KADEX 시뮬레이터 / 병사 AI</div>
+      <div style="font-size:21px; font-weight:bold; padding-top:4px;">병사 이동 속도 조정 방법 안내</div>
+      <div style="font-size:13px; color:#6b7280; padding-top:6px;">2026-09-29 · 데이터테이블 <span style="font-family:Consolas,monospace;">DT_SoldierMovement</span></div>
+    </td>
+  </tr>
+
+  <!-- 인사 + 요약 -->
+  <tr>
+    <td style="padding:22px 28px 4px 28px; font-size:15px; line-height:1.75;">
+      <p style="margin:0 0 14px 0;">안녕하세요.</p>
+      <p style="margin:0 0 14px 0;">병사가 상황별로 얼마나 빨리 움직일지는 <b>표 한 장</b>에서 정할 수 있게 되어 있습니다. 애니메이션 설정은 건드릴 필요가 없고, 표의 값만 바꾸면 됩니다.</p>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#eef5f0; border-left:4px solid #2f6f4f; margin:4px 0 18px 0;">
+        <tr><td style="padding:14px 18px; font-size:14px; line-height:1.7;">
+          <b>한 줄 요약</b><br>
+          한 상황마다 정하는 것은 두 가지입니다 — <b>어느 걸음걸이까지 허용할지</b>(걷기 / 달리기), 그리고 <b>그 걸음 안에서 몇 배로 움직일지</b>(0.75 ~ 1.25).
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- 1. 표 열기 -->
+  <tr>
+    <td style="padding:6px 28px 0 28px;">
+      <div style="font-size:16px; font-weight:bold; border-bottom:1px solid #e3e6e9; padding-bottom:6px; margin-bottom:12px;">1. 표 열기와 저장</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px; line-height:1.7;">
+        <tr>
+          <td width="26" valign="top" style="padding:4px 8px 4px 0; color:#2f6f4f; font-weight:bold;">1</td>
+          <td style="padding:4px 0;">콘텐츠 브라우저에서 <span style="font-family:Consolas,monospace; background-color:#f1f3f4; padding:1px 5px;">SoldierLab / Data / DT_SoldierMovement</span> 더블클릭</td>
+        </tr>
+        <tr>
+          <td width="26" valign="top" style="padding:4px 8px 4px 0; color:#2f6f4f; font-weight:bold;">2</td>
+          <td style="padding:4px 0;">바꾸고 싶은 <b>행</b>(상황)을 클릭하고, 아래 칸에서 <b>Max Gait</b> / <b>Speed Scale</b> 수정</td>
+        </tr>
+        <tr>
+          <td width="26" valign="top" style="padding:4px 8px 4px 0; color:#2f6f4f; font-weight:bold;">3</td>
+          <td style="padding:4px 0;"><b>Ctrl+S</b> 로 저장 → 게임을 다시 실행하면 반영</td>
+        </tr>
+      </table>
+      <p style="margin:12px 0 18px 0; font-size:13px; color:#6b7280;">저장이 안 되면 파일이 잠겨 있는 것입니다. 표를 우클릭 → <i>Source Control → Check Out</i> 후 다시 저장해 주세요.</p>
+    </td>
+  </tr>
+
+  <!-- 2. 두 값의 뜻 -->
+  <tr>
+    <td style="padding:6px 28px 0 28px;">
+      <div style="font-size:16px; font-weight:bold; border-bottom:1px solid #e3e6e9; padding-bottom:6px; margin-bottom:12px;">2. 바꿀 수 있는 값 두 개</div>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px; border-collapse:collapse;">
+        <tr>
+          <td style="padding:10px 12px; background-color:#eef5f0; border:1px solid #dfe4e8; font-weight:bold; width:130px;">Max Gait</td>
+          <td style="padding:10px 12px; border:1px solid #dfe4e8; line-height:1.7;">
+            그 상황에서 <b>허용하는 가장 빠른 걸음걸이</b>입니다. <b>Walk</b>(걷기 ≈ 291) 또는 <b>Jog</b>(달리기 ≈ 583).<br>
+            AI 가 달리기를 원해도 <b>Walk</b> 로 두면 걷습니다. 이 방식은 <b>발 미끄러짐이 전혀 생기지 않습니다</b> — 걷기·달리기 동작이 각각 그 속도로 제작되어 있기 때문입니다.
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 12px; background-color:#eef5f0; border:1px solid #dfe4e8; font-weight:bold;">Speed Scale</td>
+          <td style="padding:10px 12px; border:1px solid #dfe4e8; line-height:1.7;">
+            그 걸음 속도에 곱하는 <b>배율</b>입니다. <span style="font-family:Consolas,monospace;">0.9</span> = 10% 느리게, <span style="font-family:Consolas,monospace;">1.0</span> = 그대로.<br>
+            <b>0.75 ~ 1.25 까지만</b> 입력됩니다(이유는 4번 항목).
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:14px 0 18px 0; font-size:14px; line-height:1.7;">
+        두 값을 곱한 결과가 실제 이동 속도입니다. 예: <b>Walk × 0.75 = 218</b>, <b>Jog × 0.85 = 495</b>.
+      </p>
+    </td>
+  </tr>
+
+  <!-- 3. 현재 값 -->
+  <tr>
+    <td style="padding:6px 28px 0 28px;">
+      <div style="font-size:16px; font-weight:bold; border-bottom:1px solid #e3e6e9; padding-bottom:6px; margin-bottom:12px;">3. 상황 16개와 현재 값</div>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:13px; border-collapse:collapse; line-height:1.6;">
+        <tr style="background-color:#2f6f4f; color:#ffffff;">
+          <th align="left"   style="padding:8px 10px; font-weight:bold;">상황(행 이름)</th>
+          <th align="left"   style="padding:8px 10px; font-weight:bold;">적용되는 순간</th>
+          <th align="center" style="padding:8px 6px; font-weight:bold; white-space:nowrap;">걸음</th>
+          <th align="center" style="padding:8px 6px; font-weight:bold; white-space:nowrap;">배율</th>
+          <th align="center" style="padding:8px 6px; font-weight:bold; white-space:nowrap;">속도</th>
+        </tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Default</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">아무 상황에도 해당하지 않을 때</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">1.00</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">583</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Cautious</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">은밀 접근 명령 중</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Walk</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.80</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">233</td></tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Normal</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">보통 이동 명령 중</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.85</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">495</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Rush</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">돌입 명령 중 <span style="color:#8a5a00;">(우선 적용)</span></td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">1.00</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">583</td></tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">BreakContact</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">교전을 끊고 도주 중 <span style="color:#8a5a00;">(우선 적용)</span></td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">1.00</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">583</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">MovingToCover</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">엄폐물 사이 빈 땅을 건널 때</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">1.00</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">583</td></tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">EdgeAdvance</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">모서리를 한 걸음씩 돌아 나갈 때</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Walk</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.75</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">218</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Aiming</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">총을 들고 표적을 향한 상태 <b>(이동 중 포함)</b></td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.90</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">524</td></tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Firing</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;"><b>실제로 사격하는 동안</b></td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Walk</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.75</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">218</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Reloading</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">재장전 중</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Walk</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.85</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">248</td></tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Peeking</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">엄폐물에서 몸을 내어 확인할 때</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Walk</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.75</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">218</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Scanning</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">좌우를 훑으며 경계할 때</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Walk</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.85</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">248</td></tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Suppressed</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">총알이 스쳐 제압된 상태</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.85</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">495</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">HitReacting</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">총에 맞아 움찔하는 순간</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Walk</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.75</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">218</td></tr>
+        <tr><td style="padding:7px 10px; border-bottom:1px solid #e9ecef; font-family:Consolas,monospace;">Wounded</td><td style="padding:7px 10px; border-bottom:1px solid #e9ecef;">체력 40% 이하</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">Jog</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">0.80</td><td align="center" style="padding:7px 6px; border-bottom:1px solid #e9ecef;">466</td></tr>
+        <tr style="background-color:#fafbfc;"><td style="padding:7px 10px; font-family:Consolas,monospace;">Crouched</td><td style="padding:7px 10px;">앉은 자세로 움직일 때</td><td align="center" style="padding:7px 6px;">Walk</td><td align="center" style="padding:7px 6px;">0.80</td><td align="center" style="padding:7px 6px;">233</td></tr>
+      </table>
+
+      <p style="margin:16px 0 6px 0; font-size:14px; font-weight:bold;">여러 상황이 겹치면</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px; line-height:1.7;">
+        <tr><td style="padding:2px 0 2px 14px;">① <b>돌입(Rush)·도주(BreakContact) 명령이 있으면 그 행이 이깁니다.</b> 도주 중 재장전한다고 걸어서 도망치지 않도록 하기 위한 규칙입니다.</td></tr>
+        <tr><td style="padding:2px 0 2px 14px;">② 명령이 없으면 <b>결과 속도가 가장 낮은 행</b>이 적용됩니다. 예를 들어 앉아서 사격하면 218(Firing)과 233(Crouched) 중 218이 쓰입니다.</td></tr>
+      </table>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fdf6e6; border-left:4px solid #b98a1f; margin:16px 0 18px 0;">
+        <tr><td style="padding:14px 18px; font-size:14px; line-height:1.7;">
+          <b>“Rush 로 바꿨는데 안 빨라져요”</b><br>
+          돌입·도주 외의 행은 <b>가장 느린 쪽</b>이 이깁니다. 예를 들어 <span style="font-family:Consolas,monospace;">Normal</span> 로 이동 중 사격하면 <span style="font-family:Consolas,monospace;">Firing</span>(218)이 적용됩니다. 의도한 것입니다 — 쏘는 동안에는 뛰지 않는 것이 자연스럽기 때문입니다. 정말 뛰면서 쏘게 하려면 <span style="font-family:Consolas,monospace;">Firing</span> 행의 걸음을 <b>Jog</b> 로 바꿔 주세요.
+        </td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- 4. 왜 0.75~1.25 -->
+  <tr>
+    <td style="padding:6px 28px 0 28px;">
+      <div style="font-size:16px; font-weight:bold; border-bottom:1px solid #e3e6e9; padding-bottom:6px; margin-bottom:12px;">4. 배율이 0.75 ~ 1.25 로 제한된 이유</div>
+      <p style="margin:0 0 12px 0; font-size:14px; line-height:1.75;">
+        걷기·달리기 동작은 각각 정해진 속도(<b>걷기 291 / 달리기 583</b>)로 제작되어 있습니다. 실제 이동 속도가 그 값과 달라지면 시스템이 재생 속도와 보폭을 자동으로 늘리거나 줄여 맞추는데, 그 조정 한계가 <b>±25%</b> 입니다. 한계를 넘으면 걸음 수와 이동 거리가 어긋나 <b>발이 땅에서 미끄러지는 것처럼</b> 보입니다.
+      </p>
+      <p style="margin:0 0 12px 0; font-size:14px; line-height:1.75;">
+        그래서 쓸 수 있는 속도 구간은 아래와 같고, 표에서는 이 범위를 벗어나는 값이 아예 입력되지 않습니다.
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="font-size:14px; border-collapse:collapse; margin:0 0 14px 0;">
+        <tr style="background-color:#eef5f0;">
+          <th align="left" style="padding:8px 14px; border:1px solid #dfe4e8;">걸음</th>
+          <th align="center" style="padding:8px 14px; border:1px solid #dfe4e8;">가장 느리게</th>
+          <th align="center" style="padding:8px 14px; border:1px solid #dfe4e8;">기준</th>
+          <th align="center" style="padding:8px 14px; border:1px solid #dfe4e8;">가장 빠르게</th>
+        </tr>
+        <tr>
+          <td style="padding:8px 14px; border:1px solid #dfe4e8;">Walk (걷기)</td>
+          <td align="center" style="padding:8px 14px; border:1px solid #dfe4e8;"><b>218</b></td>
+          <td align="center" style="padding:8px 14px; border:1px solid #dfe4e8;">291</td>
+          <td align="center" style="padding:8px 14px; border:1px solid #dfe4e8;">364</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 14px; border:1px solid #dfe4e8;">Jog (달리기)</td>
+          <td align="center" style="padding:8px 14px; border:1px solid #dfe4e8;"><b>437</b></td>
+          <td align="center" style="padding:8px 14px; border:1px solid #dfe4e8;">583</td>
+          <td align="center" style="padding:8px 14px; border:1px solid #dfe4e8;">728</td>
+        </tr>
+      </table>
+      <p style="margin:0 0 18px 0; font-size:13px; color:#6b7280; line-height:1.7;">
+        218 보다 더 느린 이동이 필요하면 표만으로는 불가능합니다 — 느린 걷기 동작을 추가하거나 동작별 허용 범위를 넓히는 작업이 필요하므로, 개발자에게 요청해 주세요.
+      </p>
+    </td>
+  </tr>
+
+  <!-- 5. 자주 하는 조정 -->
+  <tr>
+    <td style="padding:6px 28px 0 28px;">
+      <div style="font-size:16px; font-weight:bold; border-bottom:1px solid #e3e6e9; padding-bottom:6px; margin-bottom:12px;">5. 자주 하는 조정</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px; border-collapse:collapse; line-height:1.7;">
+        <tr>
+          <td width="215" valign="top" style="padding:9px 12px; background-color:#f6f8f9; border:1px solid #e3e6e9; font-weight:bold;">전투 중 전체가 빠르다</td>
+          <td valign="top" style="padding:9px 12px; border:1px solid #e3e6e9;"><span style="font-family:Consolas,monospace;">Normal</span> 과 <span style="font-family:Consolas,monospace;">Aiming</span> 의 배율을 0.85 → 0.75 로</td>
+        </tr>
+        <tr>
+          <td valign="top" style="padding:9px 12px; background-color:#f6f8f9; border:1px solid #e3e6e9; font-weight:bold;">이동 자체를 크게 느리게</td>
+          <td valign="top" style="padding:9px 12px; border:1px solid #e3e6e9;">해당 행의 걸음을 <b>Jog → Walk</b> 로 (583 → 291, 배율까지 0.75면 218)</td>
+        </tr>
+        <tr>
+          <td valign="top" style="padding:9px 12px; background-color:#f6f8f9; border:1px solid #e3e6e9; font-weight:bold;">쏘면서도 뛰게 하고 싶다</td>
+          <td valign="top" style="padding:9px 12px; border:1px solid #e3e6e9;"><span style="font-family:Consolas,monospace;">Firing</span> 의 걸음을 <b>Walk → Jog</b> 로</td>
+        </tr>
+        <tr>
+          <td valign="top" style="padding:9px 12px; background-color:#f6f8f9; border:1px solid #e3e6e9; font-weight:bold;">도주 장면을 더 급하게</td>
+          <td valign="top" style="padding:9px 12px; border:1px solid #e3e6e9;"><span style="font-family:Consolas,monospace;">BreakContact</span> 배율을 1.00 → 1.15 (최대 1.25)</td>
+        </tr>
+        <tr>
+          <td valign="top" style="padding:9px 12px; background-color:#f6f8f9; border:1px solid #e3e6e9; font-weight:bold;">부상 병사를 더 티나게</td>
+          <td valign="top" style="padding:9px 12px; border:1px solid #e3e6e9;"><span style="font-family:Consolas,monospace;">Wounded</span> 를 <b>Walk / 0.80</b>(233)으로</td>
+        </tr>
+      </table>
+      <p style="margin:14px 0 18px 0; font-size:13px; color:#6b7280; line-height:1.7;">
+        전체 톤만 빠르게 확인하고 싶을 때는 게임 실행 중 콘솔(<span style="font-family:Consolas,monospace;">~</span> 키)에
+        <span style="font-family:Consolas,monospace; background-color:#f1f3f4; padding:1px 5px;">SoldierLab.Move.SpeedScale 0.85</span>
+        를 입력하면 표 전체에 한 번 더 곱해집니다(이 값도 위 범위를 넘지 않도록 자동으로 잘립니다).
+      </p>
+    </td>
+  </tr>
+
+  <!-- 6. 확인 / 문제해결 -->
+  <tr>
+    <td style="padding:6px 28px 0 28px;">
+      <div style="font-size:16px; font-weight:bold; border-bottom:1px solid #e3e6e9; padding-bottom:6px; margin-bottom:12px;">6. 적용 확인과 문제 해결</div>
+      <p style="margin:0 0 10px 0; font-size:14px; line-height:1.7;">게임 실행 중 콘솔에 <span style="font-family:Consolas,monospace; background-color:#f1f3f4; padding:1px 5px;">SoldierLab.Debug.Move 1</span> 을 입력하면, 병사의 상황이 바뀔 때마다 어떤 행이 적용됐는지 로그로 나옵니다.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:13px; line-height:1.7; margin:0 0 14px 0;">
+        <tr><td style="padding:3px 0 3px 14px;">· 값이 안 바뀐다 → 저장(Ctrl+S) 후 게임을 다시 실행했는지 확인</td></tr>
+        <tr><td style="padding:3px 0 3px 14px;">· 특정 행만 안 먹는다 → <b>행 이름의 철자·대소문자</b>가 위 표와 같은지 확인(다르면 그 행은 무시됩니다)</td></tr>
+        <tr><td style="padding:3px 0 3px 14px;">· 느려지지 않는다 → 더 느린 다른 행이 이기고 있는지, 또는 돌입·도주 명령이 우선 적용 중인지 확인</td></tr>
+        <tr><td style="padding:3px 0 3px 14px;">· <b>발이 미끄러진다</b> → 정상 범위에서는 생기지 않습니다. 보이면 개발자에게 알려 주세요(동작별 허용 범위 재확인이 필요합니다)</td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- 7. 건드리지 말 것 -->
+  <tr>
+    <td style="padding:6px 28px 0 28px;">
+      <div style="font-size:16px; font-weight:bold; border-bottom:1px solid #e3e6e9; padding-bottom:6px; margin-bottom:12px;">7. 건드리지 않는 편이 좋은 것</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px; line-height:1.7; margin-bottom:6px;">
+        <tr><td style="padding:3px 0 3px 14px;">· <b>병사의 기준 걷기·달리기 속도</b> — 플레이어가 조작하는 캐릭터와 공유하므로 함께 바뀝니다. 상황별 조정은 이 표로 해 주세요.</td></tr>
+        <tr><td style="padding:3px 0 3px 14px;">· <b>애니메이션 블루프린트 / 모션매칭 설정</b> — 이 표만으로 필요한 조정은 끝납니다.</td></tr>
+        <tr><td style="padding:3px 0 3px 14px;">· <b>행을 새로 추가</b> — 표에 없는 이름의 행은 사용되지 않습니다. 새 상황이 필요하면 요청해 주세요(상황 판단은 코드에 있습니다).</td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- 맺음 -->
+  <tr>
+    <td style="padding:20px 28px 8px 28px; font-size:15px; line-height:1.75;">
+      <p style="margin:0 0 12px 0;">표를 바꿔 보시고 어색한 구간이 있으면 <b>어느 상황에서 어떻게 어색한지</b>만 알려 주시면 함께 맞추겠습니다.</p>
+      <p style="margin:0 0 4px 0;">감사합니다.</p>
+    </td>
+  </tr>
+
+  <!-- 푸터 -->
+  <tr>
+    <td style="padding:16px 28px 22px 28px; border-top:1px solid #e3e6e9; font-size:12px; color:#6b7280; line-height:1.8;">
+      대상 파일 · <span style="font-family:Consolas,monospace;">Content/SoldierLab/Data/DT_SoldierMovement</span><br>
+      연결 지점 · <span style="font-family:Consolas,monospace;">BP_SoldierCharacter → AC_SoldierMovementProfile → Profile Table</span><br>
+      표의 값은 초안입니다. 실제 플레이를 보며 맞추는 것을 전제로 작성되었습니다.
+    </td>
+  </tr>
+
+</table>
+
+</td></tr>
+</table>
+
+</body>
+</html>

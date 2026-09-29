@@ -1406,8 +1406,79 @@ ID **C-171~C-173 · W118~W119 · P192**. **코드 완료 · 재빌드 실측 대
   `CURRENT_STATE.md` §6(UGV)·§7 · `DOCS_INDEX.md`(soldier_ai_lab + `vehicle/ugv/` 포인터). `guide/` 는 **미변경**(차량 물리·병사 사망을
   다루는 에버그린 문서가 없다 — 있는 둘은 탐지/RCWS 이고 이 수정과 접점이 없다).
 
+## 2026-09-28~29 — SoldierLab 상황별 이동 정책: 1차 구현 폐기 → 재생배율 밴드(±25%) 확정 → 걸음걸이 상한 + 배율 표 (이동/애니 세션)
+
+"시나리오에서 병사가 너무 빠르다"(사용자)에서 시작해, **상황별로 속도를 조절하되 애니메이션 시스템을 모르는 사람도 표로 커스텀할 수 있게** 만드는 작업.
+상세: **`soldier_ai_lab/animation/2026-09-29_movement_policy_and_playrate_band.md`**(새 문서). ID **C-174 · W120~W122 · P193**. **PIE 실측 ✅.**
+
+- **1차 구현(09-28)과 두 단계의 실패** — 상황 16개 × **(속도·가속·회전) 배율 3열** 표 + 컴포넌트로 만들었는데,
+  ⓐ **전혀 안 먹었다** — CMC 의 `MaxWalkSpeed` 에 곱했지만 GASP 는 **`AC_PreCMCTick` 컴포넌트가 CMC 직전에** 캐릭터의 `UpdateMovement_PreCMC` 를 돌려
+  `MaxWalkSpeed`·`MaxAcceleration`·`RotationRate` 를 **매 프레임 다시 쓴다.** 우리 틱은 액터 틱 뒤였지만 그보다 앞이라 지워졌다.
+  ⓑ 입력(gait 속도 벡터)에 곱하도록 바꾸니 속도는 변했지만 **발이 미끄러졌다** — 배율을 0.45~0.7 로 줬고, **안전범위 0.45~1.2 는 측정 없이 정한
+  임의값이었다(근본 실수).** → 사용자 지시로 **1차 구현 폐기**(컴포넌트 제거·원복)하고 값을 고치는 대신 **구조부터 다시 읽었다.**
+- **★ 확정한 사실: 재생배율 밴드가 모든 속도 변경의 한계다 [A · ABP 그래프 전수 확인]** — `Get_DynamicPlayRate` 는
+  `배율 = Clamp( Speed2D / 클립의 MoveData_Speed , Min , Max )` → `Lerp(1.0, 배율, Enable_Warping)` 이고, **`MinDynamicPlayRate`/`MaxDynamicPlayRate`
+  커브가 없으면 대체값 0.75 / 1.25** 가 쓰인다(`MoveData_Speed` 나 `Enable_Warping` 커브가 없으면 아예 1.0 반환). **우리 클립엔 Min/Max 커브가 없으므로
+  실효 밴드는 ±25% 다.** 클립 실측(에디터 Curves 패널): `ALLY_MM_Rifle_Walk_Fwd` **291.31** · `Jog_Fwd` **582.62** — 캐릭터의 `WalkSpeeds`/`RunSpeeds` 와
+  **정확히 같다**(클립이 이 속도에 맞춰 리타이밍돼 있다 = 기본 상태의 재생배율이 정확히 1.0). 따라서 **미끄러짐 없는 구간은 Walk 218~364 · Jog 437~728**,
+  사이 구간(364~437)은 **Walk·Jog 두 세트가 모두 MM DB 에 있어 모션매칭이 섞어 메운다**(구멍 아님).
+- **체인 정리 [A]** — `USoldierEngagementComponent::GetDesiredGait()` → `USoldierGaitBridgeComponent`(`WantsToWalk`/`WantsToSprint`, **`bDriveSprint=false`
+  라 AI 는 Sprint 를 요청하지 않는다**) → `SandboxCharacter_CMC::GetDesiredGait` → `Gait` → `AC_PreCMCTick` → `CalculateMaxSpeed`(Gait + 속도 벡터 +
+  `Curve_StrafeSpeedMap` + 진행 방향) → `MaxWalkSpeed`. 애니메이션 쪽으로는 `Get_PropertiesForAnimation` 이 **Gait·Velocity·가속·감속·바닥·회전만**
+  넘기고 **속도 설정값은 안 넘긴다** — ABP 는 실제 속도만 본다. 즉 **속도 벡터가 이 체인의 유일한 연속 손잡이**다. MM DB 는 Rifle Stand Walk/Jog
+  (Loops·Starts·Stops·Pivots + TurnInPlace) + Crouch Walk + Idles/Idles_LowReady, 4방향, **146 클립 전부 루트모션 ON, Sprint 세트 없음.**
+- **최종 구현 — 열은 2개다** — 신규 `Source/SoldierLab/AI/SoldierMovementProfile.{h,cpp}` + `Content/SoldierLab/Data/DT_SoldierMovement`.
+  **`MaxGait`** = 그 상황에서 허용하는 가장 빠른 걸음걸이(**상한**; 클립이 그 걸음 속도로 authored 되어 있으니 한 칸 내리는 것은 **미끄러짐이 원리적으로
+  없다 = 공짜**), **`SpeedScale`** = gait 속도 벡터에 곱하는 배율(**0.75~1.25 클램프 3겹** — `UPROPERTY meta` 로 에디터 입력 제한 + `ResolveProfile` 재클램프
+  + 전역 cvar 합산 후 재클램프. **표를 만지는 사람이 밴드를 몰라도 되게** 하는 것이 목적). 상한은 `USoldierEngagementComponent` 의 gait 결정 **끝**에서
+  씌우고 **덮어쓰지 않는다**(걸으라고 지시받은 병사가 상한 Jog 때문에 뛰지 않는다), 컴포넌트가 없으면 무제한 = 예전 동작.
+  ⛔ **가속·회전 2열은 삭제** — ⓐ 의 `AC_PreCMCTick` 이 덮어써서 **죽은 값**이었다("적용된다" 고 잘못 보고한 것을 정정) → [W121].
+- **상황 선택 2단 규칙** — ① **명령이 우선**: `BreakContact` → `Rush` 가 걸려 있으면 그 행이 이긴다(안 그러면 **도주하며 재장전하는 병사가 걸어서
+  도망친다**) ② 아니면 **최종 속도(`걸음 기준값 × 배율`, cm/s)가 가장 낮은 행** — 배율만 비교하면 걸음이 다른 행끼리 비교가 안 된다(Walk 1.00 = 291 이
+  Jog 0.85 = 495 보다 느리다). 동점은 열거자 순서(같은 조합에서 항상 같은 답이 나와야 표를 신뢰할 수 있다).
+  ★ **`Aiming` 과 `Firing` 분리(사용자 지적)** — 첫 표는 `WantsToAim()` 하나로 "교전 중" 을 잡아 Walk 를 줬는데, **견착은 엄폐지 사이를 달릴 때도
+  켜진다** → 교전이 시작되면 아무도 못 뛰는 병사가 된다. `Aiming` = Jog 0.90(견착한 채 이동), `Firing`(`WantsToFire()`) = Walk 0.75(멈춰서 쏨).
+- **상황 16개와 근거** — Default / Cautious·Normal·Rush(분대 명령 `FSoldierAssignment::Speed`) / BreakContact(`bBreakContact`) /
+  MovingToCover·EdgeAdvance(`USoldierCoverComponent::IsMovingToCover/IsAdvancing`) / Aiming·Firing·Reloading·Peeking·Scanning·Crouched(교전 컴포넌트
+  `WantsToAim/WantsToFire/IsReloading\|\|WantsToReload/IsPeeking/IsScanning/GetDesiredStance`) / Suppressed(`USoldierSuppressionComponent::GetSuppression`) /
+  HitReacting·Wounded(`USoldierHealthComponent::IsHitReacting/GetHealthFraction`). 문턱은 `WoundedHealthFraction 0.4`·`SuppressedThreshold 0.3`·`CrouchStanceThreshold 0.5`.
+- **현재 값(결과 속도)** — Default·Rush·BreakContact·MovingToCover Jog 1.00 = **583** / Aiming Jog 0.90 = **524** / Normal·Suppressed Jog 0.85 = **495** /
+  Wounded Jog 0.80 = **466** / Reloading·Scanning Walk 0.85 = **248** / Cautious·Crouched Walk 0.80 = **233** / EdgeAdvance·Firing·Peeking·HitReacting
+  Walk 0.75 = **218**. 전부 밴드 안. 같은 값이 C++ `GetDefaultProfile` 에도 있어 **표가 없어도 같게 동작한다**(행이 없으면 한 번 경고).
+  콘솔: `SoldierLab.Move.Enabled`(0 = A/B 끄기, 원본 속도 복구) · `SoldierLab.Move.SpeedScale`(전역 배율, 합산 후 밴드로 잘림 — **콘솔로도 밴드를
+  못 넘는다**) · `SoldierLab.Debug.Move 1`(`[Move] Enemy_A2 Default -> Firing (max Walk, scale 0.75) walk 218 run 437`).
+- **검증** — 전 행을 `Walk / 0.75`(= 218, 원래 Jog 583 대비 **2.7배 느림** = 밴드 하단 끝)로 밀어 PIE → **확실히 느려지고 발 미끄러짐 없음**(사용자 확인) →
+  계획값 원복 후에도 정상(사용자 확인). 하단 끝을 먼저 밟은 이유 = 거기서 안 미끄러지면 그 위 모든 값이 안전하다.
+- **★ 정정 기록(문서 7절)** — 1차 조사에서 단정했다가 틀린 것 넷: ① ~~"3축 동일 속도 벡터가 미끄러짐의 원인"~~ → 클립 authored 속도가 291.31
+  **단일값**이라 오히려 정합적, **철회** ② ~~"돌입·도주에서 미끄러진다"~~ → **관측되지 않은 추측**, 철회(두 행은 배율 1.00 이라 재생배율 정확히 1.0)
+  ③ ~~"안전범위 0.45~1.2"~~ → **근거 없는 임의값**, 실측 **0.75~1.25** 로 교체 ④ ~~"가속·회전 배율도 적용된다"~~ → 죽은 값, 철회.
+  넷 다 **확인하지 않은 것을 세밀하게 쓴** 경우이고, ③이 직접 실패를 불렀다.
+- **남은 것** — [W120] **218 보다 느리게는 표로 불가능** — 클립에 `Min/MaxDynamicPlayRate` 커브를 굽거나 느린 걷기 클립을 MM DB 에 추가해야 한다
+  (표에 0.75 아래를 적는 것은 답이 아니다) · [W121] 상황별 가속·회전은 `AC_PreCMCTick` 뒤에 도는 틱 순서부터 · [W122] `DT_SoldierMovement` **P4 add 미완**
+  (없는 환경에서는 C++ 기본값으로 돌아 거동은 같지만 표를 고쳐도 반영되지 않는다) · [C-174] 방향별(Left/Bwd)·Crouch 클립의 authored 속도 미측정
+  — 속도 벡터는 3축 동일(291.31/582.62)인데 방향별 클립 값이 다르면 옆걸음·후진에서 밴드를 벗어날 수 있다. **단, 현재 버전에서 미끄러짐은 관측되지 않았다.**
+- 바뀐 파일: `Source/SoldierLab/AI/SoldierMovementProfile.{h,cpp}`(신규 — 설계 근거가 헤더 상단 주석에) · `AI/SoldierEngagement.{h,cpp}`(상한 +
+  `IsReloading()` 게터) · `Content/SoldierLab/Data/DT_SoldierMovement`(신규 애셋) · `Content/SoldierLab/Blueprints/BP_SoldierCharacter`(컴포넌트 부착 + 표 연결).
+  **손대지 않은 것**: ABP · MM DB · 클립 · 캐릭터 속도 벡터 기본값(런타임에만 곱한다) · `USoldierGaitBridgeComponent`.
+- 문서: 새 1건 · `soldier_ai_lab/`(OPEN_ITEMS **C-174 · W120~W122** · CURRENT_STATE · CLAUDE.md **P193** + 애니메이션 읽기 순서) ·
+  `CURRENT_STATE.md` §7 · `DOCS_INDEX.md`(soldier_ai_lab 항목 + **`guide/soldier_movement_speed_guide.html` 설명 정정** — 그 HTML 은 09-28 판
+  (배율 3열·0.45~1.2) 기준이라 내용이 다르고, **메인 세션이 이메일 형식으로 다시 쓰는 중이라 파일 자체는 건드리지 않았다**).
+  `guide/` 에 병사 이동·애니메이션을 다루는 **에버그린 `.md` 는 없다**(있는 것은 위 HTML 하나뿐이고, 나머지는 탐지/RCWS/QuadCam 등으로 접점 없음).
+
+## 2026-09-29 — 자체방호 환경카메라 원거리 트럭 환기구 번쩍임: TSR 지터 원인 → 이 캡쳐 뷰만 지터 끔 (카메라 세션)
+
+- `camera_pipeline/2026-09-29_battlefield_capture_tsr_jitter_blink.md`(새 문서) — `BattlefieldCapture`(640x360, `selfdefense/env_camera`)에서
+  서브픽셀 루버가 TSR 지터 11샘플 × 캡쳐 2프레임 1회 = 22프레임(~1초) 주기로 번쩍임. `r.TemporalAA.Debug.OverrideTemporalIndex 0`만 해결(VSM/SSR/Lumen/
+  Flickering.Period/Nanite 무효). `FBattlefieldNoJitterExtension`(SceneViewExtension, ViewState 비교로 이 캡쳐만 `bAllowTemporalJitter=false`) 적용 —
+  TSR 누적 유지, 다른 뷰 영향 없음. PIE 검증 완료. 트럭 Nanite(revert)·캡쳐 TAA 끄기(사용자 거부)는 기각. 다른 캡쳐로 확장은 보류.
+
 ## 다음에 예정된 것 (이 시점 기준)
 
+- **이동 정책 후속(09-29)** — **[W122] `Content/SoldierLab/Data/DT_SoldierMovement` P4 add** 가 가장 먼저다(신규 애셋이라 아직 체크인 안 됨 —
+  없으면 C++ 기본값으로 돌아 거동은 같지만 표를 고쳐도 반영되지 않는다). 그 뒤 시나리오에서 실제 페이싱을 보고 표 값을 조정하고,
+  **218 보다 느린 걷기가 필요하다고 판단되면** [W120](클립에 `Min/MaxDynamicPlayRate` 커브 베이크 또는 느린 걷기 클립 추가 — **표로는 불가능**),
+  그때 [C-174](방향별·Crouch 클립의 authored 속도)를 먼저 잴 것. 상황별 가속·회전은 [W121](틱 순서)이 선행 조건.
+  `soldier_ai_lab/animation/2026-09-29_movement_policy_and_playrate_band.md` 5절.
 - **SoldierLab 차량 교전 다듬기(09-23)** — `TargetRadiusCm 45` 가 사람 가슴 기준이라 트럭도 45 cm 표적처럼 조준 게이트를 재는 것
   [C-166](반영하면 원거리 트럭 사격이 전부 `Aimed` 로 올라가 버스트·정착 박자가 같이 바뀌니 부작용부터 볼 것) · 차량 조준점을
   포탑으로 옮길 것인가 [C-167] · 차량 위협에 대한 엄폐 품질 수치 [C-168](본 레벨 정성 확인만 함).

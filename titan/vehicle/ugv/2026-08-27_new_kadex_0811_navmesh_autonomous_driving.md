@@ -88,6 +88,21 @@ GetSplineData → SplineSampler(OnInterior, 간격 450cm) → Projection(랜드�
 
 ## 2. 1층 — 나무 콜리전 프록시 (`TreeCollisionProxy`)
 
+> 📌 **[2026-09-28] 숲이 Megaplants 스켈레탈 나무(PCG Instanced Skinned Mesh)로 바뀌었다** — 아래 1.2~1.3절의
+> 스태틱 나무·`StaticMeshSpawner` 서술은 옛 구성이다. `ATreeCollisionProxyBuilder`에 추가된 것:
+> - `FTreeProxySpecies.TreeSkinnedMeshes` — 스킨드 나무 에셋 목록(TrunkCylinder 전용, 반경/높이는 메시 로컬 값).
+>   소스 수집이 `UInstancedSkinnedMeshComponent` 인스턴스도 읽는다.
+> - 액터 태그 **`NoTreeProxy`**(`SkipSourceActorTag`) — 붙은 액터의 나무는 소스에서 제외. 직접 배치 나무 볼륨
+>   `PCG_PlacedTrees_Volume_*`에 붙어 있다(마커 BP `BP_ForestTreeMarker_*`가 자기 줄기 캡슐을 이미 갖고 있어서).
+> - **안전장치 추가**: TrunkCylinder 종이 있는데 소스 나무가 0그루 매칭이면 Rebuild **중단**(기존 프록시 유지). 옛
+>   코드는 `TreeMesh`(스태틱)만 봐서, 스켈레탈 숲에서 Rebuild하면 줄기 콜리전을 전부 지우고 끝났을 것이다.
+> - 레벨 인스턴스 Species 6개: 옛 나무 2종(이제 0그루 매칭) · 바위 `CopySourceMesh` 2종 · **Baltic Pine A~D
+>   (반경 22.9 / 높이 1000 = 옛 16/700 ÷ 0.7)** · **Silver Birch A~C (16.5 / 647 = 옛 22/860 ÷ 1.33)**. 묘목 Birch_D는
+>   프록시 없음(옛 Tinny와 같다). 나누는 값은 새 DT의 `ScaleMultiplier` — 월드 줄기 굵기를 옛 나무와 맞추려고.
+> - 수종이 재추첨돼 사용자가 Preview → Rebuild Proxies → Build Paths 재실행("잘됨").
+>
+> 상세: `nanite/2026-09-28_forest_nanite_foliage_migration.md` D·F절.
+
 ### 2.1 방식
 
 PCG가 뿌린 나무 인스턴스의 트랜스폼을 읽어서, **경계 스플라인에서 15m 이내 + `NavMeshBoundsVolume`

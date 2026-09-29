@@ -43,6 +43,11 @@ Source/titan_example/Tools/TreeCollisionProxyBuilder.h / .cpp
 
 레벨에 액터를 하나 배치하고 Details 패널의 버튼으로 돌린다.
 
+> 📌 [2026-09-28] 스켈레탈 나무(Megaplants, `UInstancedSkinnedMeshComponent`) 지원 · `NoTreeProxy` 액터 태그 ·
+> "TrunkCylinder 종 0그루 매칭 시 Rebuild 중단" 안전장치 · 새 Species 항목이 추가됐다 →
+> `2026-08-27_new_kadex_0811_navmesh_autonomous_driving.md` 2절 머리 노트,
+> `nanite/2026-09-28_forest_nanite_foliage_migration.md` F절.
+
 **Routes** — 경로마다 스플라인 액터 + 반경. 경로는 몇 개든 추가 가능하고 `bEnabled`로 개별 토글.
 현재 설정(2026-08-26):
 

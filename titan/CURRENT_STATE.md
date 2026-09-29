@@ -1,6 +1,6 @@
 # Titan (KADEX 전시회) — 현재 프로젝트 상태
 
-2026-09-23 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
+2026-09-29 / 진행중 / 전체 시스템별 현재 상태 스냅샷 — 문서 정리 1차 작업의 산출물.
 (최초 작성 2026-09-01, 이후 항목별로 날짜를 붙여 갱신 중.)
 
 이 문서는 "지금 뭐가 어디까지 되어 있는가"만 다룬다. 문서 자체의 목록(날짜/위치)은
@@ -49,6 +49,9 @@ LIG PC(드라이버 595.84, 업데이트 거부)에서 인코더 초기화 실�
 조준 이동 시 전장카메라/CCTV가 떨리는 버그, UGV 발사 반동이 자체방호축 카메라에도 리플리케이션
 되는 버그(2-PC 환경) — `SceneCaptureViewParity`/`RCWSProjectile` 수정 완료
 (`rcws/2026-08-31_selfdefense_camera_shake_bugs.md`), **2-PC 실환경 검증만 남음**.
+**[2026-09-29 완료]** 환경카메라(`selfdefense/env_camera`)에서 원거리 트럭 환기구가 ~1초 주기로 번쩍이던 것 — TSR 지터가 원인,
+`BattlefieldCapture` 뷰에서만 지터를 끄고 TSR 누적은 유지(PIE 검증 완료). CCTV/드론 짐벌/RCWS 조준경 확장은 보류
+(`camera_pipeline/2026-09-29_battlefield_capture_tsr_jitter_blink.md`).
 
 ## 4. 멀티플레이(리슨서버) 리플리케이션 — 거의 완료
 
@@ -293,6 +296,22 @@ Block**(바닥의 소총이 시야벽·엄폐물로 계산되면 안 되므로 *
 상세: `soldier_ai_lab/ai/2026-09-23_corpse_vehicle_interaction_and_weapon_drop.md`(원칙 P192, 값 [C-171]~[C-173], 작업 [W118]~[W119]).
 ⚠ **UGV 쪽에서 찾는 경우**: 차량 파일은 `Source/titan_example/Vehicles/UGVWheeledVehicleMovementComponent.cpp` 한 줄이고, 그 근거와 남은 항목은
 전부 위 SoldierLab 문서에 있다(`vehicle/ugv/` 에 별도 문서 없음).
+
+**2026-09-29 — 병사 이동 속도가 표 한 장으로 조절된다(걸음걸이 상한 + 배율 0.75~1.25).** "시나리오에서 병사가 너무 빠르다" 는 제보에서 나온 작업.
+조절점은 `Content/SoldierLab/Data/DT_SoldierMovement` — **행 16개(상황) × 열 2개**: `MaxGait`(그 상황에서 허용하는 가장 빠른 걸음걸이 = **상한**,
+AI 판단을 덮지 않는다) + `SpeedScale`(그 걸음 속도에 곱하는 배율). 연결점은 `BP_SoldierCharacter → AC_SoldierMovementProfile`.
+★ **배율 범위 0.75~1.25 는 임의값이 아니다** — GASP ABP 의 `Get_DynamicPlayRate` 가 `Clamp(Speed2D / 클립의 MoveData_Speed, Min, Max)` 로만
+애니메이션을 적응시키고, **`Min/MaxDynamicPlayRate` 커브가 없는 클립에는 대체값 0.75 / 1.25 를 쓴다**(우리 클립 전부 해당). 클립 실측
+`ALLY_MM_Rifle_Walk_Fwd` **291.31** · `Jog_Fwd` **582.62** 가 캐릭터 `WalkSpeeds`/`RunSpeeds` 와 **같으므로**(클립이 그 속도로 리타이밍돼 있다)
+**발이 미끄러지지 않는 구간은 Walk 218~364 · Jog 437~728** 이고, 표는 그 안에만 머문다(세 겹 클램프 — 에디터 입력 제한 + 코드 + 전역 cvar 합산 후).
+현재 값은 Jog 1.00 = 583(기본·돌입·도주·엄폐 이동)부터 Walk 0.75 = 218(사격·모서리 전진·엿보기·피격)까지. 콘솔 `SoldierLab.Move.Enabled`(A/B) ·
+`SoldierLab.Move.SpeedScale`(전역 배율) · `SoldierLab.Debug.Move 1`(상황 전환 로그). **PIE 실측 완료** — 전 행을 218 로 밀어 "확실히 느려지고
+미끄러짐 없음" 확인 후 계획값 원복(둘 다 사용자 확인). ⚠ **09-28 의 1차 구현(배율 3열 · 안전범위 0.45~1.2)은 폐기됐다**: CMC 의 `MaxWalkSpeed` 에
+곱했더니 **GASP `AC_PreCMCTick` 이 CMC 직전에 매 프레임 덮어써서 전혀 안 먹었고**, 입력으로 옮긴 뒤엔 배율이 위 밴드 밖이라 발이 미끄러졌다
+(그 안전범위는 **측정 없이 정한 임의값**이었다). 가속·회전 배율 2열도 같은 이유로 **죽은 값**이라 삭제했다 — 상황별 가속·회전이 필요해지면
+틱 순서를 먼저 해결해야 한다. 218 보다 더 느리게 하려면 **표로는 불가능**하고 클립에 재생배율 커브를 굽거나 느린 걷기 클립을 추가해야 한다.
+상세: `soldier_ai_lab/animation/2026-09-29_movement_policy_and_playrate_band.md`(원칙 P193, 값 [C-174], 작업 [W120]~[W122]).
+디자이너용 안내는 `guide/soldier_movement_speed_guide.html`(**09-29 재작성 중** — 09-28 판은 3열·0.45~1.2 기준이라 현재와 다르다).
 
 ## 8. 피격 이펙트 · 교전 오디오 — 완료
 

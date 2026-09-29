@@ -3,7 +3,7 @@
 ## 요약
 
 - **목적**: 레벨 전역에서 나무/풀/Niagara 이펙트/드론 물리가 하나의 바람 값에 일관되게 반응하도록 `AWindSource` 액터를 신규 구현.
-- **핵심 설계**: 액터 하나가 Perlin 노이즈로 방향·세기를 천천히 계산해서, 서로 다른 4곳(자작나무 MPC, RealBiomes MPC, 태그 붙은 Niagara 컴포넌트, 드론 물리 정적 조회)에 매 틱 밀어 넣는다.
+- **핵심 설계**: 액터 하나가 Perlin 노이즈로 방향·세기를 천천히 계산해서, 서로 다른 4곳(자작나무 MPC, RealBiomes MPC, 태그 붙은 Niagara 컴포넌트, 드론 물리 정적 조회)에 매 틱 밀어 넣는다. **(2026-09-28) 5번째 소비처 추가 — DynamicWind 서브시스템(Megaplants Nanite Foliage 나무의 본 흔들림).** 아래 "④ DynamicWind" 절. **(2026-09-29) 풍향 배회 때문에 나무 가지가 뚝뚝 튀는 플러그인 셰이더 문제 → 나무에는 고정 풍향만 넘기도록 수정(`bDynamicWindIgnoreWander`).**
 - **큰 삽질 하나**: RCWS/UGV VFX(총열 연기, 피격 화염/먼지)에 바람을 연동하다가, Niagara의 `System.WindDirection` 계열 변수가 엔진이 자동으로 채워주는 값이 아니라 완전히 별개의 정적 애셋(`NPC_NiagaraExamples`)에서 온다는 걸 뒤늦게 발견 — 처음엔 "연동됐다"고 착각한 상태로 몇 턴을 보냈다. 최종적으로는 우리 자체 태그+`WindVectorCms` 경로로 전부 통일함.
 - **현재 상태**: 식생(자작나무/RealBiomes) + Niagara 이펙트 8종(`NS_FallingLeaves`, `NS_AmbientDust`, `NS_Wind`, `NS_BarrelSmoke`, `NS_Fire_Small_Smoke` 4개 이미터, RCWS 임팩트 5종) 전부 연동 완료. 드론 물리는 별도 연동(`DronePawn.cpp`) 완료.
 - **남은 일**: 낙엽/먼지 파티클을 카메라(또는 현재 조종 폰) 추적형으로 바꾸는 작업(설계만 논의, 미구현) — 아래 "다음 작업" 참고.
@@ -32,6 +32,81 @@
 - RCWS 임팩트류(`NS_RCWS_Dirt/Glass/Hard/Metal/Wood`, `NS_ImpactFire`)는 원래부터 `WindForce` 모듈이 있었고 `Wind Speed`가 `System.WindDirection`에 링크돼 있어서 "이미 연동된 줄" 착각했음.
 - 실제로는 `System.WindDirection`/`WindStrength`/`WindTurbulenceScale`/`WindTurbulenceFrequency`가 엔진 자동 바인딩이 아니라, System 레벨 Set Parameters 모듈이 **`/Game/NiagaraExamples/NPC_NiagaraExamples`**(Epic 예제 콘텐츠, Niagara Parameter Collection)에서 끌어오는 정적값이었다. 이 NPC를 매 틱 써주는 Blueprint/액터가 프로젝트에 전혀 없어서 사실상 고정값 — `AWindSource`와 완전 무관.
 - `NS_BarrelSmoke`/`NS_Fire_Small_Smoke`는 애초에 이 System-level Set Parameters 모듈 자체가 없어서 컴파일도 안 됐음(`Transient.FirstFrame`류 에러) — 처음엔 이 NPC 라우팅을 그대로 복제해서 임시로 컴파일만 통과시켰다가, 곧바로 "이거 실제로 안 움직인다"는 걸 깨닫고 ②번 방식으로 재작업(아래 "RCWS/UGV VFX 통합" 참고).
+
+### ④ DynamicWind 서브시스템 — Megaplants 나무 (2026-09-28 추가)
+
+New_kadex_0811 숲을 Megaplants(Nanite Foliage 스켈레탈 나무)로 바꾸면서 추가(전체 경위:
+`nanite/2026-09-28_forest_nanite_foliage_migration.md` G절). 이 나무들은 WPO가 아니라 **본 스키닝**으로 흔들리고,
+엔진 `DynamicWind` 플러그인이 GPU에서 본을 돌린다. 입력은 전역 **풍향 하나 + 풍속 하나 + 진폭**뿐이다.
+
+- `AWindSource::PushToDynamicWind()` — MPC·Niagara와 같은 푸시 주기(`TargetPushIntervalSeconds`, 0.05 s)에 호출
+- 방향 = 액터 전방(현재 풍향)의 **수평 성분**만 (DynamicWind는 세로축과의 외적으로 휘는 축을 만든다)
+  — **(2026-09-29) 기본은 배회를 뺀 `BaseWindDirectionDegrees` 고정 방향**(`bDynamicWindIgnoreWander`, 아래 "나무 뚝뚝 튐" 절)
+- `WindSpeed = clamp(|현재 풍속 m/s| × DynamicWindSpeedPerMS, 0, 100)` — DynamicWind의 WindSpeed는 m/s가 아니라
+  **0~100 척도**이고 셰이더가 /100으로 정규화해 진폭·돌풍·흐름 속도에 쓴다
+  (`Engine/Plugins/Experimental/DynamicWind/Shaders/DynamicWindEval.usf:81-82`, 플러그인 기본값 15 = 산들바람).
+  기본 배율 3이면 4 m/s → 12, 7 m/s(베이스+돌풍 최대) → 21.
+- `WindAmplitude = DynamicWindAmplitude`
+
+| 프로퍼티 (카테고리 `Wind|DynamicWind`) | 기본값 | 설명 |
+|---|---|---|
+| `bDriveDynamicWind` | true | 끄면 DynamicWind를 안 건드린다(플러그인 기본 WindSpeed 15, +X로 계속 분다) |
+| `DynamicWindSpeedPerMS` | 3.0 | m/s → 0~100 척도 배율 |
+| `DynamicWindAmplitude` | 1.0 | 흔들림 전체 배율(나무만 더/덜 흔들 때) |
+| `bDynamicWindIgnoreWander` (2026-09-29) | true | 나무(DynamicWind)에는 배회 없이 `BaseWindDirectionDegrees`만 넘김. MPC·Niagara·드론은 계속 배회 풍향 |
+
+**⚠ 빌드 함정 — 플러그인 헤더를 include할 수 없다**: `DynamicWindSubsystem.h`(Public)가 플러그인
+`Source/DynamicWind/Internal/DynamicWindLog.h`를 include해서 플러그인 밖 모듈에서는 **C1083**(첫 빌드 실패).
+또 `UDynamicWindSubsystem` UCLASS에 `DYNAMICWIND_API`가 없어 `StaticClass()`도 못 쓴다.
+→ 클래스를 이름(`/Script/DynamicWind.DynamicWindSubsystem`)으로 찾아 `GetSubsystemBase`, UFUNCTION
+`UpdateWindParameters`를 `ProcessEvent`로 호출한다. 파라미터 구조체 헤더 `DynamicWindParameters.h`는 공개라 그대로 쓴다.
+인자 크기(`ParmsSize`)가 우리 구조체와 다르면 경고 한 줄 남기고 이 연동을 끈다(엔진 업데이트로 시그니처가 바뀌어도
+조용히 메모리를 잘못 쓰지 않게). `titan_example.Build.cs`에 `"DynamicWind"` 의존 추가, 플러그인은 `.uproject`에서 켬.
+(처음 소스 주석엔 "Private 폴더"라고 잘못 적었고, 2026-09-29 `WindSource.cpp` 주석을 `Internal` 폴더로 정정함.)
+
+**에셋 쪽 배선 — 이게 없으면 본이 안 움직인다**: `/Game/SplineForest/DA_ForestDynamicWind`(클래스 `DynamicWindData`,
+콘텐츠 브라우저 Add → Miscellaneous → Transform Provider Data로 생성)를 PCG 그래프
+`PCG_SplineForest_tree2_Nanite`·`PCG_PlacedTrees`의 Instanced Skinned Mesh Spawner
+`TemplateDescriptor.transformProvider`에 지정하고 PCG 액터를 재생성한다. **새 스킨드 나무 스포너를 만들면 같은 에셋을 꽂을 것.**
+
+사용자가 PIE에서 나무 흔들림 확인(2026-09-28). **RTSP 씬 캡처에서도 흔들리는지는 아직 명시적으로 확인 안 함.**
+
+#### ⚠ 나무 "뚝뚝" 튐 — 풍향이 돌면 가지가 튄다 (2026-09-29 원인 확정·수정)
+
+**증상**: Megaplants 나무가 한 그루씩 서로 다른 때에(수 초~수십 초) 가지가 뚝 튄다. 풍속을 거의 0
+(`BaseSpeedMS 0.1`, `GustAmplitudeMS 0`)으로 해도 난다. `DirectionWanderDegrees = 0`이면 사라진다.
+
+**원인 (엔진 플러그인 셰이더)**: `Engine/Plugins/Experimental/DynamicWind/Shaders/DynamicWindEval.usf:168-170`이
+가지마다 휘는 축을 `normalize(cross(BoneForward, SectionWindDirection))`로 구하고, |dot| > 0.999면
+`normalize(cross(BoneForward, Up))`으로 갈아탄다. 풍향이 배회하다 **어떤 가지와 평행을 지나는 순간** 축이
+뒤집히거나 점프해서 그 가지가 튄다. 나무마다 yaw가 달라 튀는 시점이 제각각이다.
+(배제한 후보 — Nanite 스트리밍, 스키닝 버퍼 조각 모음, 방향성 슬라이스, 다른 바람 액터, Time — 와 cvar A/B 표는
+`nanite/2026-09-28_forest_nanite_foliage_migration.md` I절.)
+
+**수정 (우리 쪽, 플러그인 무수정)**: `bDynamicWindIgnoreWander`(기본 true) — DynamicWind에는 배회를 뺀
+`BaseWindDirectionDegrees` 방향만 넘긴다(`WindSource.cpp:132-141`). 풍속·돌풍은 그대로 넘기므로 나무는 세기
+변화대로 흔들리고, 풀(MPC)·Niagara·드론은 여전히 배회하는 풍향을 받는다. 사용자 확인: 더 이상 안 튐.
+- ⚠ **실행 중에 `BaseWindDirectionDegrees`를 바꾸면** 그 순간 일부 가지가 튄다 → 레벨마다 정해 두는 값으로 쓸 것.
+- 결과적으로 **나무 풍향과 풀/파티클 풍향이 최대 ±`DirectionWanderDegrees`만큼 다를 수 있다**(눈에 띄면 배회 폭을 줄일 것).
+
+**New_kadex_0811 `WindSource_1` 현재 값 (2026-09-29)**: `DirectionWanderDegrees` 50 · `bDynamicWindIgnoreWander` true ·
+`BaseWindDirectionDegrees` 0 · `BaseSpeedMS` 1 · `GustAmplitudeMS` 0 · `DynamicWindSpeedPerMS` 3
+(→ DynamicWind WindSpeed ≈ 3, 플러그인 기본 15보다 훨씬 잔잔).
+
+**근본 수정 옵션 (미적용)**: DynamicWind 플러그인을 프로젝트 `Plugins/`로 포크해 위 줄을 **정규화하지 않은 외적**
+(평행 근처에서 크기가 0으로 부드럽게 줄어듦)으로 바꾸면 나무 풍향도 배회시킬 수 있다. 플러그인이 Experimental
+v0.1이라 엔진 업데이트마다 포크 유지 비용이 들어 하지 않았다.
+
+**진단용 cvar (플러그인)**: `DynamicWind.OverrideSpeed <값>`(0이면 바람 정지; 음수=끔), `DynamicWind.UseSine 1`(디버그용
+단순 사인 경로), `r.Skinning.DefaultAnimationMinScreenSize`(스키닝 애니를 끄는 화면 크기 문턱, 엔진 기본 0.1).
+`DynamicWind.Enable`은 `ECVF_ReadOnly`라 기동 시에만 적용된다.
+
+### 기존 MPC 소비처와의 관계 (2026-09-28)
+
+- ① MPC 푸시는 그대로 돈다 — **남아 있는 RealBiomes 식생(고사리, 바위 위 풀 등 `MPC_Wind`를 읽는 것)**은 여전히 이 경로로 흔들린다.
+- 자작나무 MPC(`MPC_BHF_Controller`)는 계속 쓰이지만, **New_kadex_0811에는 이제 이걸 읽는 나무가 없다** — PCG 숲과
+  직접 배치 자작나무가 전부 Megaplants로 바뀌었다(옛 BHF 자작/스코틀랜드 소나무 스태틱 메시 0개). 다른 레벨용으로 남겨 둔다.
+- 아래 "식생 튜닝 내역"의 자작나무/소나무 머티리얼 튜닝은 **옛 나무 기준 기록**이다.
 
 ---
 

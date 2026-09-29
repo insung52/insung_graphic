@@ -8,6 +8,13 @@
 > 탐지 시스템이 아니라 `Network/UGVRemoteControlSubsystem.cpp`의 `ClassifyDetectedObject()`가
 > `Faction` + 액터 클래스로 판정한다. 상세는
 > `protocol/2026-09-02_object_class_expansion.md`.
+>
+> 📌 [2026-09-28] **나뭇잎이 이제 탐지를 가린다.** 샘플별 트레이스는 그대로 물리 판정이고, 그 위에 나무 수관의
+> 잎 투과율이 곱해진다 — `VisibleFraction`은 이제 "안 가려진 샘플 비율"이 아니라 **샘플별 투과율의 평균**이다.
+> 3.4a절 참고.
+>
+> 📌 [2026-09-29] 잎 감쇠 `LeafExtinctionPerMeter`를 **전 수종 0.1/m**로 낮췄다(예전 소나무 0.25·자작 0.35는 수관
+> 하나로 드론의 낙하산 탐지를 완전히 막았다). 조절 항목·계산 예시는 3.4a절 "튜닝".
 
 # 카메라 기반 객체 탐지 모사 (RCWS/UAV 바운딩 박스) 개발 문서 (2026-07-09)
 
@@ -200,6 +207,7 @@ const FTransform ActorTransform = CandidateTarget->GetActorTransform();
    찍히면, 언덕 너머로 그 끝만 살짝 보여도 계속 "탐지됨"으로 남는 문제가 있었음
    (8.4절 트러블슈팅)
 2. 이번 스캔의 `VisibleFraction = 안 가려진 점 개수 / 전체 점 개수`
+   → **(2026-09-28부터) 샘플별 잎 투과율의 평균**(가려진 샘플은 0). 잎이 없는 곳에선 위 식과 같은 값이다. 3.4a절
 3. 타겟별로 유지되는 `Confidence`(0..1)가 `VisibleFraction` 쪽으로
    `FMath::FInterpConstantTo`(초당 `ConfidenceLerpSpeed`, 기본 1.5)로 서서히
    이동 — 즉시 스냅 안 하고 부드럽게, 한 스캔의 순간적 흔들림을 완화
@@ -236,6 +244,82 @@ Head/Chest/Pelvis)의 **뼈 위치**에서 트레이스한다 — 수직선은 �
   `ResolvePartLocation(Mesh, Part, Out)`(지금 뼈 위치 재계산)을 파이어컨트롤이 부위 조준에 쓴다.
 
 상세: `rcws/2026-09-16_rcws_target_memory_and_body_part_aim.md`(**빌드·PIE 검증 전**).
+
+### 3.4a 나뭇잎 투과율 (2026-09-28)
+
+`ECC_Visibility` 트레이스는 줄기 프록시만 만나고 잎은 통과한다(잎에는 콜리전이 없다 — 수만 그루라 넣을 수도
+없다). 그래서 **물리적으로 트인 샘플마다** 카메라→샘플 선분이 나무 수관을 지나며 살아남는 비율(0~1,
+Beer-Lambert)을 따로 구해 곱한다. 계산은 SoldierLab 모듈의 `USoldierFoliageOcclusionSubsystem::ComputeTransmittance`
+(트레이스 없음, 2D 격자 산술) — 병사 시야도 같은 서브시스템을 쓴다.
+
+| 값 | 의미 (`TargetDetectionComponent.cpp:438-483`) |
+|---|---|
+| `FDetectedTargetPart::bVisible` | **여전히 물리 판정**(트레이스가 안 막힘). 조준은 이걸 본다 — 총알은 잎을 뚫는다 |
+| `FDetectedTargetPart::Transmittance` | 그 샘플의 잎 투과율. 가려진 샘플은 0 (`DetectionTypes.h:89-93`) |
+| `VisibleFraction` | 샘플별 `Transmittance`의 평균 |
+| `FScanResult::MaxTransmittance` | 가장 잘 보이는 샘플의 투과율 |
+| `bAnyVisible` | 물리적으로 트인 샘플이 하나라도 있나(잎 무관) |
+
+- `VisibleFraction` 규칙(드론/CCTV): 신뢰도가 투과율 평균을 쫓는다 — 잎 한 겹 뒤는 문턱 근처를 오르내리고,
+  여러 겹 뒤는 획득 0.6에 못 닿는다.
+- **`AnyVisibleSample` 규칙(RCWS)은 0/1이 아니라 `MaxTransmittance`를 쫓는다**(`:188-194`). 잎이 없으면 예전과 같은 0/1.
+  이게 없으면 RCWS만 숲을 꿰뚫어 봤다.
+- 재획득 기억(`ReacquireGraceSeconds`)도 `MaxTransmittance ≥ LoseConfidenceThreshold`일 때만 발동(`:206-207`) —
+  잎 너머 어른거림으로는 즉시 재획득하지 않는다.
+
+**수관은 누가 등록하나**: titan_example의 `UForestCanopyRegistrarSubsystem`(`Environment/ForestCanopyRegistrar`)이
+월드 BeginPlay에 레벨의 모든 `UInstancedSkinnedMeshComponent`(PCG Megaplants 숲)를 수종 표 `DT_ForestTrees`
+(`FForestTreeRow`의 `CanopyBottomCm/TopCm/RadiusCm/LeafExtinctionPerMeter`)와 맞춰 인스턴스마다 타원체 하나를 넣는다.
+표에 없는 메시(하층 고사리, 스태틱 폴리지 등)는 **안 가린다.** PIE 로그에
+`[Foliage] Registered N forest crown(s) from DT_ForestTrees …`가 찍힌다(New_kadex_0811: 39,482).
+
+**스위치 / 디버그**
+- Project Settings > Game > **Forest Canopy** — `TreeTable`, `bRegisterCanopies`(끄면 잎 가림 전체 OFF)
+- 콘솔 `SoldierLab.Foliage.Enabled 0` — 모든 질의가 1 반환(잎 투명, A/B용)
+- 콘솔 `SoldierLab.Debug.Foliage 1` — 시점 60 m 안 수관 그리기
+- 콘솔 `Titan.Forest.RefreshCanopies` — 레벨 다시 훑어 재등록
+- `stat SoldierLab` — `Foliage Queries` / `Foliage: Queries`
+
+**튜닝 — 무엇을 바꾸면 무엇이 달라지나 (2026-09-29 기준)**
+
+투과율 T = exp(−Σ `LeafExtinctionPerMeter` × 수관 안 통과 길이 m). 수관은 인스턴스마다 똑바로 선 타원체
+(`ForestCanopyRegistrar.cpp:106-120`). 누적 광학 깊이 5(T ≈ 0.7%)에서 적분을 끊는다.
+
+| 조절 항목 | 위치 | 뜻 |
+|---|---|---|
+| `LeafExtinctionPerMeter` (1/m) | `DT_ForestTrees` 행 | **잎 밀도.** 클수록 빨리 가린다. 0인 행은 등록 자체를 건너뜀(= 그 수종은 안 가림). **현재 8행 전부 0.1** |
+| `CanopyBottomCm` / `CanopyTopCm` | 〃 | 스케일 1 기준 수관 아래끝/위끝 높이. 인스턴스 Z 스케일을 곱함. 이 아래로 지나는 시선은 안 가려짐 |
+| `CanopyRadiusCm` | 〃 | 스케일 1 기준 수관 수평 반경. 인스턴스 XY 스케일(큰 쪽)을 곱함. 넓힐수록 가리는 면적·관통 길이 증가 |
+| `bRegisterCanopies` | Project Settings > Game > Forest Canopy | 끄면 수관 0개 = 잎 가림 전체 OFF |
+| `SoldierLab.Foliage.Enabled 0` | 콘솔 | 등록은 두고 모든 질의가 1(잎 투명) — 병사·차량 둘 다. A/B용 |
+| `SoldierLab.Debug.Foliage 1` | 콘솔 | 시점 60 m 안 수관 타원체 그리기(수관 크기/높이 맞는지 눈으로 확인) |
+| `Titan.Forest.RefreshCanopies` | 콘솔 | 레벨을 다시 훑어 재등록 |
+
+**계산 예시** — 탐지 문턱은 획득 `AcquireConfidenceThreshold` 0.6, 유지 `LoseConfidenceThreshold` 0.5
+(`TargetDetectionComponent.h:89,96`). 드론은 `VisibleFraction` 규칙이라 신뢰도가 샘플 T 평균을 쫓는다.
+
+| 시선 | 0.35/m (옛 자작) | 0.25/m (옛 소나무) | **0.1/m (현재)** |
+|---|---|---|---|
+| 자작 A 수관 1개를 중심으로(≈3.8 m) | ≈0.26 ✗ | — | **≈0.68 ✓** |
+| 소나무 A 수관 1개를 중심으로 | — | ≈0.36 ✗ | **≈0.66 ✓** |
+| 수관 2겹(자작 A ×2) | ≈0.07 ✗ | — | ≈0.46 ✗ (유지 0.5도 못 넘음) |
+| 수관 가장자리 스침(1 m) | ≈0.70 | ≈0.78 | ≈0.90 |
+
+→ 옛 값에선 **수관 하나가 드론 탐지를 완전히 막았다**(나무 밑 낙하산 미탐지, 2026-09-29). 0.1에선 수관 한 겹
+너머는 잡히고 두 겹 이상이면 안 잡힌다. 더 숨기고 싶으면 0.15~0.2(한 겹 중심 ≈0.44~0.57 — 획득 0.6 미만이 되어
+다시 "수관 하나가 막는" 쪽으로 간다), 덜 숨기려면 0.05.
+
+**주의 — 탐지기별/대상별 배율이 없다**: 감쇠는 표 하나라 병사 시야·RCWS·드론·CCTV가 모두 같은 값을 본다.
+"드론만 덜 가리기"나 "낙하산만 잎 무시"는 지금 불가. 필요하면 C++ 선택 과제로 `UTargetDetectionComponent`에
+`FoliageOcclusionScale`(탐지기별 배율), `UDetectableTargetComponent`에 `bIgnoreFoliage`(대상별 무시) — **미구현.**
+
+**변경 반영 방법**: 등록은 월드 BeginPlay에 한 번(`OnWorldBeginPlay` → `RefreshCanopies`) 표를 읽어 만든다.
+`DT_ForestTrees`를 고친 뒤 **PIE를 다시 시작**하거나, PIE 중이면 **`Titan.Forest.RefreshCanopies`**. 로그
+`[Foliage] Registered N forest crown(s) …`로 확인. (수관 필드는 PCG 스폰에는 안 쓰이므로 숲 Generate는 필요 없다.)
+
+**한계**: 성목 수관은 지면 5~6 m 위에서 시작하므로 **낮은 시선은 대부분 수관 밑으로 지나간다** — 효과는 높은
+카메라(RCWS·드론·CCTV)에서 크다. 상세·설계 근거: `nanite/2026-09-28_forest_nanite_foliage_migration.md` E절,
+`level_new_kadex_0811/2026-09-01_foliage_occlusion_ideas.md` 안 2.
 
 ### 3.5 탐지 거리
 
@@ -461,7 +545,7 @@ Project Settings → Collision → Preset → New:
 
 | 사용처 | 영향 | 판단 |
 |---|---|---|
-| `UTargetDetectionComponent` 차폐 (`TargetDetectionComponent.cpp:320`) | 탐지 차단 | **의도한 것** |
+| `UTargetDetectionComponent` 차폐 (`TargetDetectionComponent.cpp:452`, 2026-09-28 기준 — 예전 `:320`) | 탐지 차단 | **의도한 것** |
 | 적군 LOS (`EnemyCombatComponent::HasLineOfSightToTarget`) | 적군도 못 봄 | **의도된 일관성** — 코드 주석이 "RCWS엔 보이는데 보병한텐 안 보이는" 불일치를 막으려고 일부러 같은 채널을 쓴다고 명시 |
 | 아군 LOS (`AllyFormationComponent.cpp:1928`) | 아군도 못 봄 | 위와 같음 |
 | **RCWS 사거리계** (`RCWSComponent.cpp:357`) | **거리 표시가 볼륨 표면까지로 나옴** | ⚠️ **원치 않는 부작용** |
@@ -478,3 +562,6 @@ Project Settings → Collision → Preset → New:
 숲 차폐 목적이라면 볼륨은 뭉텅이로 막아서 나무 사이 틈으로 보이는 자연스러움이 사라진다.
 동적 대안(수관 밀도 그리드 등) 비교는
 `level_new_kadex_0811/2026-09-01_foliage_occlusion_ideas.md` 참고.
+
+**(2026-09-28) 그중 안 2(해석적 캐노피 감쇠)가 구현됐다 — 3.4a절.** PCG Megaplants 숲은 이제 볼륨 없이 잎이
+탐지를 가린다. 볼륨은 수종 표에 없는 식생 구역을 억지로 막아야 할 때만 쓸 것.

@@ -1,6 +1,6 @@
 # 문서 전체 목록 (DOCS_INDEX)
 
-2026-09-23 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
+2026-09-29 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
 반영판(이후 세션별로 항목 추가 중).
 
 폴더는 "시스템 하나당 폴더 하나" 축으로 통일됨(`CLAUDE.md` 참고). `guide/`는 에버그린
@@ -26,6 +26,18 @@
 - `ally_move.md` (2026-08-07) — 아군 Posture×Alert×Movement FSM 설계, §10만 구버전.
 
 ## `guide/` — 에버그린 레퍼런스 (⚠️ 내용은 대부분 옛날 것, 상단 경고 배너 확인)
+
+- `soldier_movement_speed_guide.html` (2026-09-28 신규, **2026-09-29 내용 갱신 중 — 메인 세션이
+  이메일 형식 HTML로 다시 쓰고 있다**) — 병사 이동 속도를 상황별로 조정하는 방법.
+  **애니메이션 시스템을 모르는 사람(기획·디자이너) 대상**이라 HTML로 썼고, 브라우저로 열어서
+  보면 됨. 대상 표는 `Content/SoldierLab/Data/DT_SoldierMovement`(**행 16개 × 열 2개 =
+  걸음걸이 상한 `MaxGait` + 속도 배율 `SpeedScale` 0.75~1.25**), 연결점은
+  `BP_SoldierCharacter → AC_SoldierMovementProfile`.
+  ⚠ **09-28 판(배율 3열 · 안전범위 0.45~1.2)은 폐기됐다** — 배율을 임의 범위로 잡아 발이
+  미끄러진 1차 구현이고, 가속·회전 2열은 `AC_PreCMCTick`이 덮어써서 애초에 죽은 값이었다.
+  실효 범위 **0.75~1.25**는 ABP `Get_DynamicPlayRate`가 커브 없는 클립에 쓰는 대체값이다.
+  구현·설계 근거와 정정 기록은 `soldier_ai_lab/animation/2026-09-29_movement_policy_and_playrate_band.md`
+  (원칙 P193).
 
 - `ui_dev_guide.md` (2026-07-10, 09-22 구현 현황에 재시작 확인창 `WBP_RestartPrompt`/축 규칙 한 줄 추기, **09-23 상태 패널 누적값 재시작 리셋 한 줄 추기**) — Monitor1/2 UI. `Monitor1Widget` 자체가 레거시로 확인됨,
   현재 위젯 개발기록은 `ui/kadex_test_dashboard_wbp_spec.md`.
@@ -149,6 +161,9 @@
   원인 규명(RCWS 메인뷰 카메라와 RTSP용 SceneCapture가 실제로 다른 카메라, 엔진이
   SceneCapture에 `ReflectionMethod=None` 강제). `SceneCaptureViewParity` 모듈 도입 —
   `rcws/2026-08-31_selfdefense_camera_shake_bugs.md`의 선행 문서.
+- `2026-09-29_battlefield_capture_tsr_jitter_blink.md` (2026-09-29, 완료) — 자체방호 환경카메라(`BattlefieldCapture`)에서
+  원거리 트럭 환기구가 ~1초 주기로 번쩍이던 원인 = TSR 지터(11샘플 × 2프레임 1회 캡쳐). SceneViewExtension으로 **이 캡쳐
+  뷰만 지터 끔**(TSR 누적 유지). 기각안(트럭 Nanite, 캡쳐 TAA 끄기, 디버그 cvar)과 품질 트레이드오프, 다른 캡쳐 확장 보류.
 
 ## `ai_combat/` — 적/아군 AI·애니메이션·전투
 
@@ -444,6 +459,22 @@
 이 폴더는 자체 인덱스 체계를 갖는다 — 전체 목록은 `soldier_ai_lab/CLAUDE.md` 1절(읽기 순서)과 `soldier_ai_lab/IMPLEMENTED.md`.
 여기에는 titan 본체 상태와 직접 맞물리는 최신 문서만 적는다.
 
+- `animation/2026-09-29_movement_policy_and_playrate_band.md` (2026-09-28~29, 완료 — **PIE 실측 ✅**) — ★★ **상황별 이동 정책 + 재생배율 밴드**:
+  "시나리오에서 병사가 너무 빠르다" 는 제보에서 시작해, **애니메이션을 모르는 사람도 표로 조절할 수 있게** 만든 층. ★ **이 문서의 핵심은 밴드다** —
+  ABP `Get_DynamicPlayRate` 는 `Clamp(Speed2D / 클립의 MoveData_Speed, Min, Max)` 로만 적응하고, **우리 클립엔 `Min/MaxDynamicPlayRate` 커브가 없어
+  대체값 0.75 / 1.25 가 쓰인다** → 실측 `ALLY_MM_Rifle_Walk_Fwd` **291.31** · `Jog_Fwd` **582.62**(= 캐릭터 `WalkSpeeds`/`RunSpeeds` 와 동일, 클립이
+  리타이밍돼 있다) → **미끄러짐 없는 구간은 Walk 218~364 · Jog 437~728**(그 사이 364~437 은 두 세트가 다 MM DB 에 있어 매칭이 섞는다).
+  구현 = 신규 `AI/SoldierMovementProfile.{h,cpp}` + `Content/SoldierLab/Data/DT_SoldierMovement`(**행 16개 × 열 2개** — `MaxGait` 걸음걸이 **상한**(클립이
+  그 속도로 authored 되어 공짜) + `SpeedScale`(**0.75~1.25 클램프 3겹** = `UPROPERTY meta` · 코드 · 전역 cvar 합산 후)), 상한은
+  `USoldierEngagementComponent` 의 gait 결정 **끝**에서 씌우고 배율은 **gait 속도 벡터**에 곱한다. 상황 선택 2단 = ① `BreakContact`→`Rush` 명령이
+  이긴다(도주하며 재장전하는 병사가 걸어서 도망치지 않게) ② 아니면 **최종 속도(걸음 기준값 × 배율)가 가장 낮은 행**. ⚠ **`Aiming`(견착 —
+  엄폐지 사이를 달릴 때도 켜지므로 Jog 0.90) ≠ `Firing`(멈춰서 쏨 — Walk 0.75)**. cvar `SoldierLab.Move.Enabled`/`.SpeedScale`/`SoldierLab.Debug.Move`.
+  ★★ **2026-09-28 1차 구현은 폐기·정정됐다**(7절): CMC 의 `MaxWalkSpeed` 에 곱했더니 **`AC_PreCMCTick` 이 CMC 직전에 매 프레임 덮어써서 전혀 안
+  먹었고**, 입력으로 옮긴 뒤엔 **배율 0.45~0.7 이 밴드 밖이라 발이 미끄러졌다**(안전범위 0.45~1.2 는 **측정 없는 임의값**이었다) · **가속·회전 2열은
+  같은 이유로 죽은 값**이라 삭제("적용된다" 는 오보 정정). 검증 = 전 행을 `Walk/0.75`(218, 원래의 2.7배 느림)로 밀어 **느려지고 미끄러짐 없음** 확인
+  → 계획값 원복 후에도 정상(둘 다 사용자 확인). 원칙 **P193**, 값 **[C-174]**(방향별·Crouch 클립 authored 속도 미측정 — 현재 미끄러짐은 관측 안 됨),
+  작업 **[W120]**(218 보다 느리게 = 커브 베이크/클립 추가, **표로는 불가**) · **[W121]**(가속·회전은 틱 순서부터) · **[W122]**(`DT_SoldierMovement` P4 add).
+  ⚠ 디자이너용 안내는 `guide/soldier_movement_speed_guide.html`(09-29 재작성 중 — 09-28 판은 3열·0.45~1.2 기준이라 틀렸다).
 - `ai/2026-09-23_corpse_vehicle_interaction_and_weapon_drop.md` (2026-09-23, **코드 완료·검증 대기**) — ★ **차량이 밟는 시체 · 사망 시 무기 드롭**.
   UGV(`BP_UGV_0901`)가 쓰러진 적을 밟고 지나가는데 **밀려나는 그림은 좋지만** 시체가 땅에 박혀 떨고, 그 값이 서스펜션으로 흘러
   차량이 뒤집힐 수 있는 경로가 열려 있었다(**뒤집힘 목격 0회 — 예방 수정**). 원인: Chaos 서스펜션은 `ECC_WorldDynamic` 채널로

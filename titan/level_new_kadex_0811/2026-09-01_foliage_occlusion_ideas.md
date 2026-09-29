@@ -2,6 +2,13 @@
 
 2026-09-01 / 설계단계(미구현) / blocking volume 대신 나뭇잎 가림을 동적으로 처리하는 4가지 안 비교. 2번(해석적 캐노피 감쇠) 추천.
 
+> ✅ **[2026-09-28] 안 2가 구현됐다** — 숲을 Megaplants(Nanite Foliage)로 교체하면서 같이 했다. 수관 = 수종 표
+> `DT_ForestTrees`의 타원체, Beer-Lambert 감쇠, 2D 격자, 트레이스 없음. 계산은 SoldierLab `USoldierFoliageOcclusionSubsystem`,
+> 등록은 titan `UForestCanopyRegistrarSubsystem`, 소비자는 차량 카메라 탐지(`UTargetDetectionComponent`)와 병사 시야
+> (`USoldierSightComponent`) 둘 다. 구현 기록: `nanite/2026-09-28_forest_nanite_foliage_migration.md` E절,
+> 현재 동작: `guide/detection_dev_guide.md` 3.4a절. 아래 본문은 설계 당시 기록 그대로 둔다(나무 에셋·콜리전
+> 서술은 옛 스태틱 나무 기준).
+
 ## 문제
 
 `UTargetDetectionComponent`는 카메라→타겟 샘플점으로 `LineTraceSingleByChannel(ECC_Visibility)`를
