@@ -1472,7 +1472,45 @@ ID **C-171~C-173 · W118~W119 · P192**. **코드 완료 · 재빌드 실측 대
   Flickering.Period/Nanite 무효). `FBattlefieldNoJitterExtension`(SceneViewExtension, ViewState 비교로 이 캡쳐만 `bAllowTemporalJitter=false`) 적용 —
   TSR 누적 유지, 다른 뷰 영향 없음. PIE 검증 완료. 트럭 Nanite(revert)·캡쳐 TAA 끄기(사용자 거부)는 기각. 다른 캡쳐로 확장은 보류.
 
+## 2026-09-30 — SoldierLab AI 조준 떨림 해결(프레임 단위 조준 녹화기 8회) + 조준 대각선 이동 발 끌림 원인 확정(임시 편향) + 맹목사격 임시 off (애니/AI 세션)
+
+상세: **`soldier_ai_lab/ai/2026-09-30_ai_real_pitch_and_aim_smoothing.md`**(새 문서, 14절이 최종 요약) · **`soldier_ai_lab/animation/2026-09-30_diagonal_aim_stop_selection.md`**(새 문서).
+ID **C-176~C-178 · Q52 · W124~W129 · P195~P200**, **[W11] · [C-93] 해결**. 09-29 왼손 그립 IK 문서가 번호만 박고 미등록이던 **C-175 · W123 · P194** 도 같이 등록.
+
+- **A. 조준 대각선 이동 발 끌림 [원인 확정 · 근본 수정 대기]** — 조준 + 걷기 + 대각선(WA/WD/SA/SD)에서 발이 끌림(아군·적군, 달리기·비조준도 45° 통과 시 ~0.2 s).
+  Rewind Debugger 로 **`Walk_Left_Stop` 이 클립 길이마다 재선택**되는 것을 보고 비용을 재니 Stops 0.533 vs Loops 0.702 — 우리 `*_PSD_Rifle_Stand_Walk/Jog_Loops`
+  는 **4방향**, GASP 는 FL/FR/BL/BR 포함 **18** 이라 45° 쿼리에 맞는 Loop 가 없고 `PSS_Stop` 이 이긴다(재생 중 `continuingPoseCostBias −0.3` 으로 유지).
+  차단 A/B(워핑 · 발 배치 · 이동 정책 · AIBridge · 왼손 IK · 로우레디) 전부 무변화, DB·스키마·Chooser·CDO·CMC 는 GASP 원본과 대조해 정상.
+  **임시 완화(저장, P4 미제출)**: Stops `baseCostBias` 0 → 0.2 · Loops `continuingPoseCostBias` −0.01 → −0.05(아군·적군 8 PSD) — 전환 버벅임이 남아 **사용자가 편향 튜닝 중단**.
+  근본 수정 = Lyra `MF_Rifle_*_{Fwd,Bwd}_{Left,Right}` 8개 리타깃([W124]). 곁가지 발견: `SoldierMovementProfile` 에 **플레이어 게이트가 없어 플레이어도 ×0.85**([W125] —
+  "왜 지금" 후보 [C-177]) · 적군 클립 일부 `contact_l/r` 커브 누락([W126]). **맹목사격 임시 비활성** — 신규 cvar `SoldierLab.Engagement.BlindFire`(기본 0, `PlanAperture`
+  Blind 후보 3종 제외, 코드 유지) — 실전 시뮬 "부자연스럽다" 피드백, 다시 켤지 [Q52].
+- **B. AI 조준(총구) 떨림 — 해결(사용자 판정)** — 첫 수정(진짜 피치 · 선회 2단 · 보정 시간 기반화) 뒤에도 "엄폐 뒤에서 자세를 낮출 때 도리도리" → 조준 체인에 쓰는 곳이
+  7~8군데라 **측정으로 전환**: 신규 **`Debug/SoldierAimTrace`**(`SoldierLab.Debug.AimTrace 1`, 병사당 CSV — 교전·컨트롤러·몸·MM 블렌드 스택·본·총구·ABP/BP 변수 전부).
+  녹화 8회로 원인을 하나씩 지웠다:
+  ① **엔진은 AI 컨트롤 피치를 0 으로 둔다**(`AAIController::UpdateControlRotation` — 초점이 폰이 아니면) → 총 위아래를 틱당 5% 보정기가 떠맡음 → 신규
+  **`ASoldierAIController`**(컨트롤 회전 = 교전 `GetAimRotation()` 피치 포함), `AIC_Soldier` 부모 변경(옛 부모 `AIController`) ② 선회 240°/s 등속 → 오차 비례
+  40~150°/s ③ **자세 축 리밋 사이클** — 목표 0.5 = 임계값 0.5 에서 사다리꼴이 넘나들어 웅크림이 매 프레임 토글(49~121회/분, 클립 교체는 결과) → `StepAxis` 착지 +
+  웅크림 슈미트 트리거(±0.05) ④ **조준 보정 와인드업** — 재장전 중에도 적분해 ±25° 포화, 끝난 뒤 5~12 s 어긋남 → 총이 조준에 있을 때만 **빠르게(10/s)** 적분 · 밖에선
+  누설 · 60°/s 상한("느리게" 만든 첫 수정은 개념이 틀렸다 — 부드러움은 선회가 정한다) ⑤ **서기↔앉기 AO 즉시 교체**(일어날 때 pelvis 59° 한 프레임) → 신규
+  `USoldierAnimLibrary::UpdateStanceAimOffset` 관성 0.25 s([W11] 해결) ⑥ 뛰기 클립 위 AO 가 총을 70~80° 비켜 듦 → AI 는 400 cm/s 위에서 조준 해제(340 재개,
+  최소 유지 0.8 s, 몸통 회전 ≤ 360°/s) ⑦ **몽타주** — 재장전 BlendIn 0.25 · 피격 BlendIn 0.05 · 스켈레톤 슬롯 그룹이 하나라 사격이 피격을 한 프레임에 끊음 →
+  `HitReact` 그룹 분리(사용자) · 사격 금지 2.0 s < 재장전 몽타주 2.2 s → `BP_AR4Rifle` 마지막 Delay 0.9.
+  결과: 웅크림 토글 튐 75 → 2 · 정지 총구 오차 중앙 5~6 → 1.4~1.7° · 재장전 직후 사격 척추 56.9 → 0.5°/프레임. ⚠ 측정 교훈: 피치 75~80° 근처 본 회전은
+  **쿼터니언 각도**로 비교(오일러 차는 짐벌락으로 부풀려짐). 남은 것: 앉아 걷기 조준 오차 p90 ~24°([C-176]) · 아군 재장전 1.6 s 손목(디자이너 애셋, 사용자 처리 중 [W127]) ·
+  ABP 옛 Select 잔해([W128]) · 값 넓은 장면/2-PC 원격 피치([C-178]) · P4 제출([W129]).
+- **왼손 그립 IK(09-29 문서)** — 소켓 회전 캡처 완료(`SK_AR4_X` P35.7/Y−161.7/R−153.3 · `SK_KA74U_X` P41.8/Y17.5/R27.0), 현재 IK 동작 설명, PIE 확인 [C-175] 남음.
+- 바뀐 파일(코드): 신규 `Source/SoldierLab/AI/SoldierAIController.{h,cpp}` · `Pose/SoldierAnimLibrary.{h,cpp}` · `Debug/SoldierAimTrace.{h,cpp}`, 수정 `AI/SoldierEngagement.{h,cpp}` ·
+  `Pose/SoldierAIBridgeComponent.{h,cpp}` · `Pose/SoldierPoseSmootherComponent.cpp` · `SoldierLab.Build.cs`. MCP 한계 둘 기록(BP 함수 by-ref/Thread Safe 플래그 · 스켈레톤 슬롯 그룹).
+- 문서: 새 2건 · `soldier_ai_lab/`(OPEN_ITEMS · CURRENT_STATE · IMPLEMENTED · CLAUDE.md P194~P200 + 6.2c 조준 체인 cvar + 6.1 MCP 한계) · 09-29 왼손 그립 문서 상태 갱신 ·
+  `CURRENT_STATE.md` §7 · `DOCS_INDEX.md`. `guide/soldier_movement_speed_guide.html` 은 확인만(이동 정책 동작은 안 바뀜 — 플레이어 게이트 누락은 [W125] 로 미수정).
+
 ## 다음에 예정된 것 (이 시점 기준)
+
+- **SoldierLab 조준·로코모션 후속(09-30)** — 대각선 발 끌림의 근본 수정 [W124](Lyra `MF_` 대각선 8개 리타깃, 아군·적군 → 임시 편향 원복 검토) ·
+  [W125] `SoldierMovementProfile` 플레이어 제외 · [W126] 적군 `contact_l/r` · [W129] 09-30 체크아웃 에셋 P4 제출(`AIC_Soldier` 는 C++ 부모와 같이) ·
+  [C-176] 앉아 걷기 조준 오차 · [W127] 아군 재장전 손목(사용자) · [Q52] 맹목사격 재활성 여부 · 왼손 그립 PIE [C-175].
+  `soldier_ai_lab/ai/2026-09-30_ai_real_pitch_and_aim_smoothing.md` 14절 · `soldier_ai_lab/animation/2026-09-30_diagonal_aim_stop_selection.md` 7·8절.
 
 - **이동 정책 후속(09-29)** — **[W122] `Content/SoldierLab/Data/DT_SoldierMovement` P4 add** 가 가장 먼저다(신규 애셋이라 아직 체크인 안 됨 —
   없으면 C++ 기본값으로 돌아 거동은 같지만 표를 고쳐도 반영되지 않는다). 그 뒤 시나리오에서 실제 페이싱을 보고 표 값을 조정하고,

@@ -1,6 +1,6 @@
 # 문서 전체 목록 (DOCS_INDEX)
 
-2026-09-29 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
+2026-09-30 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
 반영판(이후 세션별로 항목 추가 중).
 
 폴더는 "시스템 하나당 폴더 하나" 축으로 통일됨(`CLAUDE.md` 참고). `guide/`는 에버그린
@@ -459,6 +459,17 @@
 이 폴더는 자체 인덱스 체계를 갖는다 — 전체 목록은 `soldier_ai_lab/CLAUDE.md` 1절(읽기 순서)과 `soldier_ai_lab/IMPLEMENTED.md`.
 여기에는 titan 본체 상태와 직접 맞물리는 최신 문서만 적는다.
 
+- `ai/2026-09-30_ai_real_pitch_and_aim_smoothing.md` (2026-09-30, **완료** — 녹화 8회 후 사용자 "해결" 판정) — ★★ **AI 병사 조준(총구) 떨림**.
+  시간순 1~13절 + **14절 최종 요약**. 원인 일곱과 수정: 엔진이 AI 컨트롤 피치를 0 으로 둠 → 신규 `ASoldierAIController`(`AIC_Soldier` 부모) · 선회 오차 비례 40~150°/s ·
+  자세 축 리밋 사이클 → 착지 + 웅크림 슈미트 트리거 · 조준 보정 재설계(총이 조준에 있을 때만 10/s, 밖에선 누설, 60°/s 상한) · 서기↔앉기 AO 관성 전환(신규
+  `USoldierAnimLibrary`) · 뛰는 중 조준 해제 · 몽타주 BlendIn/슬롯 그룹 `HitReact`/사격 금지 = 재장전 몽타주 길이. **도구 = 프레임 단위 조준 녹화기
+  `SoldierLab.Debug.AimTrace`**(신규 `USoldierAimTraceSubsystem`). 원칙 P195~P199, 값 [C-176] · [C-178], 작업 [W127]~[W129], [W11] · [C-93] 해결.
+- `animation/2026-09-30_diagonal_aim_stop_selection.md` (2026-09-30, **진행중** — 원인 확정 · 임시 편향 · 근본 수정 대기) — ★ **조준 대각선 이동 발 끌림**:
+  Loops 포즈 DB 가 4방향뿐이라(GASP 18) 45° 에서 Stop 이 이김. 임시 편향(Stops `baseCostBias 0.2` · Loops `continuingPoseCostBias −0.05`, 8 PSD) — 튜닝 중단,
+  근본 = 대각선 클립 추가 [W124]. 곁가지: `SoldierMovementProfile` 플레이어 게이트 없음 [W125] · 적군 `contact_l/r` 누락 [W126] · **맹목사격 임시 off**
+  (`SoldierLab.Engagement.BlindFire` 기본 0, [Q52]). 원칙 P200.
+- `animation/2026-09-29_left_hand_grip_ik.md` (2026-09-29, 진행중 — **09-30 소켓 회전 캡처 완료**, PIE 확인 [C-175] 남음) — 왼손 그립 IK 재가동(총 메시
+  `LeftHandGrip` 소켓 위치+회전 → `CopyBone`/`ModifyBone`/`TwoBoneIK`). 원칙 P194.
 - `animation/2026-09-29_movement_policy_and_playrate_band.md` (2026-09-28~29, 완료 — **PIE 실측 ✅**) — ★★ **상황별 이동 정책 + 재생배율 밴드**:
   "시나리오에서 병사가 너무 빠르다" 는 제보에서 시작해, **애니메이션을 모르는 사람도 표로 조절할 수 있게** 만든 층. ★ **이 문서의 핵심은 밴드다** —
   ABP `Get_DynamicPlayRate` 는 `Clamp(Speed2D / 클립의 MoveData_Speed, Min, Max)` 로만 적응하고, **우리 클립엔 `Min/MaxDynamicPlayRate` 커브가 없어
