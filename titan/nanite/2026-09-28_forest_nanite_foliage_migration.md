@@ -1,6 +1,6 @@
 # New_kadex_0811 숲 Nanite Foliage 이관 (Megaplants + 잎 가림 + DynamicWind)
 
-2026-09-29 갱신(최초 2026-09-28) / 진행중 / 메인 프로젝트 Nanite ON, PCG 숲 38,972그루 + 직접 배치 216그루를 Megaplants 스켈레탈 나무로 교체(배치 위치 보존), 잎이 탐지를 가리는 투과율 시스템, DynamicWind 연동, 줄기 프록시 대응 완료. 09-29: 고사리 미끄러짐(H) 해결(Nanite OFF), 나무 "뚝뚝" 튐(I) 원인 확정·수정, 드론 낙하산 미탐지(J) 잎 밀도 0.1로 해결 — 남은 것은 리눅스 Nanite 폴백·HDRI 각도·RTSP 흔들림 확인·P4 머지 등 마무리 항목(맨 아래 "남은 작업").
+2026-10-01 갱신(최초 2026-09-28) / 진행중 / 메인 프로젝트 Nanite ON, PCG 숲 38,972그루 + 직접 배치 216그루를 Megaplants 나무로 교체(배치 위치 보존), 잎이 탐지를 가리는 투과율 시스템, 줄기 프록시 대응 완료. 09-29: 고사리 미끄러짐(H) 해결(Nanite OFF), 나무 "뚝뚝" 튐(I) 원인 확정·수정, 드론 낙하산 미탐지(J) 잎 밀도 0.1로 해결. **09-30: 나무를 스켈레탈(DynamicWind) → 스태틱 Nanite로 전환(K), DynamicWind 장시간 떨림 원인 = 월드 시간 float 정밀도 확정(L).** **10-01: 풀 머티리얼 시간 정밀도 전역 해결 + 스태틱 나무 WPO 바람 시도 → 2 m로 사실상 끔(M, 상세는 `2026-10-01_forest_wind_static_wpo_material_time.md`).** 나무는 현재 바람 없음 — 후속 과제.
 
 선행 문서(같은 날, 같은 폴더):
 - `2026-09-28_nanite_deep_dive_project_impact.md` — Nanite 원리 + 켰을 때 프로젝트 영향(VSM·리눅스 폴백 등)
@@ -8,8 +8,10 @@
 - `2026-09-28_megaplants_test_results.md` — 10만 그루 성능, **22비트 스키닝 버퍼 천장(개별 액터 ~137그루 크래시)**
 
 이 문서는 그 테스트 결과를 **메인 프로젝트 `titan_example` / 레벨 `New_kadex_0811`에 실제로 적용한 기록**이다.
-아래 A~J는 모두 세션 중 에디터·로그·소스로 확인한 사실이다(확인 못 한 것은 해당 줄에 명시).
-I·J절과 H절 결론은 2026-09-29 추가분이다.
+아래 A~M은 모두 세션 중 에디터·로그·소스로 확인한 사실이다(확인 못 한 것은 해당 줄에 명시).
+I·J절과 H절 결론은 2026-09-29, K·L절은 2026-09-30, M절은 2026-10-01 추가분이다.
+⚠ **09-30부터 나무는 스켈레탈이 아니다(K절).** C·D·F·G절의 "스킨드 스포너/DynamicWind" 서술은 09-28~29 시점 기록이며,
+현재 상태는 K절이 덮어쓴다.
 
 ---
 
@@ -23,10 +25,13 @@ I·J절과 H절 결론은 2026-09-29 추가분이다.
 | D. 직접 배치 나무 216그루 → 마커 BP + PCG | ✅ 마커 이동/복제로 편집 가능, 구 액터 삭제 |
 | E. 잎이 탐지를 가림(투과율) — 병사 시야 + 차량 카메라 | ✅ 빌드·등록 확인(39,482 수관). 잎 밀도는 J절에서 0.1로 조정 |
 | F. `TreeCollisionProxyBuilder` 스켈레탈 나무 지원 | ✅ 사용자 Rebuild·Build Paths 완료 |
-| G. DynamicWind를 `AWindSource`에 연결 | ✅ 사용자 흔들림 확인 (RTSP 캡처 쪽은 미확인) |
+| G. DynamicWind를 `AWindSource`에 연결 | ~~✅ 사용자 흔들림 확인~~ → **09-30 폐기**(K·L절) |
 | H. 작은 고사리가 통째로 미끄러짐 | ✅ **09-29 해결** — 고사리 2개 메시 Nanite OFF(사용자). 바위 2개는 선택 과제 |
 | I. 나무가 한 그루씩 가끔 "뚝뚝" 튐 | ✅ **09-29 원인 확정(플러그인 셰이더 회전축 전환) + 우리 쪽 수정**(`bDynamicWindIgnoreWander`), 사용자 확인 |
 | J. 드론이 나무 밑 낙하산을 못 잡음 | ✅ **09-29 해결** — `LeafExtinctionPerMeter` 8행 전부 0.1(사용자) |
+| K. 나무 스켈레탈(DynamicWind) → 스태틱 Nanite 전환 | ✅ **09-30** — PVE 스태틱 익스포트, PCG Static Mesh Spawner, 수관 39,482 재등록, 줄기 프록시 리빌드(사용자) |
+| L. DynamicWind 장시간 떨림 원인 | ✅ **09-30 확정** — 월드 시간 float(`DynamicWindProvider.cpp:525`), 1일째부터 재현. 플러그인 포크는 UBT가 거부 |
+| M. 풀 머티리얼 시간 정밀도 + 나무 WPO 바람 | ✅ 풀 해결(사용자 검증) / ⏸ 나무 WPO는 Nanite 복셀 한계로 2 m = 사실상 끔 — **10-01**, 별도 문서 |
 
 ---
 
@@ -39,6 +44,9 @@ I·J절과 H절 결론은 2026-09-29 추가분이다.
 | `Config/DefaultEngine.ini` | `r.Nanite.ProjectEnabled=False` → **`True`**, **`r.Nanite.Foliage=True`** 추가(주석 포함). 원래 False는 CL 288(2026-07-22)에서 온 값 |
 | `titan_example.uproject` | 플러그인 **`ProceduralVegetationEditor`**, **`DynamicWind`** 활성화(사용자가 에디터에서 켬) |
 | `Source/titan_example/titan_example.Build.cs` | `"DynamicWind"` 모듈 의존 추가(G절) |
+
+**(09-30) DynamicWind 제거**: `Build.cs`의 `"DynamicWind"` 의존과 `.uproject`의 `DynamicWind` 항목을 뺐다(K절).
+단 엔진 PVE 플러그인이 DynamicWind에 의존하므로 **플러그인은 계속 로드된다**(우리가 구동만 안 함).
 
 ### A.2 부수효과 — VSM이 이제 진짜로 돈다
 
@@ -128,11 +136,13 @@ GetSpline → SplineSampler(interior, 간격 450) → Projection(+GetLandscape) 
   (`Engine/Plugins/PCG/Source/PCG/Public/MeshSelectors/PCGSkinnedMeshSelector.h`). 그래서 가중치 선택을
   MatchAndSet으로 앞단에서 하고, 스포너는 `Mesh` 속성만 읽는다.
 - ⚠ 스킨드 스포너의 Mesh Attribute 기본값은 `@Last` — **틀린 값이다. `Mesh`로 바꿔야 한다.**
+- **(09-30) 스포너 교체**: Instanced Skinned Mesh Spawner → **Static Mesh Spawner `StaticTreeSpawner`**
+  (`PCGMeshSelectorByAttribute`, `AttributeName = Mesh`, NoCollision 템플릿). 앞단(DT + MatchAndSet)은 그대로. K절.
 
 ### C.3 수종 표 — `FForestTreeRow` + `DT_ForestTrees`
 
 C++ 구조체 `Source/titan_example/Environment/ForestTreeRow.h`(`FForestTreeRow`):
-`Mesh`(TSoftObjectPtr<USkinnedAsset>) · `Weight` · `ScaleMultiplier` · `Species` ·
+`Mesh`(TSoftObjectPtr<USkinnedAsset> → **09-30부터 `TSoftObjectPtr<UStreamableRenderAsset>`**, 스태틱·스켈레탈 공통 부모 — K절) · `Weight` · `ScaleMultiplier` · `Species` ·
 `CanopyBottomCm` · `CanopyTopCm` · `CanopyRadiusCm` · `LeafExtinctionPerMeter`.
 (수관 필드는 E절 잎 가림용 — PCG와 탐지가 **같은 표 하나**를 본다.)
 
@@ -270,6 +280,10 @@ Get Actor Data(AllWorldActors, ByTag Birch / Pine, GetSinglePoint, Merge single 
 `[Foliage] Registered 39482 forest crown(s) from DT_ForestTrees (0 skinned instance(s) not in the table)`,
 격자 132×73 @ 1000 cm. (39,482 = 38,972 + 294 + 216)
 
+**(09-30) 스태틱 나무 수집 추가**: `UInstancedStaticMeshComponent`(HISM 포함)도 표의 메시와 맞춰 수관을 등록한다
+(`ForestCanopyRegistrar.cpp:110-136`, 스켈레탈 경로는 남겨 둠). 스태틱 전환 후 PIE 로그
+`Registered 39482 forest crown(s) ... (static 39482, skinned 0)` 확인 — 개수 동일.
+
 ### E.3 병사 시야 — `USoldierSightComponent`
 
 `Source/SoldierLab/AI/SoldierSight.h/.cpp`, 새 프로퍼티(카테고리 `SoldierLab|Sight|Foliage`):
@@ -331,12 +345,18 @@ Get Actor Data(AllWorldActors, ByTag Birch / Pine, GetSinglePoint, Merge single 
 
 Birch_D(묘목)는 프록시 없음(옛 Tinny와 같다).
 
+**(09-30) 스태틱 전환 후 Species**: `SM_` 스태틱 7종 항목 추가(소나무 A~D r22.9/h1000, 자작 A~C r16.5/h647 — 위 표와 같은 값),
+스켈레탈 2개 항목 삭제 → **13 → 11개**. 사용자 리빌드 완료(K절).
+
 수종이 재추첨돼 옛 프록시가 줄기 굵기·위치와 안 맞게 됐으므로 **사용자가 Preview → Rebuild Proxies →
 Build Paths** 실행 — "잘됨".
 
 ---
 
 ## G. 바람 — DynamicWind를 `AWindSource`의 5번째 소비처로
+
+> ⛔ **2026-09-30 폐기.** 나무를 스태틱으로 바꾸면서 `PushToDynamicWind`와 관련 프로퍼티 4개를 코드에서 제거했다(K·L절).
+> 아래는 09-28~29 시점 기록이다.
 
 Megaplants는 WPO가 아니라 **본 스키닝**으로 흔들린다 — 엔진 `DynamicWind` 플러그인이 GPU에서 본을 돌리고,
 입력은 전역 풍향 하나 + 풍속 하나뿐(`UDynamicWindSubsystem`).
@@ -403,6 +423,9 @@ PCG 액터 3개 모두 재생성. **이 에셋이 없으면 본은 기본 포즈
 
 ## I. ✅ 해결(09-29) — 나무가 한 그루씩 가끔 "뚝뚝" 튄다 (DynamicWind 회전축 전환)
 
+> 09-30 DynamicWind 폐기(K절)로 `bDynamicWindIgnoreWander`도 코드에서 제거됐다. 원인 분석은 DynamicWind 사본 플러그인을
+> 만들 경우(10-01 문서 4절 (1)) 그대로 유효하다.
+
 ### I.1 증상
 
 Megaplants 나무가 **한 그루씩, 서로 다른 때에**(수 초~수십 초 간격) 가지가 뚝 튀었다.
@@ -416,7 +439,7 @@ Megaplants 나무가 **한 그루씩, 서로 다른 때에**(수 초~수십 초 
 | 스키닝 버퍼 조각 모음(defrag) | 조각 모음은 **모든 헤더를 한꺼번에** 재할당한다(`Engine/Source/Runtime/Renderer/Private/Skinning/SkinningSceneExtension.cpp:764-790`) — 한 그루씩 튀는 모양이 아니다 |
 | 나무별 방향성 슬라이스(8개) | 슬라이스 번호는 **인스턴스 yaw로 고정**된다(`Engine/Plugins/Experimental/DynamicWind/Source/DynamicWind/Private/DynamicWindData.cpp:50-61`, 45° 반올림) — 실행 중에 안 바뀜 |
 | 다른 곳에서 바람 값을 덮어씀 | 레벨의 바람 액터는 `WindSource_1` 하나. PVE의 `BP_GlobalFoliageActor_UE5`는 레벨에 없음 |
-| 시간 값 튐 | 셰이더 `Time` = 월드 `GetTimeSeconds()`(`.../DynamicWind/Private/DynamicWindProvider.cpp:525`) — 연속값 |
+| 시간 값 튐 | 셰이더 `Time` = 월드 `GetTimeSeconds()`(`.../DynamicWind/Private/DynamicWindProvider.cpp:525`) — 연속값. ⚠ **단 float라 장시간 실행 시 정밀도가 무너진다 — 09-30 L절에서 별도 증상(떨림)의 원인으로 확정** |
 
 ### I.3 A/B 테스트
 
@@ -464,6 +487,8 @@ DynamicWind 플러그인을 프로젝트 `Plugins/`로 포크해서 위 줄을 *
 0으로 부드럽게 줄어듦)으로 바꾸면 풍향을 돌려도 된다. **하지 않았다** — 플러그인이 Experimental v0.1
 (`DynamicWind.uplugin` `VersionName "0.1"`, `IsExperimentalVersion true`)이라 엔진 업데이트마다 포크 유지 비용이 든다.
 
+**(09-30) 같은 이름 포크는 불가능으로 확인** — L.3절. 대안은 다른 이름의 사본 플러그인(M절 / 10-01 문서 4절).
+
 ---
 
 ## J. ✅ 해결(09-29) — 드론이 나무 밑 낙하산을 못 잡는다 (잎 밀도 과다)
@@ -488,6 +513,96 @@ DynamicWind 플러그인을 프로젝트 `Plugins/`로 포크해서 위 줄을 *
 필요하면 C++ 선택 과제: `UTargetDetectionComponent`에 `FoliageOcclusionScale`(탐지기별 배율),
 `UDetectableTargetComponent`에 `bIgnoreFoliage`(대상별 무시). **미구현.**
 조절 항목 전체 설명은 `guide/detection_dev_guide.md` 3.4a.
+
+---
+
+## K. ✅ (09-30) 나무 스켈레탈(DynamicWind) → 스태틱 Nanite 전환
+
+**이유**: DynamicWind의 두 문제 — 풍향이 돌면 가지가 튐(I절, 우회만 했음) + **장시간 실행 시 나무 떨림**(L절, 플러그인 안이라 우리 쪽 우회 불가).
+
+### K.1 메시
+
+PVE에서 **스태틱으로 다시 익스포트**(Nanite, Shape Preservation = **Voxelize**):
+- `/Game/Megaplant_Library/Tree_Baltic_Pine/Tree_Baltic_Pine_01/SM_Tree_Baltic_Pine_01_A~D`
+- `/Game/Megaplant_Library/Tree_Silver_Birch/.../SM_Tree_Silver_Birch_01_A~D`
+
+### K.2 표·PCG
+
+- `DT_ForestTrees` 8행의 `Mesh` → `SM_` 경로. 다른 열(Weight·Scale·수관·감쇠)은 그대로.
+- `FForestTreeRow::Mesh` 타입 `TSoftObjectPtr<USkinnedAsset>` → **`TSoftObjectPtr<UStreamableRenderAsset>`**
+  (`ForestTreeRow.h:31-37`, 스태틱·스켈레탈 공통 부모 — 소프트 참조는 경로로 저장돼 기존 행 값 유지).
+- `PCG_SplineForest_tree2_Nanite` / `PCG_PlacedTrees`: Instanced Skinned Mesh Spawner → **Static Mesh Spawner `StaticTreeSpawner`**
+  (`PCGMeshSelectorByAttribute`, `AttributeName = Mesh`, NoCollision 템플릿).
+
+### K.3 수관 등록
+
+`ForestCanopyRegistrar`가 ISM/HISM도 수집(E.2 추가분). PIE 로그
+`Registered 39482 forest crown(s) ... (static 39482, skinned 0)` — **38,972 + 294 + 216, 이전과 동일.**
+
+### K.4 줄기 프록시
+
+`TreeCollisionProxyBuilder_1` Species에 `SM_` 7종 추가(소나무 A~D r22.9/h1000, 자작 A~C r16.5/h647),
+스켈레탈 2개 항목 삭제(13 → 11). **사용자 리빌드 완료.**
+
+### K.5 DynamicWind 코드 제거
+
+- `AWindSource`: `PushToDynamicWind()`와 프로퍼티 4개(`bDriveDynamicWind`·`DynamicWindSpeedPerMS`·`DynamicWindAmplitude`·
+  `bDynamicWindIgnoreWander`) 제거. 헤더 주석에 폐기 경위(`WindSource.h:19-23`).
+- `titan_example.Build.cs`의 `"DynamicWind"` 의존, `.uproject`의 `DynamicWind` 항목 제거.
+- ⚠ 엔진 **PVE 플러그인이 DynamicWind에 의존**해서 플러그인 자체는 계속 로드된다(구동만 안 함).
+- `DA_ForestDynamicWind` 에셋은 스포너에서 더 이상 참조되지 않는다(삭제 여부는 이 문서에서 확인 안 함).
+
+결과: 숲 나무는 **바람 없는 스태틱 Nanite 메시**. 바람 재도입은 M절.
+
+### K.6 P4 — 다른 세션 CL에 섞여 제출됨
+
+이 변경들은 공유 default 체인지리스트 때문에 **다른 세션의 change 16('총구 떨림 문제 수정…')에 같이 제출됐다.**
+워크스페이스 `insung_desktop1`을 여러 세션이 같이 쓰므로, 제출 전 default CL의 파일 목록을 확인할 것.
+
+---
+
+## L. ✅ (09-30) DynamicWind 장시간 떨림 — 원인 확정 (월드 시간 float)
+
+### L.1 원인
+
+`Engine/Plugins/Experimental/DynamicWind/Source/DynamicWind/Private/DynamicWindProvider.cpp:525`
+```cpp
+PassParameters->Time = Scene.GetWorld()->GetTimeSeconds();
+```
+double → **float** 변환. 셰이더(`DynamicWindEval.usf`)는 **Time의 순수 함수**(누적 상태 없음)라, 월드 시간이 커질수록
+float 최소 단위가 커져 프레임 간 시간 증가가 들쭉날쭉 → 흔들림이 떨린다.
+
+### L.2 재현
+
+- 도구: 콘솔 **`Titan.Debug.AdvanceWorldTime [초, 기본 43200]`** — `World->TimeSeconds`를 앞으로 민다(`WindSource.cpp:15-32`).
+  월드 시간을 쓰는 모든 것에 영향이 있으니 PIE 확인용으로만.
+- `L_Basic`에 PVE `Wind_Example_PCG` 볼륨(`TEST_DynamicWindTimeTest`)을 놓고 시험: **12시간은 애매, 1일(86400)부터 풍속 3에서도
+  미세 떨림 확인**(사용자).
+- ⚠ `L_Basic.umap`은 이 테스트 볼륨 때문에 체크아웃돼 있다 — **제출 금지**.
+
+### L.3 정정 · 실패한 시도
+
+- **정정**: 세션 중 한때 원인 후보로 말한 "스켈레톤 인덱스 불일치 버그(`DynamicWindProvider.cpp:374-406`)"는 **오판**이다.
+  367행에서 TMap을 다른 allocator로 복사(압축)하므로 인덱스는 일치한다.
+- **DynamicWind 포크 실패**: 플러그인을 `Plugins/DynamicWind`로 복사하자 UBT가 거부 —
+  `Module 'ProceduralVegetation' (Engine Plugins) should not reference module 'DynamicWind' (Project)`.
+  프로젝트 플러그인이 같은 이름의 엔진 플러그인보다 우선하는 건 맞지만(`PluginManager.cpp:1280`), **엔진 PVE가 참조하는 모듈이라
+  프로젝트로 옮길 수 없다.** PVE는 끌 수도 없다 — 나무 머티리얼 부모 `MA_Foliage_Trees`가 PVE 콘텐츠다.
+- 같은 정밀도 문제가 **머티리얼 Time 노드**(풀 WPO)에도 있다 → M절에서 해결.
+
+---
+
+## M. (10-01) 풀 머티리얼 시간 정밀도 해결 + 스태틱 나무 WPO 바람 시도
+
+상세: **`nanite/2026-10-01_forest_wind_static_wpo_material_time.md`**. 요약:
+
+- ✅ **`UTitanMaterialTimeSubsystem` + `/Game/Materials/MPC_TitanTime`** — 월드 시간을 double로 되감아(`WrappedTime`) MPC로 넣고,
+  RealBiomes·PN·`M_FoliageCustomWind` 바람 함수의 Time 노드를 교체. 기준점 리셋 = 시나리오 재시작 암전 + 4시간 주기 + 수동.
+  사용자: **"풀 튀는 거 전혀 없고 시간 오래 지나도 안 떨림."**
+- ⏸ **나무 WPO 바람** — `MF_TitanTreeWind` + 마스터 복사본 2개 + MI 7개 부모 교체. 그러나 **Nanite 복셀 래스터는 WPO를 안 해서**
+  복셀 나무는 텍스처만 미끄러진다 → `WorldPositionOffsetDisableDistance` **200 cm**(숲 컴포넌트 24개 + 스폰너 템플릿 2개).
+  **사용자 결정: 2 m = '나무 바람 끔'과 같은 임시 상태.** 후속은 스켈레탈 복귀 + DynamicWind를 다른 이름의 프로젝트 플러그인으로
+  복사(추천) 또는 Voxelize 끄고 스태틱+WPO.
 
 ---
 
@@ -532,16 +647,23 @@ DynamicWind 플러그인을 프로젝트 `Plugins/`로 포크해서 위 줄을 *
 **레벨 `New_kadex_0811`**: 두 숲 BP의 그래프 교체, 마커 216 + `PCG_PlacedTrees_Volume_*`, 옛 나무 216 삭제,
 `TreeCollisionProxyBuilder` Species 6개 + 프록시 재생성, (09-29) `WindSource_1` 값(I.5)
 **(09-29) 에셋 수정**: `SM_Pine_Fern_Broad_Group_01/_02` Nanite OFF, `DT_ForestTrees` 잎 감쇠 0.1
+**(09-30, K절)**: 신규 `SM_Tree_Baltic_Pine_01_A~D`·`SM_Tree_Silver_Birch_01_A~D`, `DT_ForestTrees` Mesh 경로, PCG 그래프 2개 스포너 교체,
+`TreeCollisionProxyBuilder_1` Species 11개. 코드: `ForestTreeRow.h`, `ForestCanopyRegistrar.cpp`, `WindSource.h/.cpp`(DynamicWind 제거 +
+`Titan.Debug.AdvanceWorldTime`), `Build.cs`, `.uproject` — change 16에 섞여 제출(K.6)
+**(10-01, M절)**: 10-01 문서 6절 목록 — **미제출**
 
 ---
 
 ## 남은 작업
 
-(2026-09-29 갱신 — 완료: ~~H 고사리 미끄러짐~~(고사리 2개 Nanite OFF), I 나무 튐 수정, J 드론 낙하산 탐지)
+(2026-10-01 갱신 — 완료: ~~H 고사리 미끄러짐~~(고사리 2개 Nanite OFF), I 나무 튐 수정, J 드론 낙하산 탐지, K 스태틱 전환, L 떨림 원인, M 풀 시간 정밀도)
 
+0. **(10-01) 나무 바람 재도입** — 현재 나무는 사실상 바람 없음(M절). 스켈레탈 복귀 + DynamicWind 사본 플러그인(추천) vs Voxelize 끄고
+   스태틱+WPO 중 결정. 10-01 문서 4절.
+0-1. **(10-01) P4** — 10-01 미제출분 제출(다른 세션과 같은 default CL — 파일을 골라 담을 것), `L_Basic.umap` revert. 10-01 문서 6절.
 1. **리눅스 패키징** — `bGenerateNaniteFallbackMeshes`를 기본값(True)으로 되돌린 뒤 패키징 검증 (A.4) ← **패키징 전 필수**
 2. **HDRI 스카이라이트 각도** — `SourceCubemapAngle` ≈ −100(부호 확인) + Recapture (C.6, 적용 여부 미확인)
-3. **RTSP 씬 캡처에서 나무 흔들림 확인** (G)
+3. ~~RTSP 씬 캡처에서 나무 흔들림 확인 (G)~~ — DynamicWind 폐기로 해당 없음(나무 바람 재도입 후 다시 확인)
 4. **P4** — `WindSource.h/.cpp` 재오픈분(I절) 서브밋 시 user2와 머지. CL 519 이후 남은 파일·새 에셋(`Megaplant_Library`·`SplineForest`) add 여부 확인 (A.5)
 5. **엔진 5.8.2+** — 이 PC는 5.8.2 확인. 빌드/납품 PC 확인 (UE-386321)
 6. (선택) **바위 `SM_Pine_Rock_Small_01/_03` Nanite OFF** — 위 풀이 미끄러지면 (H)
@@ -550,4 +672,4 @@ DynamicWind 플러그인을 프로젝트 `Plugins/`로 포크해서 위 줄을 *
 9. **병사 쪽 잎 튜닝** — `FoliageNoticeSeconds`·`FoliageClearTransmittance` 인게임 조정 (감쇠 값은 J절에서 0.1로 정함)
 10. 교체 후 fps 수치 기록 (A.3)
 11. (선택) 잎 반짝임 — `bVoxelOpacity` 시험 (C.5)
-12. (선택) 풍향 배회를 나무에도 주고 싶으면 DynamicWind 플러그인 포크 (I.6)
+12. ~~(선택) 풍향 배회를 나무에도 주고 싶으면 DynamicWind 플러그인 포크 (I.6)~~ — 같은 이름 포크는 불가(L.3), 0번 항목으로 흡수

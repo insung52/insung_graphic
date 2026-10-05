@@ -1,6 +1,8 @@
-# 로코모션 자동 테스터 + 기록기 확장 (발 미끄러짐·방향 전환 꼬임 측정용)
+# 로코모션 자동 테스터 + 발 미끄러짐·Loop 불안정 해결 (아군)
 
-2026-09-30 / 진행중(기준선 측정 완료 · 속도 배율 A/B 대기) / 플레이어 병사를 조준/총내림 × 걷기/뛰기 × 서기/앉기 × 8방향 안정·전환 스케줄로 자동 조종하며 프레임별로 기록하고, 케이스별 Loop 비율·접지 발 미끄러짐·발 교차를 표로 뽑는 도구.
+2026-09-30~10-01 / 진행중(아군·적군 적용 완료 · 접지 커브 재생성 대기 · 디자이너 이음새 수정 대기) / 자동 테스터·기록기로 원인을 측정하고, Loop 클립 루트 선형화 + MM 질의 궤적 4방향 스냅 + Starts/Pivots 편향으로 아군 조준 이동 24케이스 전부 Loop 100%·전환 112/112 Loop 도달을 만들었다.
+
+> **요약(5.4~5.10)** — 원인 3개: ① 일부 Loop 클립 루트 속도가 보폭 안에서 ±53~74% 출렁임(→ `SoldierRootSpeedTool` 선형화, 8클립) ② 4방향 DB의 대각선 공백(→ `SnapTrajectoryToCardinal`, 앞 대각선 → 옆걸음 · 뒤 대각선 → 후진) ③ Start/Pivot 정속 구간이 Loop 대용(→ Starts·Pivots DB `baseCostBias` 0.1). 부차: 플레이어 속도 ×0.85(뛰기 선택 악화, [W125]).
 
 관련: `animation/2026-09-30_diagonal_aim_stop_selection.md`(대각선 Stop 선택 — [W124]) · `ai/2026-09-30_ai_real_pitch_and_aim_smoothing.md`(기록기 `SoldierAimTrace` 원형) · `design/2026-09-01_architecture.md` 5.1·5.5.2절(MM 채택 이유, "4방향 + 오리엔테이션 워핑" 계획).
 
@@ -140,13 +142,108 @@ request 파일(`quick` + `exec SoldierLab.Move.Enabled 0`)로 무인 실행. 걷
 
 **해법 후보(기존 애셋 가공)**: 문제 Loop 8클립의 **루트 이동을 선형(평균 속도 × t)으로 재베이크하고 골반을 그만큼 보상**하는 애니메이션 모디파이어. 월드 발 궤적은 원본과 같게 유지되면서 루트가 캡슐처럼 일정 속도가 된다 → 궤적 비용 평탄 + 캡슐 등속 재생 시 미끄러짐 제거. Start 범위 제한은 이 수정 후 재평가.
 
+### 5.8 ★ 루트 선형화 적용 — `Saved/AimTrace/20261001_071342` [A]
+
+도구 `Source/SoldierLabEditor/AnimModifiers/SoldierRootSpeedTool.cpp`(요청 파일 `Saved/AnimTool.request` → 결과 `Saved/AnimTool.done`, 동사 `diagnose|linearize|revert|reindex`).
+
+- 진단: 깨끗한 4클립 swing **0.0%**(완전 등속) vs 문제 8클립 **53~74%**(예: `Walk_Fwd` 평균 287, 최소 79 @1.93 s, 최대 383). 가설 확정.
+- 선형화 8클립: swing 0.0%, 루트 직계 자식(3개) 월드 이동 **0.000 cm**(보이는 동작 불변). P4 체크아웃 후 저장.
+- ⚠ 첫 시도는 효과 0 — `Modify()` 없이 편집해 PoseSearch DB가 인덱스를 다시 안 만들었다(MM은 인덱스의 옛 궤적으로 비교). `Modify()` 추가 + `reindex` 동사(`FAsyncPoseSearchDatabasesManagement::RequestAsyncBuildIndex(NewRequest|WaitForCompletion)`)로 해결. **클립을 코드로 고치면 반드시 DB 재인덱스.**
+
+| 실행 | 걷기 서기 Loop%/100%방향 | 뛰기 서기 | 앉아걷기 | 전환 Loop 도달 (걷기/뛰기) |
+|---|---|---|---|---|
+| 기준선(×0.85) | 86 / 5 | 25 / 2 | 48 / 1 | 55 / 21 |
+| 속도 1.0 | 83 / 5 | 65 / 5 | 43 / 2 | 55 / 45 |
+| + Start 범위 0~0.8 | 68 / 2 | 43 / 3 | 60 / 3 | 56 / 48 |
+| **+ 루트 선형화** | 75 / **6** | 50 / 4 | **100 / 8** | 53 / 40 |
+
+- **정방향 W/A/S/D는 걷기·뛰기 모두 Loop 100%, 앉아걷기는 8방향 전부 100%**, rest spd 중앙 앉기 20 → 8.4, 걷기 → 9.3.
+- **남은 실패 = 서기 대각선뿐**: 걷기 SD·SA(Pivots 72 · Starts 27), 뛰기 WD·SD·SA·WA(Starts/Pivots). 4방향 DB의 대각선 공백(2절 가설) 그대로 → 다음은 질의 궤적 4방향 스냅.
+
+### 5.9 ★ 질의 궤적 4방향 스냅 — `Saved/AimTrace/20261001_073840` [A]
+
+- C++ `USoldierAnimLibrary::SnapTrajectoryToCardinal`(BlueprintPure·ThreadSafe): 궤적 샘플 **위치만** 현재 샘플 중심으로 회전(Facing 불변). 몸 정면 = 샘플 Facing(메시 회전)의 +Y. 앞·뒤 우선 무상태 판정: |상대각| ≤ 55° 전진, ≥ 125° 후진, 그 사이 옆. 예측 이동 < 10 cm면 스냅 안 함. cvar `SoldierLab.Anim.TrajectorySnap`(기본 1).
+- ABP `Update_Trajectory`(MCP로 노드 추가·재배선): 새 변수 **`RawTrajectory`** = 생성기의 이전 프레임 입력 + `Trj_Past/Current/FutureVelocity` 원천. 기존 **`Trajectory` = Snap(충돌 처리된 궤적)** — PoseHistory 노드의 `TransformTrajectory` 바인딩이 그대로 받아 MM 질의에만 스냅이 들어간다. (스냅된 값을 생성기 입력으로 되먹이면 회전이 매 프레임 누적되므로 분리 필수.)
+
+| | 서기 걷기 | 서기 뛰기 | 앉아걷기 | 전환 Loop 도달 걷기 / 뛰기 |
+|---|---|---|---|---|
+| 루트 선형화까지 | 6/8 | 4/8 | 8/8 | 53 / 40 |
+| **+ 스냅** | **8/8** | **8/8**(WD 96%) | **8/8** | 53 / **56** |
+
+- 대각선은 기대대로 전진·후진 Loop(`Walk_Fwd`, `Jog_Fwd`, `Jog_Bwd`, 재생속도 1.00~1.02) + 워핑. `Enable_Warping` 전 케이스 1.0.
+- **남은 것**: ① 뛰기 전진 대각선 WD·WA의 rest spd 69·45(같은 방식의 후진 대각선 SD·SA는 17.6, 정방향 W 19) → 전진 루프에서 워핑이 45°를 다 채우지 못하는 듯(워핑 각도 상한·보간 속도 확인 필요). ② 걷기 전환 중 도착 방향 SA 3쌍(W>SA, D>SA, WA>SA) 미도달.
+
+### 5.10 남은 2문제 — 전진 대각선 미끄러짐 · 걷기 SA 전환 [A]
+
+**① 뛰기 전진 대각선 미끄러짐** — 발 최소속도 분해 결과 **옆 방향 미끄러짐**(|lateral| 33·22 cm/s, 직진 8). 선택은 깨끗(되감기 0). 비교: 스냅 전 걷기 WD는 **`Walk_Right` −45° 워핑 → rest 2.7**, 스냅(앞뒤 우선) 후 **`Walk_Fwd` +45° → 17.9**, 뛰기 `Jog_Fwd` +45° → 45~69, 후진 `Jog_Bwd` ±45° → 17.6. **전진 루프는 워핑에 약하다.** → 스냅 창을 전진·후진 분리 cvar로: `SoldierLab.Anim.TrajectorySnap.ForwardHalfAngle` **40**(앞 대각선 → 옆걸음) · `.BackwardHalfAngle` **55**(뒤 대각선 → 후진). 워핑 노드 설정(Graph 모드, 상한 180°, 목표 = `LastNonZeroVelocity`)과 스티어링(`Get_DesiredFacing` = 궤적 Facing, 스냅 무관)은 무죄.
+
+**② 걷기 → SA 전환 미도달** — `Walk_Bwd_Start` 0.4~0.8 s(범위 0~0.8 안이지만 이미 정속)가 반복 선택. → 아군 **Starts DB 3개 `baseCostBias` 0.1**. 그러자 **정지→출발 0.4 s 구간이 Starts 83% → 28%(Pivots 65%)** 부작용 → **Pivots DB 3개도 0.1**.
+
+| 실행 | 걷기 rest 중앙/최대 | 뛰기 rest 중앙/최대 | 전환 도달 걷기/뛰기 · t_loop | 출발 0.4 s DB |
+|---|---|---|---|---|
+| 스냅(5.9) `073840` | 11.2 / 20 | 17.9 / **69** | 53 / 56 · 0.57 / 0.69 | Starts 83 · Pivots 17 |
+| + 창 40/55 + Starts 0.1 `081139` | 6.4 / 13 | 17.7 / **20** | **56 / 56** · 0.44 / 0.51 | Starts 28 · **Pivots 65** |
+| + Pivots 0.1 `082101` | 8.6 / 17 | 17.7 / 20 | 56 / 56 · **0.12 / 0.32** | Starts 60 · Loops 25 · Pivots 14 |
+
+- 대각선 클립: WD→`*_Right`, WA→`*_Left`, SD/SA→`*_Bwd`(걷기·뛰기·앉기 모두), Loop% 24/24 = 100.
+- ⚠ 트레이드오프: 편향 0.1은 **전환이 매우 빨리 Loop로 감**(Pivot 동작 생략 경향, t_loop 0.12 s) · **출발 25%가 Loop로 바로**. 눈으로 확인 후 0.05 등으로 조정 여지.
+
+### 5.11 조준 뛰기 총 끊김 = 루프 이음새 불량(원본 애셋) [A]
+
+- 사용자: 조준+`Jog_Fwd`에서만 루프 경계마다 총이 끊김. 기록: 경계 프레임 손 9.3 cm / 22°(평소 1.6 cm / 2.7°).
+- `SoldierRootSpeedTool`에 `seam`(첫 키 vs 마지막 키, 루트 기준) 추가. **원본(P4 #1, `p4 diff -sa` 무변경) 상태에서** 아군 Loop 8 · 적군 Loop 12가 발 13~28 cm 불량, 아군 `Jog_Fwd`는 왼손 17.4 cm / 28.5°, 아군 `Crouch_Walk_Bwd`는 왼 아래팔 45°. 정상 = 아군 `Jog_Bwd`/`Left`/`Right`·`Walk_Left`·Idle 전부. 게임 기록에서도 같은 8클립만 경계에서 발 10~21 cm 튐.
+- **우리 작업 무관 증명**: 원본으로 되돌린 8클립을 다시 선형화 — 이음새 수치 전후 완전 동일.
+- 처리: 사용자 결정 — **디자이너 수정 요청**(우리가 고치지 않음). 목록 = `assets/2026-10-01_loop_seam_defects.md`. (`fixseam` 명령은 만들어 두었으나 쓰지 않음.)
+- 선형화 코드는 트랙 키 직접 계산으로 교체(포즈 평가 의존 제거). 한때 `ik_hand_root` 971 cm 오차를 선형화 버그로 오판했으나 **원본 아군 클립 자체의 상태**였다(적군판엔 없음).
+
+### 5.12 적군 적용 — `Saved/AimTrace/20261001_110056` [A]
+
+- 적군 Loop 12 전부 선형화(swing 52~74% → 0, 이음새 전후 동일, 자식 `pelvis`·`ik_foot_root`·`ik_hand_root` drift 0) · Loops DB 3 재인덱스 · Starts·Pivots DB 6 `baseCostBias` 0 → 0.1 · Starts DB 3 Sampling Range (0, 0.8)(사용자 입력) · 스냅은 ABP 공용.
+- 테스터 cvar `SoldierLab.Test.Loco.EnemyAnimSet 1` — 플레이어(아군 BP)의 ABP `UseAllyAnimSet`을 false로 덮어 적군 클립을 측정(겉모습은 아군 그대로, MM DB 100% `Enemy_`).
+- 결과: 정상 24/24 Loop 100%, 전환 112/112 도달, 출발 0.4 s Starts 65%. **뛰기 미끄러짐만 아군보다 큼**(중앙 34.9 / 최대 63 vs 17.7 / 20) → 클립 품질(아군은 뛰기 루프 3개가 디자이너 정리본) — 디자이너 목록에 추가. ~~적군은 접지 커브 정상(C-179는 아군만)~~ → **정정(5.14 이후 측정)**: 적군도 Loop 접지 커브가 대부분 망가져 있다(뛰기 0~4%, 걷기 0~17%) — [C-179] 확장.
+
+### 5.13 병렬 테스터 — 구성 블록마다 병사 1명 [A]
+
+- `SoldierLab.Test.Loco.Parallel 1`(기본): 구성 블록(한 구성의 정상 상태 8방향, 또는 전환 56쌍)마다 병사 1명, 동시 실행. `all` 11명 · `quick` 5명, 소요 = 가장 긴 블록(전환 ≈ 3분). 추가 병사는 **로컬 플레이어**(`UGameplayStatics::CreatePlayer`, 분할화면 강제 끔) — AI 컨트롤러면 `!IsPlayerControlled()` 분기 컴포넌트(AIBridge·GaitBridge·PoseSmoother·ScanTurn·HeadAim)가 입력을 덮어씀. 60 m 격자(`LaneSpacing`), 캡슐끼리 충돌 무시, 종료 시 제거. 리포트는 세션의 병사별 CSV를 모두 합친다.
+- 검증 `Saved/AimTrace/20261001_112316`(적군 클립, 병사 4명, 사용자가 189/324에서 중단): 적군 순차 실행 `110056`과 같은 케이스 비교 — 정상 24/24 Loop% 동일, rest spd 대부분 ±1 cm/s(최대 차 63.1 vs 68.2), 전환 46/46 동일. **59.9 fps, dt > 0.05 프레임 0**.
+- 발견: ① `MaxSplitscreenPlayers`(기본 4) 때문에 5번째 플레이어 생성 실패 → 실행 중에만 리플렉션으로 블록 수까지 올리고 복원(코드 수정, 라이브 코딩 대기) ② `GM_SoldierLab` 기본 폰이 `BP_Soldier_Hostile`로 바뀌어 있었다(이 세션 아님, default CL에 열림) → `EnemyAnimSet`을 "0 = 아군 강제 · 1 = 적군"으로 바꿔 기본 폰과 무관하게 함, 종료 시 캐릭터 자신의 값으로 복원(코드 수정, 라이브 코딩 대기).
+
+### 5.14 `all` 병렬 — 아군 BP / 적군 BP 각자 클립 [A]
+
+사용자 지시: **아군 BP면 아군 클립, 적군 BP면 적군 클립**으로 테스트(클립 세트 강제 방식 폐기). 테스터 cvar `SoldierLab.Test.Loco.Side` 0 = `BP_Soldier_Friendly` · 1 = `BP_Soldier_Hostile` — GameMode가 다른 BP를 냈으면 그 자리에 원하는 BP를 생성해 플레이어가 빙의(AI 자동 빙의 끔), 클립 세트는 캐릭터 BP 자신이 정함. 첫 플레이어의 원래 폰은 숨겼다가 종료 시 복원. `MaxSplitscreenPlayers` 리플렉션 상향으로 11명 생성.
+
+| 구성 | 아군 `113055` 정상 Loop · rest 중앙/최대 · 전환 도달 | 적군 `113357` |
+|---|---|---|
+| 조준 걷기 서기 | 8/8 · 7.6 / 17.2 · 56/56 | 8/8 · 11.1 / 17.2 · 56/56 |
+| 조준 뛰기 서기 | 8/8 · 17.7 / 20.0 · 56/56 | 8/8 · **32.8 / 68.4** · 56/56 |
+| 조준 걷기 앉기 | 8/8 · 6.3 / 21.8 · 56/56 | 8/8 · 5.7 / 9.8 · 56/56 |
+| 총내림 걷기 서기 | 8/8 · 8.2 / 9.9 · 56/56 | 8/8 · **19.2 / 20.9** · 56/56 |
+| 총내림 뛰기 서기 | 8/8 · 20.1 / 20.7 · 56/56 | 8/8 · **35.0 / 43.5** · 56/56 |
+| 총내림 걷기 앉기 | 8/8 · 7.3 / 9.5 · — | 8/8 · 5.9 / 5.9 · — |
+
+- **양 진영 정상 48/48 Loop 100%, 전환 280/280 도달.** 총내림 구성(C-180)도 처음 측정 — 문제없음.
+- 적군 뛰기(조준·총내림)와 총내림 걷기 서기의 미끄러짐이 아군보다 큼 → 클립 품질, 디자이너 목록에 반영.
+- 11명 동시: 59.9 fps, dt > 0.05 프레임 0 / 26 (7만 프레임 중).
+
 ## 6. 다음
 
-1. **A/B: 속도 배율 끄고 같은 스케줄** — request 파일 2번째 줄부터 `exec <콘솔명령>`을 받도록 테스터 확장(라이브 코딩 필요). `SoldierLab.Move.Enabled 0`은 런타임에 작성 속도로 되돌린다(`WriteGaitSpeeds(1.f)`).
-   ```
-   quick
-   exec SoldierLab.Move.Enabled 0
-   ```
-2. 결과에 따라: 속도 정책을 플레이어에서 빼기([W125]) · AI 쪽 정책 재검토([P193], 사용자 결정 사항).
-3. 질의 궤적 4방향 스냅 구현 → 같은 스케줄로 전후 비교.
-4. 접지 커브: 클립 원본 커브 확인 경로 찾기(적군 클립 포함).
+완료(아군): ~~A/B 속도 배율~~(5.4) · ~~질의 궤적 스냅~~(5.9) · ~~남은 2문제~~(5.10) = [W130]. 편향 0.1은 사용자가 육안 확인 후 유지(2026-10-01). 함정 기록: [P201] 코드로 클립 수정 → DB 재인덱스 · [P202] 전진 루프 ±45° 워핑 약함.
+
+OPEN_ITEMS 연결: ~~적군 적용 [W131]~~(5.12 완료) · ~~P4 제출 [W132]~~(Change 17) · 속도 밴드 가정 [Q53]/[W125] · 접지 커브 [C-179] · ~~총내림 미측정 [C-180]~~(5.14 해결) · 대각선 Stop [W124](스냅으로 해소 추정) · 디자이너 이음새 수정 [W133] · 미제출 3파일 [W134].
+
+1. **접지 커브 재생성(우리 몫, [C-179])** — 아군·적군 Loop 대부분이 접지 0~17%(정상 걷기 ~60%, 뛰기 30~40%). `UFootContactCurveModifier` 속도 임계 10 cm/s가 클립의 디딘 발 미끄러짐(18~60 cm/s)보다 낮아서. `Saved/AnimTool.request`에 `contact <클립> <임계값>`으로 재생성(메모리) → 병렬 `all` 아군·적군 재측정 → 개선 확인 후 저장. 그래도 크게 미끄러지는 클립만 디자이너 목록에.
+2. **디자이너 루프 이음새 수정 대기([W133])** — 전달본 `assets/2026-10-01_loop_seam_fix_request.html`. 수정본 오면 `seam` → `linearize` → `reindex` → (`contact`) → 병렬 `all` 양측.
+3. 플레이어 속도 배율 제외([W125]) · AI 속도 정책 재검토([P193]) — 사용자 결정 사항. 테스트는 계속 `exec SoldierLab.Move.Enabled 0`.
+4. P4 미제출([W134]): `SoldierLocomotionTest.{h,cpp}` · `SoldierRootSpeedTool.cpp` — **제출은 파일 목록 제시 후 사용자 명시 승인 필수.**
+
+### 도구 사용법 (무인 반복)
+
+```
+Saved/LocoTest.request   1행 = 스케줄(quick|steady|turns|all), 2행~ = "exec <콘솔명령>"
+                         → 플레이어 폰 생기면 자동 시작, 결과 Saved/LocoTest.done
+Saved/AnimTool.request   "diagnose|linearize|revert|reindex <에셋경로>" 줄 단위
+                         → 에디터가 1초마다 처리, 결과 Saved/AnimTool.done
+리포트                    PYTHONIOENCODING=utf-8 python tools/locomotion_report.py [세션] --csv out.csv
+```
+- 클립을 코드로 고치면 **반드시 해당 DB `reindex`**(안 하면 MM이 옛 인덱스로 비교 — 5.8).
+- MCP `StartPIE`/`StopPIE` + 위 요청 파일로 사람 없이 측정 가능. **레벨은 `L_Basic`**(다른 레벨이면 다른 폰을 조종).

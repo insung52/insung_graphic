@@ -900,6 +900,13 @@ private: int32 ShotsFiredCount = 0;         // 트리거 놓았다 다시 잡아
 `UGameplayStatics::SpawnEmitterAtLocation`으로 스폰, 풀링 불필요(콜리전/물리 상태 없는
 원샷 연출이라 투사체 풀링과 이유 자체가 다름).
 
+> **2026-10-06 현재**: 총구(`Multicast_FireEffects`)·피격(`ARCWSProjectile::PlayImpactEffect`)은
+> Niagara `SpawnSystemAtLocation`이고 **엔진 컴포넌트 풀 `ENCPoolMethod::AutoRelease`**로 스폰한다
+> (명중마다 새 컴포넌트를 만들지 않음, 그림은 동일). 명중 화염(ImpactFire)만 자체 24개 풀 유지.
+> 피격 데칼 상한 `MaxActiveImpactDecals`(200)은 이날부터 실제로 오래된 데칼을 지운다
+> (`DestroyComponent` — 그 전엔 Owner=WorldSettings 파괴 거부로 무효였음).
+> 상세 `infra_architecture/2026-10-06_s6_fix_batch1.md`.
+
 **전용 머즐 플래시 애셋은 프로젝트에 없어서**(`FPS_Weapon_Bundle`엔 무기 메시의
 "Muzzle_Break" 파츠만 있음) `Sparks/P_Sparks_A`를 대용으로 지정(스타터 팩에 전용
 애셋이 없을 때 흔한 방식, `EditAnywhere`라 언제든 교체 가능).

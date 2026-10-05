@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>루프 애니메이션 수정 요청</title>
+<style>
+  :root{--ink:#1f2430;--muted:#5b6472;--line:#e3e6eb;--bg:#ffffff;--soft:#f6f7f9;--accent:#2f6fed;--warn-bg:#fff7e6;--warn-line:#f0c36d;--bad-bg:#fdecec;--bad-line:#e69a9a;--ok-bg:#eaf6ee;--ok-line:#8fcaa2;--code-bg:#eef1f5}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 -apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+  .page{max-width:980px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:28px;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 28px}
+  h2{font-size:21px;margin:44px 0 12px;padding-top:18px;border-top:2px solid var(--line)}
+  h3{font-size:17px;margin:26px 0 8px}
+  p{margin:8px 0}
+  ul,ol{margin:6px 0 10px 20px;padding:0}
+  li{margin:4px 0}
+  code{background:var(--code-bg);padding:1px 5px;border-radius:4px;font-family:Consolas,"D2Coding",Menlo,monospace;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:10px 0 14px;font-size:14px}
+  th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left}
+  th{background:var(--soft);font-weight:600;white-space:nowrap}
+  td.n{text-align:right;white-space:nowrap}
+  .wrap{overflow-x:auto}
+  .box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--soft);padding:10px 14px;border-radius:4px;margin:12px 0}
+  .warn{border-color:var(--warn-line);border-left-color:#e0a030;background:var(--warn-bg)}
+  .bad{border-color:var(--bad-line);border-left-color:#d05050;background:var(--bad-bg)}
+  .ok{border-color:var(--ok-line);border-left-color:#3d9a5c;background:var(--ok-bg)}
+  .tag{display:inline-block;font-size:12px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--muted);margin-left:4px;vertical-align:middle}
+  .tag.no{background:var(--bad-bg);border-color:var(--bad-line);color:#9a3b3b}
+  .tag.ok{background:var(--ok-bg);border-color:var(--ok-line);color:#2b6e43}
+  .small{font-size:13px;color:var(--muted)}
+  @media (max-width:640px){.page{padding:24px 16px 60px}}
+  @media print{.page{padding:0}h2{break-after:avoid}table{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>루프 애니메이션 수정 요청</h1>
+<p class="sub">2026-10-01 · 걷기·뛰기·앉아 걷기 반복(Loop) 애니메이션 20개 — 반복될 때마다 발·손이 한 프레임 튀는 문제</p>
+
+<div class="box bad"><b>요약</b> — 반복 애니메이션의 <b>마지막 프레임과 첫 프레임 자세가 서로 다릅니다.</b> 그래서 애니메이션이 한 바퀴 돌아 처음으로 넘어가는 순간 발이나 손이 한 프레임 만에 툭 튑니다. 게임에서는 걷거나 뛰는 동안 1~2초마다 한 번씩 보입니다. 가장 눈에 띄는 예가 <b>조준하고 앞으로 뛸 때 총이 뚝 끊기는 현상</b>입니다.<br>
+<b>요청</b>: 아래 목록의 애니메이션을 <b>마지막 프레임 자세 = 첫 프레임 자세</b>가 되도록 맞춰 주세요.</div>
+
+<!-- ============================================================ -->
+<h2 id="s1">1. 직접 확인하는 방법</h2>
+
+<p>애니메이션 미리보기에서는 병사가 앞으로 걸어가 버려서 첫 프레임과 마지막 프레임을 비교하기 어렵습니다. 제자리에서 재생되게 바꾸면 쉽게 보입니다.</p>
+<ol>
+  <li>애니메이션 시퀀스를 엽니다.</li>
+  <li><b>Asset Details</b> 탭에서 <b>Root Motion ▸ Enable Root Motion</b> 체크박스를 <b>해제</b>합니다. → 병사가 제자리에서 걷습니다.</li>
+  <li>타임라인에서 <b>첫 프레임</b>과 <b>마지막 프레임</b>을 번갈아 찍어 봅니다.</li>
+  <li>발·손·팔의 위치와 각도가 <b>똑같으면 정상</b>, 달라지면 반복할 때 튑니다.</li>
+</ol>
+
+<div class="box warn"><b>⚠ 확인·작업이 끝나면 Enable Root Motion 을 반드시 다시 체크해 주세요.</b> 꺼진 채로 저장하면 게임에서 병사의 이동이 망가집니다.</div>
+
+<div class="box ok"><b>정상 예시 (이렇게 맞으면 됩니다)</b> — 아래 아군 애니메이션 4개는 첫·마지막 프레임이 정확히 같아서 반복이 매끄럽습니다. 비교용으로 열어 보세요.
+<ul>
+  <li><code>ALLY_MM_Rifle_Jog_Bwd</code> · <code>ALLY_MM_Rifle_Jog_Left</code> · <code>ALLY_MM_Rifle_Jog_Right</code> · <code>ALLY_MM_Rifle_Walk_Left</code></li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s2">2. 가장 먼저 봐 주셨으면 하는 것 <span class="tag no">우선</span></h2>
+
+<div class="wrap"><table>
+<tr><th>애니메이션</th><th>문제</th><th>게임에서 보이는 모습</th></tr>
+<tr><td><code>ALLY_MM_Rifle_Jog_Fwd</code></td><td><b>왼손</b>이 첫·마지막 프레임에서 약 17 cm · 28° 어긋남 (왼손 손가락도 같이), 왼발도 약 22 cm 어긋남</td><td>조준하고 앞으로 뛸 때 반복마다 <b>총이 뚝 끊김</b></td></tr>
+<tr><td><code>ALLY_MM_Rifle_Crouch_Walk_Bwd</code></td><td><b>왼쪽 아래팔</b>(<code>lowerarm_l</code> 본, 자식 <code>lowerarm_twist_01_l</code>·<code>_02_l</code> 도 함께)이 첫·마지막 프레임에서 약 45° 다르게 회전 — 위치는 1 cm 미만이라 팔이 제자리에서 비틀린 형태, 오른발 약 16 cm 어긋남</td><td>앉아서 뒤로 걸을 때 반복마다 왼팔이 튐</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="s3">3. 전체 목록</h2>
+
+<p>숫자는 <b>첫 프레임과 마지막 프레임의 차이</b>입니다(가장 크게 어긋난 부위). 발은 대부분 15~28 cm 어긋나 있어 반복할 때 발이 미끄러지듯 툭 움직입니다. 상체(팔·손)는 2 cm · 3° 정도까지는 거의 눈에 띄지 않습니다.</p>
+
+<h3>3.1 아군 — <code>/Game/SoldierLab/Animations_Ally/Animations/Rifle/Loops/</code> (8개)</h3>
+<div class="wrap"><table>
+<tr><th>애니메이션</th><th>발</th><th>상체</th></tr>
+<tr><td><code>ALLY_MM_Rifle_Jog_Fwd</code> <span class="tag no">우선</span></td><td>왼발 22.4 cm · 28°</td><td><b>왼손 17.4 cm · 28.5°</b></td></tr>
+<tr><td><code>ALLY_MM_Rifle_Crouch_Walk_Bwd</code> <span class="tag no">우선</span></td><td>오른발 16.2 cm · 20°</td><td><b>왼쪽 아래팔(<code>lowerarm_l</code>) 45° 비틀림</b></td></tr>
+<tr><td><code>ALLY_MM_Rifle_Walk_Fwd</code></td><td>오른발 15.2 cm · 19°</td><td>1 cm 이하</td></tr>
+<tr><td><code>ALLY_MM_Rifle_Walk_Bwd</code></td><td>오른발 13.4 cm · 14°</td><td>왼쪽 아래팔 2.5°</td></tr>
+<tr><td><code>ALLY_MM_Rifle_Walk_Right</code></td><td>왼발 16.1 cm · 20°</td><td>골반 2.8°</td></tr>
+<tr><td><code>ALLY_MM_Rifle_Crouch_Walk_Fwd</code></td><td>오른발 15.2 cm · 21°</td><td>골반 2.9°</td></tr>
+<tr><td><code>ALLY_MM_Rifle_Crouch_Walk_Left</code></td><td>오른발 16.8 cm · 18°</td><td>골반 1.0 cm · 3.5°</td></tr>
+<tr><td><code>ALLY_MM_Rifle_Crouch_Walk_Right</code></td><td>오른발 16.6 cm · 22°</td><td>골반 2.8°</td></tr>
+</table></div>
+
+<h3>3.2 적군 — <code>/Game/SoldierLab/Animations_Enemy/Animations/Rifle/Loops/</code> (12개, 전부)</h3>
+<div class="wrap"><table>
+<tr><th>애니메이션</th><th>발</th><th>상체</th></tr>
+<tr><td><code>Enemy_MM_Rifle_Walk_Fwd</code></td><td>오른발 15.2 cm · 19°</td><td>골반 1.5°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Walk_Bwd</code></td><td>오른발 13.4 cm · 14°</td><td>왼손 1.2 cm · 2°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Walk_Left</code></td><td>오른발 18.5 cm · 19°</td><td>왼쪽 아래팔 1.5 cm</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Walk_Right</code></td><td>왼발 16.1 cm · 20°</td><td>골반 2.8°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Jog_Fwd</code></td><td>왼발 22.4 cm · 28°</td><td>오른쪽 아래팔 3.4 cm · 4°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Jog_Bwd</code></td><td>왼발 20.0 cm · 18°</td><td>왼쪽 아래팔 4.1 cm · 4.6°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Jog_Left</code></td><td>오른발 22.0 cm · 16°</td><td>오른쪽 아래팔 2.0 cm · 2.8°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Jog_Right</code></td><td>왼발 27.6 cm · 29°</td><td>오른쪽 아래팔 3.0 cm · 4°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Crouch_Walk_Fwd</code></td><td>오른발 15.2 cm · 21°</td><td>오른쪽 아래팔 1.6 cm · 2°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Crouch_Walk_Bwd</code></td><td>오른발 16.2 cm · 20°</td><td>오른쪽 아래팔 1.0 cm</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Crouch_Walk_Left</code></td><td>오른발 16.8 cm · 18°</td><td>골반 1.0 cm · 3.5°</td></tr>
+<tr><td><code>Enemy_MM_Rifle_Crouch_Walk_Right</code></td><td>오른발 16.6 cm · 22°</td><td>오른쪽 아래팔 1.4 cm · 2°</td></tr>
+</table></div>
+
+<p class="small">정상(수정 불필요): 아군 <code>Jog_Bwd</code> · <code>Jog_Left</code> · <code>Jog_Right</code> · <code>Walk_Left</code>, 아군·적군 Idle 3종(<code>Idle_ADS</code> · <code>Idle_Hipfire</code> · <code>Crouch_Idle</code>).</p>
+
+<!-- ============================================================ -->
+<h2 id="s4">4. 작업하실 때 참고</h2>
+<ul>
+  <li>P4에 올라가 있는 <b>최신 버전</b>에서 작업해 주시면 됩니다. 아군 8개·적군 12개는 저희가 몸의 이동 속도를 고르게 다듬어 둔 버전이 올라가 있는데, 보이는 동작은 원본과 같습니다.</li>
+  <li>수정본을 올리시면 알려 주세요. 저희 쪽 후처리(이동 속도 정리 등)를 다시 적용하고 게임에서 확인하겠습니다.</li>
+  <li>다시 구워서(Bake) 저장하시는 경우, <b>손 IK 본</b>(<code>ik_hand_root</code> · <code>ik_hand_gun</code> · <code>ik_hand_l</code> · <code>ik_hand_r</code>)도 손을 따라 움직이도록 함께 구워 주세요. 아군 8개는 이 본들이 제자리에 멈춰 있습니다(적군·정상 예시 4개는 정상).</li>
+  <li>발 미끄러짐은 저희 쪽(발 IK)에서 처리하고 있어 이번 요청에는 넣지 않았습니다.</li>
+</ul>
+
+</div>
+</body>
+</html>

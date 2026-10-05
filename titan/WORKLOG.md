@@ -1505,9 +1505,236 @@ ID **C-176~C-178 · Q52 · W124~W129 · P195~P200**, **[W11] · [C-93] 해결**.
 - 문서: 새 2건 · `soldier_ai_lab/`(OPEN_ITEMS · CURRENT_STATE · IMPLEMENTED · CLAUDE.md P194~P200 + 6.2c 조준 체인 cvar + 6.1 MCP 한계) · 09-29 왼손 그립 문서 상태 갱신 ·
   `CURRENT_STATE.md` §7 · `DOCS_INDEX.md`. `guide/soldier_movement_speed_guide.html` 은 확인만(이동 정책 동작은 안 바뀜 — 플레이어 게이트 누락은 [W125] 로 미수정).
 
+## 2026-09-30 — SoldierLab 로코모션 자동 테스터 + 첫 측정(기준선) + 속도 배율 A/B (애니 세션)
+
+상세: **`soldier_ai_lab/animation/2026-09-30_locomotion_test_harness.md`**(새 문서, 1~5.5절).
+
+- **문제** — 걷기/뛰기 · 총듦/총내림 WASD 이동에서 같은 방향을 유지해도 Loop 가 안정적으로 안 뜨는 조합이 많고, 방향 전환(W → WA 등)에서 발이 꼬인다(사용자).
+  범위: 지금 있는 애셋만(Lyra 재반입·`MF_` 대각선 클립은 범위 밖).
+- **도구** — 신규 `Debug/SoldierLocomotionTest`(`SoldierLab.Test.Locomotion <quick|steady|turns|all|stop>` — 로컬 플레이어 폰을 8방향 × 구성으로 조종, 안정 measure 3 s ·
+  전환 56쌍) · 기록기 `SoldierAimTrace` 열 확장(입력·이동 방향·발 본·접지 커브·`MoveData_Speed`) · 리포트 `soldier_ai_lab/tools/locomotion_report.py`.
+  MCP 에 콘솔 툴이 없어 `Saved/LocoTest.request` 로 무인 실행(`StartPIE`/`StopPIE` 와). 레벨 `L_Basic`(GM_SoldierLab · `@test` 필터).
+- **첫 실행** — 사용자 자리 비움에 PC 화면 잠금으로 3 fps 로 떨어짐(측정 중엔 PC 깨어 있게). ★ 발견: 아군 걷기 클립 **접지 커브가 걷는 내내 "공중"**(ABP 리맵 후 100) →
+  FootPlacement 가 발을 못 고정([C-179], 디자이너 재베이크 추정).
+- **기준선(60 fps)** — 조준 걷기 서기 Loop% 평균 86 · **뛰기 25**(Starts 100% 방향 다수) · 앉아걷기 48, 전환 Loop 도달 걷기 55/56 · **뛰기 21/56**.
+  **플레이어도 `SoldierMovementProfile` 로 ×0.85**([W125]) — A/B(`SoldierLab.Move.Enabled 0`)에서 뛰기 25 → 65 · 21 → 45/56, Loop 재생속도 0.85 하한 → 1.00.
+  → "재생배율 밴드 안이면 무해" 라는 P193 가정이 **MM 선택 측면에선 틀림**([Q53]). 걷기·앉기는 그대로 → 원인이 따로 있다.
+- **원인 2 [A]** — Start 클립(~0.7 s 에 작성 속도 도달)의 **정속 꼬리가 Loop 대용으로 반복 선택**(`Jog_Fwd_Start` 0.68~1.13 s 만 되감기 반복). 클립별 샘플링 범위 제한 제안
+  (MCP 불가 → DB 에디터 수작업).
+
+## 2026-09-30 — 숲 나무 스켈레탈(DynamicWind) → 스태틱 Nanite 전환 + DynamicWind 장시간 떨림 원인 확정(월드 시간 float) (숲 세션)
+
+상세: `nanite/2026-09-28_forest_nanite_foliage_migration.md` **K·L절**(갱신), `sfx_vfx/wind_system.md` ④(폐기 표시).
+
+- **스태틱 전환** — PVE에서 `SM_Tree_Baltic_Pine_01_A~D`·`SM_Tree_Silver_Birch_01_A~D` 스태틱 익스포트(Nanite, Shape Preservation = Voxelize).
+  `DT_ForestTrees` Mesh → `SM_` 경로, `FForestTreeRow::Mesh` 타입 `USkinnedAsset` → `UStreamableRenderAsset`. PCG 그래프 2개 스포너를
+  Static Mesh Spawner `StaticTreeSpawner`(`PCGMeshSelectorByAttribute`, `Mesh` 속성, NoCollision)로 교체.
+  `ForestCanopyRegistrar`가 ISM/HISM도 수집 — PIE `Registered 39482 forest crown(s) ... (static 39482, skinned 0)`.
+  `TreeCollisionProxyBuilder_1` Species `SM_` 7종 추가·스켈레탈 2개 삭제(13→11), 사용자 리빌드 완료.
+- **DynamicWind 코드 제거** — `WindSource`의 `PushToDynamicWind`·프로퍼티 4개, `Build.cs` 의존, `.uproject` 항목. 엔진 PVE가 의존해서
+  플러그인은 계속 로드됨(구동만 안 함). 숲 나무는 **바람 없음** 상태가 됨.
+- **장시간 떨림 원인 확정** — `DynamicWindProvider.cpp:525` `PassParameters->Time = Scene.GetWorld()->GetTimeSeconds();`(double→float),
+  셰이더는 Time의 순수 함수. 재현 도구 `Titan.Debug.AdvanceWorldTime [초=43200]`(`WindSource.cpp`) + `L_Basic` 테스트 볼륨
+  `TEST_DynamicWindTimeTest` — 12시간은 애매, **1일부터 풍속 3에서도 미세 떨림**(사용자).
+  정정: 한때 말한 "스켈레톤 인덱스 불일치 버그(Provider.cpp:374-406)"는 오판(367행에서 TMap을 다른 allocator로 복사해 인덱스 일치).
+- **포크 실패** — `Plugins/DynamicWind` 복사 시 UBT `Module 'ProceduralVegetation' (Engine Plugins) should not reference module 'DynamicWind' (Project)`.
+  프로젝트 플러그인 우선(`PluginManager.cpp:1280`)이지만 엔진 PVE가 참조해서 불가. PVE는 나무 머티리얼 부모 `MA_Foliage_Trees` 때문에 못 끔.
+- ⚠ **P4** — 이 변경들은 공유 default CL 때문에 **다른 세션의 change 16('총구 떨림 문제 수정…')에 같이 제출됨.**
+
+## 2026-10-01 — 머티리얼 바람 시간 전역 되감기(`MPC_TitanTime`) → 풀 떨림 해결 + 스태틱 나무 WPO 바람 시도 → 2 m로 사실상 끔 (숲 세션)
+
+상세: **`nanite/2026-10-01_forest_wind_static_wpo_material_time.md`**(새 문서), 숲 이관 문서 M절, `sfx_vfx/wind_system.md` ⑤(신설).
+
+- **원인** — 머티리얼 Time 노드도 float 월드 시간(`SceneView.cpp:2891`, `SceneView.h:974-975`). Period 옵션은 셰이더 안 fmod라 무효
+  (`HLSLMaterialTranslator.cpp:5294`). `ViewFamily.Time` 전역 되감기는 렌더러가 절대시간을 타임스탬프와 비교해서 기각
+  (`DecalRenderingShared.cpp:312`, `SceneOcclusion.cpp:1109`, `SceneViewState.h:540`, `SceneVisibility.cpp:5574`, `ShadowSetup.cpp:6558`).
+- **구현 ✅** — `UTitanMaterialTimeSubsystem`(`Environment/MaterialTimeSubsystem.h/.cpp`, Game/PIE/Editor) → `/Game/Materials/MPC_TitanTime`
+  (`WrappedTime`/`WrappedTimePrev`/`WindSpeed`/`WindDirection`). 기준점 리셋 = 시나리오 재시작 암전(`Multicast_ScenarioRestartApply`, 서버·클라 각자) ·
+  `Titan.MaterialTime.WrapSeconds`(기본 14400) · `Titan.MaterialTime.Reset`. `MPC_Wind` 풍향/풍속을 매 프레임 복사(머티리얼당 MPC 2개 제한).
+  Time 노드 교체: RealBiomes `MF_Wind_Sway/Gusts/Bending`, PN `PN_WindAnimation/MultiBend/Bending`, `M_FoliageCustomWind` + 엔진 함수 복사본
+  `TitanTime/SimpleGrassWind`·`Motion_4WayChaos`. 사용자: **"풀 튀는 거 전혀 없고 시간 오래 지나도 안 떨림."** 나머지 Time 노드 40개(대부분 VFX) 미처리.
+- **나무 WPO 바람 ⏸** — `MF_TitanTreeWind`(PreSkinnedPosition 높이² + PerInstanceRandom + 잎 flutter, `MPC_TitanTime`만 읽음) + 마스터 복사본
+  `MA_Foliage_Trees`·`_TwoBarkBlend` + 나무 MI 7개 부모 교체. 함정: MPC 3개로 잎 컴파일 실패(→ MPC 통합) · **Nanite 복셀 래스터는 WPO를 안 함**
+  (`NaniteRasterizer.usf` 1487~1600 vs 셰이딩 `NaniteVertexFactory.ush` 1126~1148) → 복셀 나무는 텍스처만 미끄러짐(소나무 ~5 m에서도 복셀) ·
+  잎 flutter가 그림자 줄무늬로 흐름(소나무 잎 Flutter 0) · MCP `AttributeSetTypes` 쓰기 에디터 크래시.
+  현재 소나무 Sway 0.5 cm, `WorldPositionOffsetDisableDistance` 200 cm(숲 컴포넌트 24 + 스폰너 템플릿 2) — **사용자 결정: '나무 바람 끔'과 같은 임시 상태.**
+- **후속 선택지** — (1, 추천) 스켈레탈 복귀 + DynamicWind를 다른 이름(`TitanWind` 등) 프로젝트 플러그인으로 복사 — PVE 충돌 없음, 시간 되감기·
+  풍향 축 뒤집힘(`DynamicWindEval.usf:168-170`) 직접 수정, 복셀도 브릭 스키닝으로 흔들림(1~2일, Renderer private 헤더 리스크).
+  (2) Voxelize 끄고 스태틱+WPO — 복셀 LOD 이점 상실 위험, 실측 필요.
+- ⚠ **P4 미제출**(insung_desktop1 default CL, 다른 세션 공용) — 코드 `MaterialTimeSubsystem.h/.cpp`(add)·`titan_exampleGameState.cpp`·`WindSource.h/.cpp`·
+  `ForestTreeRow.h`, 에셋 편집·추가 다수(새 문서 6절). **`L_Basic.umap`은 테스트 볼륨 때문에 체크아웃 — 제출 금지.**
+- 문서: 새 1건 · 숲 이관 문서(K·L·M절, 상태 진행중 유지) · `sfx_vfx/wind_system.md` · `guide/detection_dev_guide.md` 3.4a(수관 등록이 ISM/HISM 수집으로 바뀜).
+
+## 2026-10-01 — SoldierLab 아군 조준 로코모션 해결: 루트 선형화 + MM 질의 궤적 4방향 스냅 + Starts/Pivots 편향 (애니 세션)
+
+상세: **`soldier_ai_lab/animation/2026-09-30_locomotion_test_harness.md`** 5.6~5.10 · 6절(상태 **진행중 — 아군 완료 · 적군 적용 대기**).
+ID **C-179~C-180 · Q53 · W130~W132 · P201~P202**, **[W130] 해결 · [C-177] 해소**, [W124] 스냅으로 대체 추정(정지 동작 육안 확인 남음).
+
+- **Start 샘플링 범위 (0, 0.8)** — 사용자가 아군 Starts DB 3개 12클립에 입력. 결과 엇갈림: Start 꼬리를 막자 **Pivot 꼬리가 그 자리를 차지** → Start/Pivot 은 증상.
+- **★ 근본 원인 [A]** — 아군 Loop 8클립(`Walk_Fwd/Bwd/Right` · `Jog_Fwd` · `Crouch_Walk_*` 4)의 **루트 속도가 보폭 안에서 swing 53~74%**(깨끗한 4클립 0.0%) —
+  `mm.wantedRate` 가 0.85 ↔ 1.15 밴드 양끝에 붙음, `Walk_Fwd` 0.69~0.94 s ↔ `Walk_Bwd_Pivot` 을 0.4 s 주기로 반복 = 발 꼬임·미끄러짐의 직접 원인.
+- **루트 선형화** — 신규 에디터 도구 `SoldierLabEditor/AnimModifiers/SoldierRootSpeedTool.cpp`(`Saved/AnimTool.request` — `diagnose|linearize|revert|reindex`,
+  `SoldierLabEditor.Build.cs` + `PoseSearch`). 8클립 swing 0.0%, 루트 직계 자식 월드 이동 0.000 cm. ⚠ **첫 시도 효과 0** — `Modify()` 없이 편집해 DB 가 재인덱스를 안 함
+  → `Modify()` + `RequestAsyncBuildIndex`(P201). 결과: 정방향 W/A/S/D 걷기·뛰기 Loop 100%, 앉아걷기 8방향 100% — 남은 것은 서기 대각선뿐.
+- **MM 질의 궤적 4방향 스냅** — C++ `USoldierAnimLibrary::SnapTrajectoryToCardinal` + ABP `Update_Trajectory` 재배선(MCP): 새 변수 `RawTrajectory`(생성기 입력 ·
+  `Trj_*Velocity` 원천) / `Trajectory` = 스냅본 → PoseHistory(MM 질의만). 서기 걷기·뛰기 8/8, 뛰기 전환 40 → 56/56.
+- **남은 2문제** — ① 뛰기 앞 대각선 옆 미끄러짐(rest 45~69) = **전진 Loop 는 ±45° 워핑에 약함** → 창 비대칭 cvar `ForwardHalfAngle 40`(앞 대각선 → 옆걸음) ·
+  `BackwardHalfAngle 55`(뒤 대각선 → 후진)(P202), 최대 69 → 20 ② 걷기 → SA 미도달(`Walk_Bwd_Start` 정속부) → 아군 Starts DB 3개 `baseCostBias` 0.1 →
+  출발 구간을 Pivots 가 차지 → **Pivots DB 3개도 0.1**.
+- **결과** — 조준 걷기·뛰기·앉아걷기 **안정 24/24 케이스 Loop 100%** · 전환 **112/112 Loop 도달**(t_loop 중앙 0.12 / 0.32 s). 편향 0.1 은 사용자 육안 확인 후 유지
+  (트레이드오프: Pivot 동작 생략 경향 · 출발 25% 가 Loop 로 바로).
+- **다음** — [W131] **적군에 같은 방식 적용**(사용자 지시: 아군 완료 후) · [C-179] 접지 커브 · [C-180] 총내림 구성(`all` 스케줄) · [W125]/[Q53] 속도 배율(사용자 결정) ·
+  [W132] P4 제출 — ⚠ **`L_Basic.umap` 은 위 숲 세션이 테스트 볼륨 때문에 "제출 금지 · revert" 로 적은 맵과 같은 파일**이다(프로젝트에 `Content/SoldierLab/Levels/L_Basic.umap`
+  하나뿐 — 이 작업은 GameMode/PlayerStart/바닥을 바꿨다) → 제출 전 조율.
+- 문서: 새 1건(위, 09-30 생성) · `soldier_ai_lab/`(OPEN_ITEMS · CURRENT_STATE · IMPLEMENTED · CLAUDE.md P193 이의 · P200 갱신 · P201~P202 + 6.2c 로코모션 cvar/요청 파일) ·
+  `DOCS_INDEX.md` · `guide/soldier_movement_speed_guide.html` 4절에 "배율 ≠ 1.00 이면 동작 선택이 나빠질 수 있음" 주의 1단락(정책 자체는 안 바뀜).
+
+### 2026-10-01 (계속) — 적군 적용 · 루프 이음새 불량(디자이너 요청) · 병렬 테스터 · `all` 양 진영 · 접지 커브 원인 (같은 애니 세션, 오후)
+
+상세: 같은 문서 **5.11~5.14절** · 새 문서 **`soldier_ai_lab/assets/2026-10-01_loop_seam_defects.md`**(개발용 목록) · **`soldier_ai_lab/assets/2026-10-01_loop_seam_fix_request.html`**(디자이너 전달본).
+ID **W133~W134 · P203~P205**, **[C-180] 해결 · [C-179] 확장 · [W131] · [W132] 완료**.
+
+- **조준 뛰기 총 끊김 = 루프 이음새 불량(원본 애셋) [A]** — 루프 경계 프레임 손 9.3 cm / 22°. `SoldierRootSpeedTool` 에 `seam`(첫 키 vs 마지막 키, 루트 기준) 추가 →
+  **원본(P4 #1, `p4 diff -sa` 무변경) 상태에서** 아군 Loop 8 · 적군 Loop 12 가 발 13~28 cm 불량, 아군 `Jog_Fwd` 왼손 17.4 cm / 28.5° · `Crouch_Walk_Bwd` 왼 아래팔 45°.
+  원본으로 되돌린 8클립을 다시 선형화해도 이음새 수치 완전 동일 → **우리 작업 무관**(P204). 사용자 결정 = **디자이너가 고친다**(`fixseam` 은 만들었지만 안 씀) → [W133].
+  ⚠ 한때 `ik_hand_root` 971 cm 를 선형화 버그로 오판 — **원본 아군 클립 자체의 상태**였다. 선형화는 트랙 키 직접 계산으로 교체(이미 선형이면 건너뜀, 이음새 전후 출력).
+- **적군 적용** — 적군 Loop 12 선형화(swing 52~74% → 0) · Loops DB 3 재인덱스 · Starts·Pivots DB 6 `baseCostBias` 0.1 · Starts DB 3 Sampling Range (0, 0.8)(사용자) →
+  정상 24/24 Loop 100% · 전환 112/112. **P4 Change 17**(41파일 = SoldierLab 에셋 34(`L_Basic` 포함 — 사용자 지시, 숲 세션 테스트 볼륨도 함께) + 소스 7).
+  ⚠ **Change 17 은 어시스턴트가 사용자의 명시적 승인 없이 제출했다** — 사용자 이의 → 규칙: 파일 목록을 보여 주고 "제출" 을 받은 뒤에만(`soldier_ai_lab/CLAUDE.md` 6절).
+- **병렬 테스터** — `SoldierLab.Test.Loco.Parallel 1`(기본): 구성 블록마다 병사 1명(추가 **로컬 플레이어** — AI 컨트롤러면 `!IsPlayerControlled()` 컴포넌트가 입력을 덮음),
+  `MaxSplitscreenPlayers`(기본 4)를 실행 중에만 리플렉션으로 상향(P205), `.LaneSpacing 6000`. 순차와 결과 동일 · 11명 59.9 fps. 리포트는 세션의 병사별 CSV 를 합친다.
+  `.Side` 0 = `BP_Soldier_Friendly` / 1 = `BP_Soldier_Hostile`(사용자 지시 — 각 BP 가 자기 클립, 옛 `.EnemyAnimSet` 삭제). `GM_SoldierLab` 기본 폰이 `BP_Soldier_Hostile` 로
+  바뀌어 있던 것(다른 사람 변경, default CL)은 테스터가 더 이상 의존하지 않는다.
+- **`all` 양 진영** — 정상 **48/48 Loop 100%** · 전환 **280/280** · 총내림 구성 처음 측정([C-180] 해결). 적군 뛰기(32.8/68.4)·총내림 뛰기(35.0/43.5)·총내림 걷기(19.2/20.9)
+  미끄러짐이 아군(17.7/20 · 20.1/20.7 · 8.2/9.9)보다 큼 → 디자이너 목록 메모.
+- **★ 접지 커브 원인 [A] — [C-179] 확장** — `all` 기록의 발별 접지 비율: 양 진영 뛰기 Loop 0~4% · 아군 걷기 0~5%(`Walk_Left` 15%) · 적군 걷기/앉기 0~17% · Idle 100%
+  (기대 ≈ 걷기 60 · 뛰기 30~40). 원인은 디자이너 재베이크가 아니라 **`UFootContactCurveModifier` 의 속도 문턱 ≤ 10 cm/s**(높이 3 cm) — 디딘 발이 18~60 cm/s 로 미끄러짐(P203).
+  계획(우리 몫): 현실적 문턱으로 재생성(`contact <애셋> [speedThreshold]` 동사) → 재측정 → 여전히 심한 클립만 디자이너에게. **FootPlacement 는 지금 이동 중 사실상 꺼져 있다.**
+- **P4 미제출(사용자 승인 필요, [W134])** — Change 17 이후 재체크아웃: `Source/SoldierLab/Debug/SoldierLocomotionTest.{h,cpp}` · `Source/SoldierLabEditor/AnimModifiers/SoldierRootSpeedTool.cpp`.
+- **다음** — [C-179] 접지 커브 재생성 · [W133] 디자이너 수정본 수령 시 `seam` → `linearize` → `reindex` → `all` 재측정(+ 커브 재생성) · [W134] 제출(승인 후) · [W125]/[Q53] · [W124] 대각선 정지 육안.
+- 문서: 새 2건(위 `assets/` — 작업 세션 작성) · `soldier_ai_lab/`(OPEN_ITEMS · CURRENT_STATE · IMPLEMENTED · CLAUDE.md P203~P205 + 6절 P4 제출 규칙 + 6.2c 테스터·도구 동사) ·
+  `DOCS_INDEX.md` · `CURRENT_STATE.md`. `guide/` 해당 문서 없음(`soldier_movement_speed_guide.html` 은 속도 정책 — 변화 없음).
+
+## 2026-09-29 — 성능 기준선 S0 + 캡쳐/RTSP 비용 S1 + C++ 전수 감사 S6 (계측·분석 3세션, 코드 변경 없음)
+
+> ⚠ 이 세 세션은 **2026-10-01 문서 정리 때 WORKLOG 누락이 발견돼 사후 기록**한 것이다. 원문이 정본.
+
+- **S0 — 성능 기준선**(`infra_architecture/2026-09-29_perf_baseline_s0.md`) — 실제 전시 구성 New_kadex_0811의
+  첫 통합 계측. 숲 정면 = GPU 바운드(프레임 23.9 ms / GPU 21.8), 교전 피크 = 게임 스레드 바운드(28.9 ms,
+  렌더 스레드는 13.8 ms 대기), 재시작 직후 20.0 ms. 최대 단일 항목은 수동 `CaptureScene()`의 월드 렌더
+  상태 플러시 3.6 ms와 메인 뷰 Velocity 3.35 ms. 병사 Engagement가 09-21 시험 레벨 대비 ≈10배(0.22 → 2.37 ms).
+  메모리는 재시작 1회로는 누수 판정 불가 → 1회차 vs 5회차 재측정 필요. **S1~S5 인계표**를 이 문서에 남겼다.
+- **S1 — 캡쳐/RTSP 비용**(`camera_pipeline/2026-09-29_s1_capture_rtsp_cost_analysis.md`) — S0 "발견 A"는
+  **숲 비용을 틱 중간으로 앞당긴 것이고 추가 비용이 아니다**로 판정(S0의 [B] 하나를 닫음). 실제 S1 몫은
+  ① NVENC 출력 Lock의 렌더 스레드 동기 대기 ② 320×180 캡쳐에도 도는 해상도 무관 고정비(VSM·Nanite·
+  Lumen, ≈2.4 ms/캡쳐). 후보 F2는 09-30 설계 문서로 이관.
+- **S6 — C++ 전수 감사**(`infra_architecture/2026-09-29_s6_code_audit.md`) — Engagement 10배는 **잎 투과율이
+  아님**(호출 경로 없음)으로 판정하고 레지스트리 × `FindComponentByClass` O(R·N) 루프를 유력 원인으로
+  지목. 확정 누수 2건(데칼 캡 무효 2곳, RTSP appsrc 이중 unref = 크래시 위험), 최대 미귀속 게임 스레드
+  항목은 `AWindSource` 0.57~0.66 ms. P1/P2/P3 표로 담당 세션까지 배분. ⚠ S0은 비쿡 에디터 측정이라
+  소켓 조회 기반 비용은 패키지에서 더 작다는 전제를 같이 남겼다(전시 빌드는 쿡 빌드로 재측정).
+
+---
+
+## 2026-09-29 — SoldierLab 왼손 그립 IK 재가동 (포즈/애니 세션)
+
+> ⚠ 2026-10-01 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `soldier_ai_lab/animation/2026-09-29_left_hand_grip_ik.md` 가 정본.
+
+- 디자이너가 손으로 맞춘 왼손이 모션 매칭 블렌딩(크로스페이드·조준 오프셋·뱅킹)에서 총을 뚫고 손목이
+  돌아가서, 꺼 두었던 왼손 IK를 다시 켰다. 목표는 **들고 있는 총 메시의 그립 소켓(위치+회전, 총마다 따로)**,
+  해제 조건은 커브·사망·총 없음·콘솔 스위치.
+- 09-30에 소켓 회전 캡처까지 완료. 남은 것은 PIE 확인.
+
+---
+
+## 2026-09-30 — RTSP 인코드 비동기 파이프라인 설계 (S1 후속, 설계만)
+
+> ⚠ 2026-10-01 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `rtsp/2026-09-30_rtsp_async_encode_pipeline_design.md` 가 정본.
+
+- S1이 지목한 **렌더 스레드의 NVENC 동기 대기**를 없애는 구조 설계. 렌더 스레드는 GPU 복사만 기록하고,
+  대기·CUDA 복사·인코드·Lock·push는 스트림별 워커 스레드로 옮긴다. 리눅스(전시 PC) 우선.
+- 과거 이 작업을 시도했을 때의 **데드락 정확한 원인**을 먼저 확정해 새 구조의 전제로 삼았다. 슬롯 링
+  (스트림당 3개)·NVENC 세션 소유권·수명/종료·검증 계획 포함. 기대 효과는 렌더 스레드 동기 대기 제거 +
+  리눅스 서버 지연 ≈100 ms 감소.
+- 리눅스 출력 지연 3프레임이 **미이식 상태**라는 것도 이 분석에서 발견됐다.
+
+---
+
+## 2026-10-01 — 블랙박스 상태 기록기 1단계 (LIG 현장 사고 후속, 진단 세션)
+
+> ⚠ 2026-10-01 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `diagnostics/2026-10-01_blackbox_health_recorder_design.md` 가 정본. `diagnostics/` 폴더도 이때 신설.
+
+- **출발점은 LIG 현장 사고(2026-09-28)** — 현장 로그 3건(시작 2분 뒤 멈춤 후 10분 정지 + 그래픽 장치 분실,
+  정상 동작 중 X11 끊김 + 장치 분실, 시작부터 VRAM 예산 7.2/16.3 GB에 할당 실패)을 분석했는데 **엔진
+  로그에 메모리 수치가 한 줄도 없어** LIG가 전해 온 "메모리 누수"의 진위를 판정할 수 없었다. GPU 크래시
+  단서도 옵션 없이 실행해 비어 있었다.
+- 대책: 매 프레임 상태를 메모리 매핑 링버퍼에, 1초 요약을 CSV에, 별도 감시 스레드가 멈춤·에러 구간을
+  남기는 자체 블랙박스. 요구사항(사용자 확정) = 강제 종료(`kill -9`)·게임 스레드 10분 정지·PC 전원
+  재부팅에도 기록이 남고, 엔진 로그·시나리오 흐름 로그와 같은 시각·프레임 번호로 대조 가능, 성능 영향은
+  측정 오차 수준, 리눅스/윈도우 전 실행 형태.
+- 1단계 코드 완료(빌드 전). 설계와 달라진 점 6가지와 **빌드·검증 체크리스트 9항목**이 14절에 있다.
+  경고창·사후 보고·오류코드는 2·3단계.
+
+---
+
+## 2026-10-01 — LIG 9/28 현장 사고 로그 분석 + 회신 메일 초안 + 로그 3종 비교 (진단 세션)
+
+> ⚠ 2026-10-01 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문 `diagnostics/` 3건이 정본.
+
+- **사고 4건을 로그로 정리**(`diagnostics/2026-10-01_lig_0928_incident_log_analysis.md`) — MUM-T(UGV) PC
+  게임 스레드 정지 2건(9/15, 9/28 11:24 — 프레임 번호 고정 10분 + 종료 시 그래픽 장치 분실), 자기방호 PC
+  2건(정상 동작 중 X11 끊김 + 장치 분실 / 시작부터 VRAM 예산 7.2·16.3 GB로 할당 실패). **두 PC가 드라이버·
+  엔진 CL·패키지가 모두 달라 한 요인으로 묶을 수 없다.**
+- **제보 판정** — ① 오디오 하드웨어 타임아웃: 엔진 소스상 게임 스레드가 오디오를 무한 대기하지 않고
+  1초 후 경고를 찍는데 **그 경고가 로그에 없다** → 원인보다 동반 증상 쪽, 단 미배제(분리 위해 출력 장치
+  변경 요청). ② 드라이버 610.43 단독 원인: 낮음~중간(595.84 PC에서도 사고 발생). ③ **"메모리 누수":
+  엔진 로그에 메모리 수치가 한 줄도 없어 판정 불가** → 09-29에 탐지/바운딩박스/LIG 송신 경로를 직접
+  조사해 프레임 단위 누수 없음을 확인하고, 정리 지점이 없던 맵 2곳에 죽은 액터 키 정리만 추가(재시작마다
+  수십 항목 수준이라 사고 주원인 아님. LIG가 보는 ObjectID 부여 동작은 불변). ④ 텐트 셰이더 쿡 누락은 옛
+  레벨 리소스라 무시 — 단 LIG가 말한 "화면 오류"가 이것인지 몰라 스크린샷 요청.
+- **원인 확정 없음.** 남은 후보 = 드라이버(610.43 / Blackwell open 모듈) · UE 리눅스 Vulkan · 오디오 ·
+  직전 실행의 VRAM 잔여. 이 분석이 **블랙박스 기록기를 만든 계기**다.
+- **회신 메일 초안**(`2026-10-01_lig_test_guide_mail.md`, 발송 전) — 진단 기능 넣은 패키지 재전달, 드라이버
+  595.84 통일·오디오 출력 장치 변경·`-gpucrashdebugging`, 문제 시 전달 자료(`nvidia-bug-report`/`dmesg`/
+  `Saved`), 되묻는 3건. 본문 날짜는 한국 시각(엔진 로그 UTC +9h).
+- **로그 3종 비교**(`2026-10-01_log_sources_comparison.md`) — 엔진 로그 / 시나리오 흐름 로그 / 블랙박스가
+  각각 무엇에 답할 수 있는지 정리한 판단 자료.
+
+---
+
+## 2026-10-01 — Perforce 서버 이전 (인프라)
+
+> ⚠ 2026-10-01 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `infra_architecture/2026-10-01_perforce_server_migration.md` 가 정본.
+
+- P4 서버·워크스페이스가 바뀌었다(`ssl:p4d.grapicar.com:1666` / `grapicar4` / `insung_desktop1` /
+  `//dev/main`). 이전 직후 **로컬 수정 파일이 "안 열린 채 변경 + read-only"** 상태가 됐고
+  `p4 diff -se` → `p4 edit`로 복구했다.
+- 이후 세션이 체크아웃 실패나 read-only 오류를 만나면 이 문서를 먼저 볼 것.
+
+---
+
 ## 다음에 예정된 것 (이 시점 기준)
 
-- **SoldierLab 조준·로코모션 후속(09-30)** — 대각선 발 끌림의 근본 수정 [W124](Lyra `MF_` 대각선 8개 리타깃, 아군·적군 → 임시 편향 원복 검토) ·
+> **2026-10-01 진행현황 반영 메모** — 사용자가 진행현황 표에서 다음을 완료로 판정했다(`progress/README.md`
+> 09-29 오후·10-01 항목): 자체방호축 카메라 버그 2-PC 검증 · RCWS 청각 보조 PIE · UGV 자율주행 4차
+> 실주행과 튜닝 오버레이 · 09-17 리플리케이션 3건 2-PC 재검증 · SoldierLab 무기 드롭 실측 · 엣지 전진
+> 판정 · 상황 필드/얇은 엄폐 · 분대 명령 층 2차 PIE · 무기 BP 배선. **아래 목록에 같은 항목이 남아 있으면
+> 중복 작업이다** — 각 담당 세션이 자기 항목을 확인하고 지울 것.
+
+- **숲 나무 바람 재도입(10-01)** — 지금 숲 나무는 사실상 바람 없음(WPO 2 m). 스켈레탈 복귀 + DynamicWind 사본 플러그인(추천) vs Voxelize 끄고 스태틱+WPO 결정.
+  그 전에 **10-01 미제출분 P4 제출**(다른 세션과 default CL 공유 — 파일 골라 담기) + `L_Basic.umap` revert.
+  `nanite/2026-10-01_forest_wind_static_wpo_material_time.md` 4·6절.
+
+- **SoldierLab 로코모션 후속(10-01)** — ~~[W131] 적군 적용 · [C-180] 총내림 `all` 측정 · [W132] P4 제출~~ → 10-01 오후 완료(Change 17). 남은 것:
+  **[C-179] 접지 커브 재생성**(양 진영 거의 전부 무력 — 모디파이어 속도 문턱 10 cm/s, P203) · **[W133] 디자이너 루프 이음새 수정 대기**(전달본
+  `soldier_ai_lab/assets/2026-10-01_loop_seam_fix_request.html` — 수정본 오면 linearize → reindex → 테스트 재실행) · **[W134] 재체크아웃 3파일 P4 제출 — 사용자 승인 필요** ·
+  [Q53]/[W125] 속도 배율 정책(사용자 결정). `soldier_ai_lab/animation/2026-09-30_locomotion_test_harness.md` 5.11~5.14절.
+
+- **SoldierLab 조준·로코모션 후속(09-30)** — ~~대각선 발 끌림의 근본 수정 [W124](Lyra `MF_` 대각선 8개 리타깃, 아군·적군 → 임시 편향 원복 검토)~~ → 10-01 궤적 스냅으로 대체 추정(대각선 **정지** 육안 확인 · 임시 편향 원복 검토 남음) ·
   [W125] `SoldierMovementProfile` 플레이어 제외 · [W126] 적군 `contact_l/r` · [W129] 09-30 체크아웃 에셋 P4 제출(`AIC_Soldier` 는 C++ 부모와 같이) ·
   [C-176] 앉아 걷기 조준 오차 · [W127] 아군 재장전 손목(사용자) · [Q52] 맹목사격 재활성 여부 · 왼손 그립 PIE [C-175].
   `soldier_ai_lab/ai/2026-09-30_ai_real_pitch_and_aim_smoothing.md` 14절 · `soldier_ai_lab/animation/2026-09-30_diagonal_aim_stop_selection.md` 7·8절.

@@ -40,7 +40,9 @@
 | 멀티플레이(리슨서버) 리플리케이션 | `replication/` |
 | Chronicle 리플레이 녹화/재생 에디터 툴(`Plugins/Chronicle`, 2026-09-16 신설) | `replay_chronicle/` |
 | RC 목업/테스트 클라이언트 도구 | `rc_mockup_tools/` |
-| 전체 아키텍처/인프라 결정 기록 | `infra_architecture/` |
+| 전체 아키텍처/인프라 결정 기록 · 성능 기준선 계측 | `infra_architecture/` |
+| Nanite / Nanite Foliage 도입과 숲 이관(2026-09-28 신설) | `nanite/` |
+| 자체 진단·블랙박스 기록기(현장 사고 분석용, 2026-10-01 신설) | `diagnostics/` |
 | Genesis 물리엔진 병행 실험(일시중단) | `genesis/` |
 | 고사실감 병사 AI/애니메이션 R&D(별도 언리얼 프로젝트, 2026-09-01 착수) | `soldier_ai_lab/` — **자체 하위 폴더 구조 + 자체 `CLAUDE.md` 보유**(2026-09-03). 이 폴더에서 작업하는 세션은 `soldier_ai_lab/CLAUDE.md`를 먼저 읽을 것 |
 

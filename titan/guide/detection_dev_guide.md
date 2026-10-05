@@ -15,6 +15,14 @@
 >
 > 📌 [2026-09-29] 잎 감쇠 `LeafExtinctionPerMeter`를 **전 수종 0.1/m**로 낮췄다(예전 소나무 0.25·자작 0.35는 수관
 > 하나로 드론의 낙하산 탐지를 완전히 막았다). 조절 항목·계산 예시는 3.4a절 "튜닝".
+>
+> 📌 [2026-09-29] **죽은 액터 키를 정리한다.** `ScanTargets` 끝(`LastActiveTime` 정리 루프 옆)에서
+> `TargetConfidence`·`ActivelyDetected`의 무효 액터 키를 지운다 — 예전엔 추가만 하고 지우는 곳이 없어 시나리오
+> 재시작(병사 재스폰)마다 남았다. 살아 있는 대상의 Confidence는 그대로(엄폐 후 복귀 기억). LIG 송신 쪽
+> `UUGVRemoteControlSubsystem::ObjectIDMap`도 `SendObjectDetectionResult` 앞에서 같은 정리를 하며, `NextObjectID`는
+> 계속 증가해 ID 재사용이 없다(LIG가 보는 ObjectID 동작 불변). LIG "탐지/바운딩박스 메모리 누수" 제보 조사 중
+> 추가한 것으로, 프레임 단위 누수는 없었고 이 양(재시작마다 수십 항목)은 사고 주원인이 아니다. 상세는
+> `diagnostics/2026-10-01_lig_0928_incident_log_analysis.md` §7.2.
 
 # 카메라 기반 객체 탐지 모사 (RCWS/UAV 바운딩 박스) 개발 문서 (2026-07-09)
 
@@ -268,10 +276,11 @@ Beer-Lambert)을 따로 구해 곱한다. 계산은 SoldierLab 모듈의 `USoldi
   잎 너머 어른거림으로는 즉시 재획득하지 않는다.
 
 **수관은 누가 등록하나**: titan_example의 `UForestCanopyRegistrarSubsystem`(`Environment/ForestCanopyRegistrar`)이
-월드 BeginPlay에 레벨의 모든 `UInstancedSkinnedMeshComponent`(PCG Megaplants 숲)를 수종 표 `DT_ForestTrees`
-(`FForestTreeRow`의 `CanopyBottomCm/TopCm/RadiusCm/LeafExtinctionPerMeter`)와 맞춰 인스턴스마다 타원체 하나를 넣는다.
-표에 없는 메시(하층 고사리, 스태틱 폴리지 등)는 **안 가린다.** PIE 로그에
-`[Foliage] Registered N forest crown(s) from DT_ForestTrees …`가 찍힌다(New_kadex_0811: 39,482).
+월드 BeginPlay에 레벨의 모든 `UInstancedStaticMeshComponent`(HISM 포함 — **2026-09-30부터 PCG Megaplants 숲은 스태틱 Nanite 메시**)와
+`UInstancedSkinnedMeshComponent`(예전 스켈레탈 나무용, 경로만 남겨 둠)를 수종 표 `DT_ForestTrees`
+(`FForestTreeRow`의 `Mesh`·`CanopyBottomCm/TopCm/RadiusCm/LeafExtinctionPerMeter`)의 메시와 맞춰 인스턴스마다 타원체 하나를 넣는다
+(`ForestCanopyRegistrar.cpp:110-160`). 표에 없는 메시(하층 고사리, 바위, 줄기 프록시 등)는 조용히 건너뛰고 **안 가린다.** PIE 로그에
+`[Foliage] Registered N forest crown(s) from DT_ForestTrees (static S, skinned K; …)`가 찍힌다(New_kadex_0811: 39,482 — static 39,482, skinned 0).
 
 **스위치 / 디버그**
 - Project Settings > Game > **Forest Canopy** — `TreeTable`, `bRegisterCanopies`(끄면 잎 가림 전체 OFF)
@@ -283,7 +292,7 @@ Beer-Lambert)을 따로 구해 곱한다. 계산은 SoldierLab 모듈의 `USoldi
 **튜닝 — 무엇을 바꾸면 무엇이 달라지나 (2026-09-29 기준)**
 
 투과율 T = exp(−Σ `LeafExtinctionPerMeter` × 수관 안 통과 길이 m). 수관은 인스턴스마다 똑바로 선 타원체
-(`ForestCanopyRegistrar.cpp:106-120`). 누적 광학 깊이 5(T ≈ 0.7%)에서 적분을 끊는다.
+(`ForestCanopyRegistrar.cpp:91-108`, `AddCanopy`). 누적 광학 깊이 5(T ≈ 0.7%)에서 적분을 끊는다.
 
 | 조절 항목 | 위치 | 뜻 |
 |---|---|---|

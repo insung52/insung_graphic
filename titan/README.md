@@ -1,7 +1,9 @@
 # Titan (KADEX 전시회 시뮬레이터) — 프로젝트 개요
 
 카덱스(KADEX) 전시회 제출용 언리얼 엔진 기반 시나리오 씬 제작 프로젝트. 실제 코드는
-`C:\working\works\kadex\titan_example`(UE5.8, Perforce 관리, git 아님). 이 문서는 **진입점**
+`C:\working\works\kadex\titan_example`(UE5.8, Perforce 관리, git 아님 — **2026-10-01 P4 서버 이전**:
+`ssl:p4d.grapicar.com:1666` / `grapicar4` / 워크스페이스 `insung_desktop1` / `//dev/main`, 옛
+`user4_DESKTOP-81S78B2_4340` 무효, `infra_architecture/2026-10-01_perforce_server_migration.md`). 이 문서는 **진입점**
 — 프로젝트를 처음 보는 사람/세션이 뭘 어디서 찾아야 하는지만 안내하고, 상세 내용은 각 문서로
 넘긴다.
 

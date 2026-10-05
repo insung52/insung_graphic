@@ -27,7 +27,7 @@ C++) 구현 및 그 아래에 깔린 실제 게임 기능(RCWS/차량/탐지 등
 | | `CountValue` | `RequestBit` 그대로 echo | ✅ | |
 | `UGV_RCWS_Status` | `RCWSStatus` | RCWS 컴포넌트 resolve 성공 여부 | ⚠️ 근사 | "원격통제기와 실제 접속됐는지"가 아니라 "컴포넌트가 존재하는지"만 봄 — 사실상 항상 ON |
 | `UGV_Period_ObjectDetectionResult` | `TotalObject`/`Objects[]` BBox·Faction | `UTargetDetectionComponent`(실측 탐지) | ✅ 실측 | 카메라 시야각/거리 기반 실제 탐지 |
-| | `ObjectID` | 신규 부여(액터당 안정 ID) | ✅ (신규 구현) | ICD에 대응 개념 없어 이번에 추가 |
+| | `ObjectID` | 신규 부여(액터당 안정 ID) | ✅ (신규 구현) | ICD에 대응 개념 없어 이번에 추가. (2026-09-29) `ObjectIDMap`의 죽은 액터 키를 송신 전에 정리 — `NextObjectID`는 계속 증가해 ID 재사용 없음, LIG가 보는 동작 불변(`diagnostics/2026-10-01_lig_0928_incident_log_analysis.md` §7.2) |
 | | `ObjectClass` | `ClassifyDetectedObject()` — Faction + 액터 클래스 | ✅ 실동작 (2026-09-02 확장) | ICD 원문 `Human`/`Car` 2값 → 플랫 6값(`Ally`/`Enemy`/`UGV`/`MobileCommandPost`/`Drone`/`Parachute`). LIG가 우리 재량으로 확정해준 항목(Q10). 판정 순서: ① `Faction==EnemyEvidence` → `Parachute`(낙하산 `BP_Parachute`는 대응 C++ 클래스가 없고 이 Faction을 쓰는 유일한 에셋) ② `ACharacter` → Faction으로 `Ally`/`Enemy` ③ `ATitanTruck` → `MobileCommandPost` ④ `ADronePawn`/`AUAVPawn`(구형) → `Drone` ⑤ `AWheeledVehiclePawn` → `UGV`(실사용 `BP_UGV_Vehicle*`이 엔진 클래스 직속 BP라 이게 유일한 공통 조상) ⑥ 그 외 → Faction만으로 `Ally`/`Enemy` + 경고 로그. New_kadex_0811 전수 확인 결과 ⑥로 떨어지는 액터 없음. 상세는 `2026-09-02_object_class_expansion.md` |
 | | East/North/Zone/Letter | `GeoCoordinateUtils::WorldLocationToUTM` | ✅ (계산은 실측) | UTM Zone/Datum 자체가 실측 대조 안 된 값(§`protocol_icd.md` §6 기존 미확정 항목) |
 | | `Velocity`(객체별) | `GetVelocity().Size()` | ✅ 실측 | 단위는 우리 추정(m/s) |

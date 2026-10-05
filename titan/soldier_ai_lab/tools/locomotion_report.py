@@ -37,24 +37,30 @@ MAX_DT = 0.05          # frames slower than this (throttled editor) are left out
 CROSS_MARGIN_CM = 0.0  # left foot lateral > right foot lateral + margin => crossed
 
 
-def find_csv(arg):
+def find_csvs(arg):
+    """Every CSV in the session that carries test labels - one per soldier (the parallel tester
+    runs one soldier per configuration block, 2026-10-01)."""
     if arg is None:
         sessions = sorted(glob.glob(os.path.join(DEFAULT_ROOT, "*")), key=os.path.getmtime)
         if not sessions:
             sys.exit("no sessions under " + DEFAULT_ROOT)
         arg = sessions[-1]
-    files = [arg] if arg.lower().endswith(".csv") else glob.glob(os.path.join(arg, "*.csv"))
+    files = [arg] if arg.lower().endswith(".csv") else sorted(glob.glob(os.path.join(arg, "*.csv")))
+    found = []
     for f in files:
+        if os.path.basename(f).lower() == "summary.csv":
+            continue
         with open(f, newline="", encoding="utf-8") as fh:
             r = csv.reader(fh)
-            h = next(r)
+            h = next(r, [])
             if "test.case" not in h:
                 continue
             ix = h.index("test.case")
-            for row in r:
-                if row and not row[0].startswith("#") and len(row) > ix and row[ix]:
-                    return f
-    sys.exit("no CSV with locomotion test labels in " + arg)
+            if any(row and not row[0].startswith("#") and len(row) > ix and row[ix] for row in r):
+                found.append(f)
+    if not found:
+        sys.exit("no CSV with locomotion test labels in " + arg)
+    return found
 
 
 def load(path):
@@ -94,11 +100,37 @@ def main():
     if "--csv" in sys.argv:
         out_csv = sys.argv[sys.argv.index("--csv") + 1]
         args = [a for a in args if a != out_csv]
-    path = find_csv(args[0] if args else None)
+    paths = find_csvs(args[0] if args else None)
+    print("# Locomotion report -", os.path.dirname(paths[0]), f"({len(paths)} soldier CSV)")
+    steady_lines, turn_lines, summary = [], [], []
+    for path in paths:
+        analyse(path, steady_lines, turn_lines, summary)
+
+    if steady_lines:
+        print("\n## Steady (measure phase)\n")
+        print("| case | loop% | db mix | sw/s | rest spd | planted% | slide med | slide p90 | cross% | travel | speed |")
+        print("|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+        print("\n".join(steady_lines))
+    if turn_lines:
+        print("\n## Turns (post phase: after the direction change)\n")
+        print("| case | t_loop s | clips | slide max | slide mean 0.6s | cross frames |")
+        print("|---|---:|---:|---:|---:|---:|")
+        print("\n".join(turn_lines))
+
+    if out_csv and summary:
+        keys = sorted({k for d in summary for k in d})
+        with open(out_csv, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=keys)
+            w.writeheader()
+            w.writerows(summary)
+        print("\nsummary written to", out_csv)
+
+
+def analyse(path, steady_lines, turn_lines, summary):
+    """One soldier's CSV: appends its table rows and summary dicts (cases are unique per soldier)."""
     ix, rows = load(path)
     g = lambda r, k: fnum(r[ix[k]]) if k in ix else 0.0
     s = lambda r, k: r[ix[k]] if k in ix else ""
-    print("# Locomotion report -", path)
 
     # Per-frame derived values.
     n = len(rows)
@@ -164,12 +196,8 @@ def main():
             continue
         groups.setdefault((c, p), []).append(i)
 
-    summary = []
     steady = [(k, v) for k, v in groups.items() if k[1] == "measure"]
     if steady:
-        print("\n## Steady (measure phase)\n")
-        print("| case | loop% | db mix | sw/s | rest spd | planted% | slide med | slide p90 | cross% | travel | speed |")
-        print("|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|")
         for (case, _), idx in steady:
             dur = sum(g(rows[i], "dt") for i in idx) or 1e-6
             dbs = collections.Counter(short_db(s(rows[i], "mm.db")) for i in idx)
@@ -183,16 +211,13 @@ def main():
             sp = statistics.mean(g(rows[i], "speed2D") for i in idx)
             med, p90 = pct(sl, 0.5), pct(sl, 0.9)
             rs, ps = rest_speed(idx), planted_share(idx)
-            print(f"| {case} | {loop:.0f} | {mix} | {sw:.1f} | {rs:.1f} | {ps:.0f} | {med:.1f} | {p90:.1f} | {cr:.0f} | {statistics.mean(tv) if tv else float('nan'):.0f} | {sp:.0f} |")
+            steady_lines.append(f"| {case} | {loop:.0f} | {mix} | {sw:.1f} | {rs:.1f} | {ps:.0f} | {med:.1f} | {p90:.1f} | {cr:.0f} | {statistics.mean(tv) if tv else float('nan'):.0f} | {sp:.0f} |")
             summary.append(dict(kind="steady", case=case, loop_pct=round(loop, 1), db_mix=mix, switches_per_s=round(sw, 2),
                                 rest_speed=round(rs, 1), planted_pct=round(ps, 1),
                                 slide_med=round(med, 1), slide_p90=round(p90, 1), cross_pct=round(cr, 1)))
 
     turns = [(k, v) for k, v in groups.items() if k[1] == "post"]
     if turns:
-        print("\n## Turns (post phase: after the direction change)\n")
-        print("| case | t_loop s | clips | slide max | slide mean 0.6s | cross frames |")
-        print("|---|---:|---:|---:|---:|---:|")
         for (case, _), idx in turns:
             t0 = g(rows[idx[0]], "time")
             t_loop = next((g(rows[i], "time") - t0 for i in idx if short_db(s(rows[i], "mm.db")).endswith("Loops")), None)
@@ -200,19 +225,11 @@ def main():
             sl_all = [x for i in idx for x in (slide_l[i], slide_r[i]) if x is not None]
             sl_early = [x for i in idx if g(rows[i], "time") - t0 <= 0.6 for x in (slide_l[i], slide_r[i]) if x is not None]
             crf = sum(1 for i in idx if crossed[i])
-            print(f"| {case} | {('%.2f' % t_loop) if t_loop is not None else '-'} | {clips} | "
-                  f"{max(sl_all) if sl_all else float('nan'):.0f} | {statistics.mean(sl_early) if sl_early else float('nan'):.0f} | {crf} |")
+            turn_lines.append(f"| {case} | {('%.2f' % t_loop) if t_loop is not None else '-'} | {clips} | "
+                              f"{max(sl_all) if sl_all else float('nan'):.0f} | {statistics.mean(sl_early) if sl_early else float('nan'):.0f} | {crf} |")
             summary.append(dict(kind="turn", case=case, t_loop=round(t_loop, 2) if t_loop is not None else "",
                                 clips=clips, slide_max=round(max(sl_all), 1) if sl_all else "",
                                 slide_mean_early=round(statistics.mean(sl_early), 1) if sl_early else "", cross_frames=crf))
-
-    if out_csv and summary:
-        keys = sorted({k for d in summary for k in d})
-        with open(out_csv, "w", newline="", encoding="utf-8") as fh:
-            w = csv.DictWriter(fh, fieldnames=keys)
-            w.writeheader()
-            w.writerows(summary)
-        print("\nsummary written to", out_csv)
 
 
 if __name__ == "__main__":
