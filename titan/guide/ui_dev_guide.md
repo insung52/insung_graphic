@@ -56,7 +56,7 @@
     `UScenarioStateSubsystem::RunLocalRestartBegin/Apply/End` 를 부른다. ⚠ **레벨 GameMode 오버라이드가
     titan 계열(`BP_KadexTestGameMode`)이 아니면** `Atitan_exampleGameState` 가 없어 이 멀티캐스트가 전부
     서버-로컬 폴백이 되고, **2-PC 에서 클라 화면만 페이드가 안 된다**(09-23 실사고, 같은 문서 §5).
-  - (2026-10-06 추가, 빌드·검증 전) **로딩 화면 + 호스트 시나리오 게이트** — `UTitanLoadingScreenSubsystem`(GI 서브시스템):
+  - (2026-10-06 추가, 빌드 완료·단독 PIE 확인, 콘솔 거부·재시작·2-PC·-game 검증 대기) **로딩 화면 + 호스트 시나리오 게이트** — `UTitanLoadingScreenSubsystem`(GI 서브시스템):
     로비 세 트래블(`HostListenServer`/`StartSoloAxis`/`ConnectToHost`)은 즉시 `open` 대신 페이드아웃 후 `open`,
     LoadMap 동안 MoviePlayer(-game/패키지만), 게임 월드(로비 아닌 모든 월드, PIE 직접 시작 포함) BeginPlay부터
     뷰포트 Slate 오버레이 + 카메라 검정(오디오도 페이드) 아래서 Niagara/데칼 워밍업·안정화 대기 → 페이드인.
@@ -65,7 +65,9 @@
     `ApplyDemoRCWSAutoFire`·`BeginAlly*`·`BeginEnemyFleeToZone`·`IssueSquadOrderSpec` 등)는 **경고 로그
     "… 거부 — 호스트 로딩 중"과 함께 거부**(대기열 없음 — 끝난 뒤 다시 입력). **데모 자동 시작은 거부가 아니라 연기** —
     페이드인 시작부터 3 s. 준비 상태는 월드 키(`HostReadyWorld`)라 **재시작은 영향 없음**(같은 월드, 로딩 안 거침).
-    타임아웃(기본 30 s) 후엔 조건 미충족이어도 로딩 종료. cvar `titan.Loading.*`. 상세 `ui/2026-10-06_loading_screen_impl.md`.
+    타임아웃(기본 30 s) 후엔 조건 미충족이어도 로딩 종료. 텍스트 "Loading..." + 폰트 Pretendard Medium
+    (Project Settings `LoadingText`/`LoadingFont`/`LoadingFontSize`, UFont는 `Pretendard-Medium_Font`). 로컬 PC 판정은
+    `GetLocalPlayer() != nullptr`(`IsLocalController`는 `AUGVAIController`까지 잡음). cvar `titan.Loading.*`. 상세 `ui/2026-10-06_loading_screen_impl.md`.
 - `UScrollingRulerWidget`/`SScrollingRuler` — 2절에서 설계한 4곳 전부 커버하는 범용 눈금 리본
   (방위각처럼 스크롤하는 wrap 모드 / EL·ZOOM처럼 고정범위+이동 포인터인 non-wrap 모드 둘 다 지원).
 - `ULineGraphWidget` 그라데이션 채우기 옵션 추가(`bShowGradientFill`/`FillOpacityAtLine`) — 3절

@@ -134,9 +134,16 @@
 | 소나무 MI 3개 | `TreeWind_SwayAmpCm` **0.5** |
 | 소나무 잎 MI | `TreeWind_FlutterCm` **0** |
 | 자작 MI | 함수 기본값(Flutter 1.5 그대로) |
-| `WorldPositionOffsetDisableDistance` | **200 cm** — 레벨 숲 컴포넌트 24개 + 두 스폰너 템플릿(`PCG_SplineForest_tree2_Nanite`, `PCG_PlacedTrees`) |
+| `WorldPositionOffsetDisableDistance` | 200 cm (남아 있지만 아래 플래그로 무의미) |
+| **`bEvaluateWorldPositionOffset`** | **false** — 레벨 숲 컴포넌트 24개 + 두 스폰너 템플릿(`PCG_SplineForest_tree2_Nanite`, `PCG_PlacedTrees`), 2026-10-06 |
 
-**사용자 결정**: 2 m는 **"나무 바람 흔들림 끔"과 같은 임시 상태**다. 나중에 플러그인을 뜯어고치든 해서 **복셀까지 흔들리게** 할 예정.
+**사용자 결정**: 나무 바람은 **끈 상태(임시)**. 나중에 플러그인을 뜯어고치든 해서 **복셀까지 흔들리게** 할 예정.
+
+**2026-10-06 — 2 m 거리 제한으로는 안 꺼졌던 이유**: WPO 끄는 거리는 나무 밑동이 아니라 **인스턴스 바운드 중심(수관 높이)**에서
+**각 뷰의 카메라 위치**까지 잰다(`NaniteCullingCommon.ush:473-475` `CenterTranslatedWorld - NaniteView.CullingViewOriginTranslatedWorld`,
+501-503에서 비교). 땅 위 메인 카메라는 수관 중심 2 m 안에 못 들어가 한 번도 안 켜졌지만, 높이 달린 **환경맵 카메라(씬 캡쳐, 뷰마다 따로 계산)**는
+수관 중심 2 m 안의 나무에서 WPO가 켜져 자작 잎 flutter(1.5)와 복셀 텍스처 미끄러짐이 캡쳐 화면에만 보였다. → 거리 제한 대신
+**`bEvaluateWorldPositionOffset=false`**로 완전히 끔(모든 뷰, WPO 비용도 0). 바람을 다시 넣을 때 true로 되돌릴 것.
 
 ---
 

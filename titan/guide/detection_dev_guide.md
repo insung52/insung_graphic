@@ -184,6 +184,14 @@ const FVector4 Clip = (ViewMatrix * ProjectionMatrix).TransformFVector4(FVector4
 하나가 화면 밖으로 살짝 나가도 나머지로 그럴듯한 박스를 그리기 위함. 그보다
 심하게 벗어난(카메라 완전히 반대편을 보는 등) 코너는 버림.
 
+> 📌 [2026-10-06] **행렬은 스캔당 1회 만든다**(수식은 그대로). `ScanTargets`가 시작할 때
+> `BuildCameraViewProjection(Camera, ResolveAspectRatio(), ...)`로 view×proj를 한 번 만들고,
+> `EvaluateTarget(Actor, const FMatrix*)`가 코너 8개를 `ProjectWithViewProjection`으로 투영한다
+> (예전엔 코너마다 `ProjectToScreenUV`가 같은 행렬을 다시 구성). RCWS 조준점 UI가 쓰는 public static
+> `ProjectWorldPointToCameraUV`는 이제 이 두 함수의 조합 = 같은 산술, 결과 비트 동일.
+> `ProjectToScreenUV` 멤버는 남아 있지만 스캔 경로에선 안 쓴다. 상세는
+> `infra_architecture/2026-10-06_s6_fix_batch3.md` A1.
+
 ### 3.3 오리엔티드(회전 반영) 바운딩 박스
 
 `AActor::GetActorBounds()`/`GetComponentsBoundingBox()`는 **월드 축 정렬** 박스라서,

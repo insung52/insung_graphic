@@ -884,6 +884,18 @@ SoldierLab.Cover.Avoidance 1        RVO 회피를 병사 전원 CMC 에서 런�
                                       09-21 실측 0.3~0.5 ms → **켜 둔다**. ⚠ A/B 는 평균과 max 를 같이 — "켬" 캡처에 `DispatchBlockingHit` 58 ms 히치가 섞이면 A/B 가 아니다([W101])
 측정 규약                           `SoldierLab.Debug.* 0` 전부 · **AI 로깅 off**("PROFILING WITH AI LOGGING ON" 배너 없어야) · 같은 카메라 · 같은 교전 시점 · **Standalone** — 의심 대상은 세 갈래(자기 스코프 · `.Enabled 0` 의 차 · 병사 수 스케일링)로 확인, 전후 stat 줄을 문서에
 
+결과 동일 최적화 A/B (10-06 S6 묶음 2 — `ai/2026-10-06_s6_fix_batch2_game_thread.md`, 빌드·측정 전)
+SoldierLab.Perf.SocketCache 1       눈/표적/총구 소켓 해석(소켓 로컬 변환 + 본 인덱스) 캐시, 위치는 매 호출 계산 · 캐릭터는 `GetMesh()`. 0 = 옛 경로(매번 `FindComponentByClass` + 이름 조회)
+SoldierLab.Perf.ComponentCache 1    Identity 가 자기 액터의 Engagement/Sight/Cover 포인터 보관(BeginPlay) — `CountTeammatesOn`·`IsTeammateFacing`·`SquadCost` 의 `FindComponentByClass` 대체
+SoldierLab.Perf.DistancePrecut 1    Sight 살아있는 후보 · 투사체 제압에서 **액터 원점**이 반경 + 마진 밖이면 소켓 조회 전에 버림(캐릭터만, 시체 루프 제외)
+  .PrecutMarginCm 300               위 선컷 여유(머리 +80 · 린 70 · 폴백 110/160 cm 보다 큼)
+SoldierLab.Perf.FieldRayDedupe 1    `MarkClearAlongRay` — 같은 광선 안 이미 클리어한 L0 셀(최근 8키)·같은 부모 키 쓰기 생략(멱등, 삽입 순서 보존)
+SoldierLab.Perf.PropertyCache 1     PoseSmoother `FProperty*`(클래스별, miss 포함) · AIBridge `Shoot`/`StartReload` `UFunction*` 캐시. 발사 게이트는 BP 그대로
+                                      ★ 전부 기본 1 · **0 = 같은 빌드의 옛 코드** — 교전 중 토글해서 `stat SoldierLab` 차를 본다. 거동이 달라 보이면 그 항목부터 0 으로
+                                      새 stat: `Engagement: SelectTarget/PickCandidate/CountTeammatesOn/ComputeLookValue/IsTeammateFacing/PlanAperture/IsFriendlyInLineOfFire` ·
+                                      `Sight: Candidates` · `Field: MarkClearAlongRay/ReportSighting/ReportSighting GroundZ` · `Cover: SquadCost/IsEnemyCoveredByTeammate` ·
+                                      `Projectile Tick`/`Projectile: Suppression` · `PoseSmoother Tick` · `AIBridge TickBridge` + DWORD `Calls: CountTeammatesOn`
+
 시나리오 재시작 리셋 계약 (09-22, titan 세션 — P187)
 SoldierLab.ResetWorld               ★ SoldierLab 월드 서브시스템 셋을 한 번에 초기화: `USoldierSquadSubsystem::ResetForRestart` · `USoldierSituationFieldSubsystem::ResetForRestart` · `USoldierProjectilePoolSubsystem::RecallAll`.
                                       **병사 재스폰·차량 부활은 안 한다**(그건 titan `titan.ScenarioRestart` 의 몫) — 시험 레벨에서 리셋 계약만 단독 검증하는 용도. 서버 월드에서

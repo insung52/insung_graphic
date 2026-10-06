@@ -1558,6 +1558,8 @@ ID **C-176~C-178 · Q52 · W124~W129 · P195~P200**, **[W11] · [C-93] 해결**.
   (`NaniteRasterizer.usf` 1487~1600 vs 셰이딩 `NaniteVertexFactory.ush` 1126~1148) → 복셀 나무는 텍스처만 미끄러짐(소나무 ~5 m에서도 복셀) ·
   잎 flutter가 그림자 줄무늬로 흐름(소나무 잎 Flutter 0) · MCP `AttributeSetTypes` 쓰기 에디터 크래시.
   현재 소나무 Sway 0.5 cm, `WorldPositionOffsetDisableDistance` 200 cm(숲 컴포넌트 24 + 스폰너 템플릿 2) — **사용자 결정: '나무 바람 끔'과 같은 임시 상태.**
+  **10-06 보충**: 200 cm는 수관 중심↔각 뷰 카메라 거리(`NaniteCullingCommon.ush:473-475, 501-503`)라 환경맵 카메라(씬 캡쳐)에선 WPO가 켜져
+  자작 잎 출렁임 + 복셀 미끄러짐이 캡쳐에만 보였다 → `bEvaluateWorldPositionOffset=false`(컴포넌트 24 + 스폰너 템플릿 2)로 완전히 끔.
 - **후속 선택지** — (1, 추천) 스켈레탈 복귀 + DynamicWind를 다른 이름(`TitanWind` 등) 프로젝트 플러그인으로 복사 — PVE 충돌 없음, 시간 되감기·
   풍향 축 뒤집힘(`DynamicWindEval.usf:168-170`) 직접 수정, 복셀도 브릭 스키닝으로 흔들림(1~2일, Renderer private 헤더 리스크).
   (2) Voxelize 끄고 스태틱+WPO — 복셀 LOD 이점 상실 위험, 실측 필요.

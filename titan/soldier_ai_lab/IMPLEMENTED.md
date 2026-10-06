@@ -1217,7 +1217,7 @@ Source/SoldierLab/Weapons/SoldierProjectile.h (~560줄) / .cpp (~1050줄)
       **`MaxFlightDistanceCm 60000`**(.h:206, 600 m) — 시간 상한 `MaxFlightTimeSeconds 5`(.h:199)와 같은 자리(Tick .cpp:264-267)에서 주차, 도탄은 튕긴 지점부터
       결과: Shoot 안 스폰 0.83 ms/발 → 0 · 투사체 액터 47 에서 정지(비행 15). 3.1 의 "발당 SpawnActor" 서술은 09-21 전 이야기다
     ★ 10-06: `Prefill(Class, Count=-1)` UFUNCTION — 클래스당 1회, 프레임 분할로 미리 채움(공통 `SpawnRound` → 주차 상태 동일).
-      cvar **`SoldierLab.Projectile.PrefillCount` 32** · **`SoldierLab.Projectile.PrefillPerFrame` 4**(PoolMax 로 상한). **빌드 전 · BP_AR4Rifle BeginPlay 배선 대기**
+      cvar **`SoldierLab.Projectile.PrefillCount` 32** · **`SoldierLab.Projectile.PrefillPerFrame` 4**(PoolMax 로 상한). **BP_AR4Rifle BeginPlay 배선 완료 · PIE 검증(2026-10-06, 32발 프리필이 첫 교전 전 완료)**
       (`../infra_architecture/2026-10-06_s6_fix_batch1.md` C절 — titan 루트 기준)
     총구 섬광·발사음·반동은 **여기 없다** — 총구에서 일어나므로 무기 액터 소유
 

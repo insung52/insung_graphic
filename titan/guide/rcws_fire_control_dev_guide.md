@@ -329,6 +329,13 @@ UWidget으로 감싸는" 패턴을 그대로 재사용. `RCWSViewImage`/`RCWSDet
 `MaxFlightTimeSeconds`(5초) 초과 시 숨김+콜리전 끔+속도 0(`Deactivate`) — 실제
 스폰/파괴는 세션 내내 한 번뿐.
 
+> 📌 [2026-10-06] 풀 소유 컴포넌트가 **`EndPlay`에서 풀을 파괴**한다 — 사유가 `Destroyed`/
+> `RemovedFromWorld`일 때만(차량 자체가 파괴될 때). 투사체는 비복제라 각 프로세스가 자기 로컬 풀만
+> 정리. 레벨 전환·PIE 종료는 월드 해체에 맡긴다. 차량은 평소 제자리 부활이라 시나리오 재시작에선 발동
+> 안 함. 같은 묶음에서 표적의 `EnemyCombat`/`DetectableTarget`/스켈레탈 메시 컴포넌트 조회가 표적별
+> 캐시(`ResolveTargetComponents`, 표적의 컴포넌트 수가 바뀌면 재해석)로 바뀌었다 — 표적 선정·조준점
+> 결과는 동일. 상세는 `infra_architecture/2026-10-06_s6_fix_batch3.md` A5(4)·A7.
+
 콜리전: `"Projectile"`이라는 이름의 프로파일은 이 UE5.8 프로젝트에 **존재하지 않음**
 (ThirdPersonMP 템플릿 관례를 착각한 것 — `BaseEngine.ini` grep으로 확인 후 명시적으로
 직접 구성):

@@ -1,6 +1,6 @@
 # 로딩 화면 + 워밍업 + 호스트 시나리오 게이트 구현
 
-2026-10-06 / 구현 완료(검증 대기) / 설계(`2026-10-06_loading_screen_design.md`) A~D 단계와 §4 호스트 시나리오 게이트를 `UTitanLoadingScreenSubsystem` + `UScenarioStateSubsystem` 게이트로 구현; 빌드·PIE·2-PC 검증 전.
+2026-10-06 / 구현 완료(검증 대기) / 설계(`2026-10-06_loading_screen_design.md`) A~D 단계와 §4 호스트 시나리오 게이트를 `UTitanLoadingScreenSubsystem` + `UScenarioStateSubsystem` 게이트로 구현; 빌드 완료·단독 PIE 동작 확인(워밍업 원점 스폰 버그 수정 포함, §8), 콘솔 거부·재시작·2-PC·-game 검증 대기.
 
 > 정본 설계: [`2026-10-06_loading_screen_design.md`](2026-10-06_loading_screen_design.md). 이 문서는 "실제로 무엇을 어떻게 넣었고 설계와 어디가 다른가" + 설계 §6 미결 2건의 조사 결과 + 검증 절차.
 > 빌드는 사용자가 한다(이 세션은 빌드 안 함). 아래 엔진 file:line은 UE5.8 엔진 소스 기준.
@@ -12,17 +12,17 @@
 | 파일 | 내용 |
 |---|---|
 | `Source/titan_example/UI/TitanLoadingScreenSubsystem.h/.cpp` (신규) | `UGameInstanceSubsystem`. A~D 단계 전부, cvar, Slate 오버레이, 워밍업. 코어 티커(`FTSTicker`)로 자체 틱 |
-| `Source/titan_example/UI/TitanLoadingScreenSettings.h` (신규) | `UDeveloperSettings`(config=Game, Project Settings > Game > Titan Loading Screen): `WarmupNiagaraSystems`, `WarmupDecalMaterials`, `LoadingLogo`(선택), `LoadingText`(기본 "로딩중") |
+| `Source/titan_example/UI/TitanLoadingScreenSettings.h` (신규) | `UDeveloperSettings`(config=Game, Project Settings > Game > Titan Loading Screen): `WarmupNiagaraSystems`, `WarmupDecalMaterials`, `LoadingLogo`(선택), `LoadingText`(기본 "Loading", 점 애니메이션으로 "Loading..."), `LoadingFont`(`TSoftObjectPtr<UFont>`), `LoadingFontSize`(int32, 기본 28) — 폰트 2개는 빌드 후 추가(§8-2) |
 | `Source/titan_example/UI/ScenarioStateSubsystem.h/.cpp` | `HostReadyWorld`/`DemoSetupPendingWorld`(둘 다 `TWeakObjectPtr<UWorld>`), `IsHostWorldReady()`, `PassHostReadyGate(EntryName)`, `NotifyHostWorldReady(World)`; 진입 함수마다 게이트 1줄; `ApplyDemoRunModeSetup` 연기 |
 | `Source/titan_example/titan_examplePlayerController.cpp` | 익명 네임스페이스 헬퍼 `ExecuteLobbyTravel(PC, Command)`(`:2404`) — `HostListenServer`/`StartSoloAxis`/`ConnectToHost` 세 곳(`:2454, 2484, 2498`)이 `ConsoleCommand(open…)` 대신 이걸 부른다. 서브시스템이 없으면 예전처럼 즉시 `ConsoleCommand`. **PC 헤더는 안 바꿈** |
 | `Source/titan_example/titan_example.Build.cs` | `PrivateDependencyModuleNames`에 `"MoviePlayer"`, `"EngineSettings"`(`UGameMapsSettings::GetGameDefaultMap` — 로비 판정) 추가 |
-| `Config/DefaultGame.ini` | `[/Script/titan_example.TitanLoadingScreenSettings]` — Niagara 23개 + 탄흔 데칼 1개 + `LoadingText=로딩중` |
+| `Config/DefaultGame.ini` | `[/Script/titan_example.TitanLoadingScreenSettings]` — Niagara 23개 + 탄흔 데칼 1개 + `LoadingText=Loading` + `LoadingFont=/Game/Font/Pretendard-Medium_Font.Pretendard-Medium_Font` + `LoadingFontSize=28` |
 
 ## 2. 단계별 구현 (설계 §3 대응)
 
 ### A. 로비 페이드아웃
 - `BeginLobbyTravel` → 로컬 카메라 `StartCameraFade(0→1, LobbyFadeOutSeconds, 검정, bFadeAudio=true, hold)` → 실시간 경과 후 `ExecutePendingTravel`이 요청 PC의 `ConsoleCommand(open…)`.
-- `ExecutePendingTravel`이 open 직전에 뷰포트 오버레이를 먼저 띄움 → `ConnectToHost` 접속 대기 동안에도 "로딩중"이 보임.
+- `ExecutePendingTravel`이 open 직전에 뷰포트 오버레이를 먼저 띄움 → `ConnectToHost` 접속 대기 동안에도 "Loading..."이 보임.
 - `OnNetworkFailure`/`OnTravelFailure` 구독. 로비 페이드/트래블/클라 로딩 중 실패면 `AbortLoading` → 오버레이 제거, 로비 월드가 그대로면 0.3 s 페이드로 로비 화면 복구. **호스트 워밍업 중 네트워크 실패는 중단하지 않음**(§4 참고).
 
 ### B. LoadMap 동안 MoviePlayer
@@ -33,7 +33,8 @@
 ### C. 워밍업 오버레이
 - 훅: `OnPostWorldInitialization` → `World->OnWorldBeginPlay` → `HandleWorldBeginPlay`. 대상 = 자기 GameInstance의 게임 월드 중 `GameDefaultMap`(로비)이 아닌 것 전부. 판정 결과를 항상 로그(`대상 월드 판정: …`).
 - `BeginWarmup`: 뷰포트 오버레이 표시 + 로컬 카메라 검정 고정(`SetManualCameraFade(1, 검정, bFadeAudio=true)`, 매 틱 재확인) + `PrecachePSOsBoostToHighestPriority(true)` + 워밍업 에셋 동기 로드(에디터면 `UNiagaraSystem::WaitForCompilationComplete`).
-- 로컬 PC+카메라가 생기고 2프레임 뒤 카메라 앞 `WarmupDistanceCm`에 Niagara 전부 스폰, 데칼은 카메라 앞 지면 트레이스 지점에 1회(지면 못 찾으면 생략). `WarmupFrames` 프레임 뒤 제거. 10 s 동안 로컬 카메라가 없으면 이펙트 워밍업 생략(경고 로그).
+- 로컬 PC+카메라가 생기고 **카메라 위치가 원점 근처가 아니게 된 뒤** 2프레임 뒤 카메라 앞 `WarmupDistanceCm`에 Niagara 전부 스폰, 데칼은 카메라 앞 지면 트레이스 지점에 1회(지면 못 찾으면 생략). `WarmupFrames` 프레임 뒤 제거. 카메라가 계속 원점이면 `NoCameraSkipSeconds`(10 s) 뒤 그 위치로 폴백 스폰, 로컬 카메라 자체가 없으면 이펙트 워밍업 생략(경고 로그). 스폰 직전 진단 로그 `[LoadingScreen] 워밍업 카메라 — PC=…, 뷰타겟=…, 카메라=…`.
+- **"로컬 PC" 판정 = `TitanLoading::IsViewingPlayerController(PC)` = `PC->GetLocalPlayer() != nullptr`** — `IsLocalController()`가 아님(§8-3). 카메라 PC 찾기·카메라 검정 고정·카메라 페이드·Monitor1 창 찾기 4곳 모두 이 판정.
 - **준비 조건**(모두 동시 충족이 `StableFrames` 연속 + `MinHoldSeconds` 경과): 워밍업 완료 · **로컬 PC(카메라 있음) 존재** · `!IsAsyncLoading()` · `IStreamingManager::GetNumWantingResources() <= MaxStreamingWanting` · `PipelineStateCache::NumActivePrecacheRequests() <= MaxPSOPrecache` · `FApp::GetDeltaTime() <= MaxFrameMs` · (`ForceUnmet=1`이면 강제 미충족).
 - 하드 타임아웃 `TimeoutSeconds`(단 `MinHoldSeconds+1`보다 작으면 그 값으로 올림). 5 s마다 진행 로그(미충족 목록), 종료 시 `사유=정상/타임아웃` + 마지막 미충족 목록.
 
@@ -116,7 +117,7 @@
 - 이 서브시스템은 `Initialize`부터 코어 티커(0.02 s)로 돌고, 활성 조건은 `클라 아님 && !IsDemoMode() && PC0 축 UGV` — **로딩을 기다리지 않는다.** 즉 풀시스템 모드에선 로딩 오버레이 중에도 LIG 명령으로 UGV가 움직일 수 있다.
 - 엣지: `IsDemoMode()`는 `AScenarioConfig`가 등록되기 전엔 false(`-demo`/URL 오버라이드 제외) → 설정 액터로만 데모를 켠 레벨에선 등록 전 잠깐 소켓이 열릴 수 있다.
 
-## 7. 검증 절차 (설계 §5 대응, 미실시)
+## 7. 검증 절차 (설계 §5 대응 — 진행 상태는 §8-4 표)
 
 > 오버레이는 월드 BeginPlay에서 시작하므로 cvar는 **월드 로드 전에** 넣어야 한다: `DefaultEngine.ini [ConsoleVariables]` 또는 `-ExecCmds="titan.Loading.MinHoldSeconds 30,titan.Loading.TimeoutSeconds 60"`. PIE는 PIE 시작 전 에디터 콘솔에서 설정.
 
@@ -131,3 +132,52 @@
 6. 첫 발사·첫 피격 히치: `titan.Loading.Enabled 0` vs `1`을 PIE와 `-game` 각각 비교(`stat unit` 또는 로그 프레임 간격).
 7. `titan.Loading.ForceUnmet 1` → `TimeoutSeconds` 후 `로딩 종료 — 사유=타임아웃 (… 마지막 미충족=[강제미충족…])`, 이후 시나리오 정상 시작.
 - 추가: `-game`에서 `-NoLoadingScreen`(비-Shipping) 또는 `titan.Loading.UseMoviePlayer 0` → LoadMap 동안 MoviePlayer 없이 진행되는지.
+
+## 8. 2026-10-06 빌드 후 수정·PIE 확인
+
+### 8-1. 첫 빌드 C2039
+- `UDecalComponent`는 `USceneComponent` 파생(엔진 `DecalComponent.h:24`)이라 `SetHiddenInSceneCapture`가 없음 → 데칼 쪽 호출만 제거. Niagara는 그대로 캡쳐 제외. 결과 정리는 §4-3.
+
+### 8-2. 텍스트/폰트 교체 (사용자 요청 — 한글 "로딩중"이 싸 보임)
+- `LoadingText` 기본값 "로딩중" → **"Loading"**(점 애니메이션으로 "Loading...").
+- 설정 추가: `UTitanLoadingScreenSettings::LoadingFont`(`TSoftObjectPtr<UFont>`), `LoadingFontSize`(int32, 기본 28).
+- `DefaultGame.ini`: `LoadingText=Loading`, `LoadingFont=/Game/Font/Pretendard-Medium_Font.Pretendard-Medium_Font`, `LoadingFontSize=28`.
+  - 주의: `UFont` 에셋은 **`_Font`가 붙은 쪽**. `/Game/Font/Pretendard-Medium` 자체는 FontFace라 이 슬롯에 안 맞음.
+  - 쿡: 이 폰트는 `WBP_kadex`·`WBP_ConfirmDialog`·`WBP_RestartPrompt` 등이 참조하므로 쿡에 들어감(ini 소프트 참조만으로는 쿡 대상 아님 — §4-10과 같은 원칙).
+- 서브시스템이 로드한 폰트를 `UPROPERTY() TObjectPtr<UFont> LoadingFont`로 붙잡음 — MoviePlayer 로딩 스레드도 같은 위젯으로 그리므로 GC 안전용. 로드 실패 시 엔진 기본 bold 폰트로 폴백 + 경고 로그 "로딩 폰트 로드 실패".
+- 향후(사용자 계획): 디자이너가 만든 전체 화면 이미지로 교체 예정 → 배경 이미지 옵션 + 텍스트 숨김 옵션 추가하면 됨. **WBP로 안 간 이유**: MoviePlayer 단계(LoadMap)는 로딩 스레드에서 렌더하므로 UObject 위젯(UMG)은 위험 — 순수 Slate 유지.
+
+### 8-3. 버그 — 워밍업 이펙트가 월드 원점에 스폰
+- 증상: 로그 `워밍업 이펙트 스폰 … @ V(X=500.00)`(원점 + 앞 500 cm), 데칼은 "카메라 앞 지면을 못 찾아 생략".
+- 1차 수정(불충분): 카메라 위치가 원점 근처가 아닐 때까지 대기, `NoCameraSkipSeconds`=10 s 뒤 폴백. → 2차 PIE에서 정확히 10 s 폴백 시점에 여전히 원점 스폰. 대기만으로는 해결 안 됨.
+- **진짜 원인**: 로컬 PC를 `APlayerController::IsLocalController()`로 찾았는데, 이 함수는 Standalone/Client에서 NetDriver가 있으면 **모든 PC에 true**(엔진 `PlayerController.cpp:343-349`) → `ULocalPlayer` 없는 PlayerController 파생 `AUGVAIController`(카메라가 원점)를 집었다. 프로젝트 기존 함정 "AUGVAIController는 사실 PlayerController"의 재발.
+- 수정: `TitanLoading::IsViewingPlayerController(PC)` = `PC->GetLocalPlayer() != nullptr`. 사용처 4곳 전부 교체 — `FindLocalPlayerControllerWithCamera`, `HoldLocalCamerasBlack`, `StartLocalCameraFade`, Monitor1 창 찾기. 2-PC 리슨 호스트에서 UGV 컨트롤러가 "로컬 PC"로 잡히는 것도 같이 막힘.
+- 1차 수정의 "카메라가 원점이 아닐 때까지 대기"는 추가 안전장치로 유지. 진단 로그 `[LoadingScreen] 워밍업 카메라 — PC=…, 뷰타겟=…, 카메라=…` 추가.
+- 미변경 참고: `UScenarioStateSubsystem::FadeLocalCameras`(기존 코드)도 `IsLocalController`를 쓰지만 무해 — UGV 컨트롤러의 안 쓰는 카메라까지 페이드할 뿐. 손대지 않음.
+
+### 8-4. PIE 결과 (단독 PIE, New_kadex_0811, standalone, 데모)
+
+| 회차 | 결과 |
+|---|---|
+| 1 (22:38) | 정상 종료 20.3 s. 원점 스폰(버그). 순서는 정상: 데모 세팅 연기 → 로딩 종료 정상 → 게이트 해제 → 연기했던 데모 세팅 적용 → 지휘소 자동사격 +1.0 s → 데모 자동 시작 +3.0 s → 스텝 평가 시작 |
+| 2 (23:00) | 정상 종료 12.8 s. 1차 수정 후에도 정확히 10 s 폴백에서 원점 스폰(불충분 확인). 순서 정상(동일) |
+| 3 (23:07, 최종) | `PC=BP_TestPlayerController_C_0`, `뷰타겟=BP_UGV_0901_C_1`, 카메라 `V(X=59267,Y=13471,Z=-3723)` — 2프레임째. Niagara 23 + 데칼 1을 ~5 m 앞에 스폰, 3프레임 뒤 제거. 정상 종료 11.3 s(안정 직전 마지막 미충족 = `프레임=62.4ms`). 게이트 해제 → 데모 세팅 → 자동사격 +1.0 s → 자동 시작 +3.0 s → 스텝 시작 |
+
+- 로딩 시간 구성: 워밍업 에셋 동기 로드 ~3.3 s(PIE는 Niagara 컴파일 대기 포함, 로그상 ~6.2 s짜리 한 프레임으로 보임) + 이후 프레임 시간 안정화 대기. `-game`/패키지는 미측정.
+- 로그의 에러는 무관: `UGVChaosPawn` CDO의 `SK_UGVChaos` 누락, CommonUI 뷰포트 경고.
+
+§7 검증 항목 상태:
+
+| §7 항목 | 상태 |
+|---|---|
+| 1-① 데모 로그 순서 | **부분 확인** — 기본 cvar(MinHold 1 s)로 3회 모두 순서 정상. `MinHoldSeconds 30` 조건은 미실시 → **검증됨(2026-10-06, -game MinHold 30/Timeout 60, [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L1)** |
+| 1-② 로딩 중 콘솔 명령 거부 | 미실시 → **검증됨(2026-10-06, -game 5종 모두 거부, [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L2)** — `?Demo=0` 회차는 미실시 |
+| 1-③ 자동사격이 게이트 해제 뒤 | 확인(로그 순서) → MinHold 30 -game에서도 검증됨([s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L1) |
+| 2 PIE 직접 시작 | **확인** → -game·`Enabled=0` PIE까지 검증됨([s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L3) |
+| 3 재시작 3회 | 미실시 → **검증됨(2026-10-06, 거부 0, [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L4)** |
+| 4 2-PC | 미실시 → 여전히 미실시(수동 목록, [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L5·§4) |
+| 5 RTSP 메인뷰 검정 | 미실시 → **미통과·의문(2026-10-06)** — 오버레이 중 5.65 s 뒤 송출이 검정에서 풀림, 원인 미확정 → [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L8 |
+| 6 첫 발사 히치 비교 | 미실시 → 부분(PIE 1샘플씩, 차이 미확정, -game 미실시) → [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L9 |
+| 7 `ForceUnmet` 타임아웃 | 미실시 → 여전히 미실시([s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L6). 단 실제 타임아웃 2회 관측 — 원인은 프레임 조건(MaxFrameMs 60), L7 |
+| 추가 `-game` MoviePlayer 화면 | 미실시 → 부분(로그 `MoviePlayer 로딩 화면.` 확인, `UseMoviePlayer 0` 비교 미실시) → [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) L10 |
+| 추가 `-game` 워밍업 이펙트 | **발견(2026-10-06)** — R01에서 첫 프레임 전에 `NoCameraSkipSeconds` 10 s 만료로 워밍업 생략(R02는 성공) → [s6_verification](../infra_architecture/2026-10-06_s6_verification.md) F1 |

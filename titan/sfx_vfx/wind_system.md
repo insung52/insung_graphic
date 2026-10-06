@@ -145,7 +145,8 @@ MW 자작 머티리얼과 나머지 Time 노드 에셋(프로젝트 전체 40개
 풍향/풍속이 필요하면 `MPC_Wind` 대신 `MPC_TitanTime`의 `WindDirection`/`WindSpeed`를 읽으면 MPC 슬롯을 하나로 아낀다.
 
 **스태틱 나무 WPO 바람(`MF_TitanTreeWind`, 10-01)**: 만들었지만 Nanite 복셀 래스터가 WPO를 안 해서(복셀 나무는 텍스처만 미끄러짐)
-`WorldPositionOffsetDisableDistance` 200 cm로 **사실상 끔**(사용자 결정, 임시). 상세·후속 선택지는 10-01 문서 3·4절.
+처음엔 `WorldPositionOffsetDisableDistance` 200 cm로 껐으나, 이 거리가 수관 중심↔각 뷰 카메라 거리라 환경맵 카메라(씬 캡쳐)에선
+켜졌다 → 10-06 **`bEvaluateWorldPositionOffset=false`로 완전히 끔**(사용자 결정, 임시). 상세·후속 선택지는 10-01 문서 3·4절.
 
 ### 기존 MPC 소비처와의 관계 (2026-09-28, 2026-10-01 보충)
 
