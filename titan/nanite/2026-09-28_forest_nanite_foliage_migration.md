@@ -601,6 +601,10 @@ float 최소 단위가 커져 프레임 간 시간 증가가 들쭉날쭉 → �
   사용자: **"풀 튀는 거 전혀 없고 시간 오래 지나도 안 떨림."**
 - ⏸ **나무 WPO 바람** — `MF_TitanTreeWind` + 마스터 복사본 2개 + MI 7개 부모 교체. 그러나 **Nanite 복셀 래스터는 WPO를 안 해서**
   복셀 나무는 텍스처만 미끄러진다 → `WorldPositionOffsetDisableDistance` **200 cm**(숲 컴포넌트 24개 + 스폰너 템플릿 2개).
+  **10-07 나무 뜸/박힘 수정**: 원인 = `Projection`(지형 높이) **뒤에** `TransformPoints_0`가 XY를 최대 ~3.3 m(X 0~150, Y ±300) 밀고 재투영이 없어
+  경사면에서 밀린 방향 따라 뜨거나 박힘(실측 147그루: 10 cm 넘게 뜸 31, 평균 오차 ±30 cm@경사 10~25%; Z 오프셋이 0~-20뿐이라 '뜸'은 재투영 부재의 증거).
+  → `TransformPoints_0` 뒤에 `ReprojectAfterOffset`(Projection, 위치만·회전/스케일 투영 안 함, 대상 `GetLandscapeData_0`) + `SinkIntoGround`(월드 Z -10~-20 cm).
+  재측정: 뜸 0, 밑동−지형 5/50/95% = -19.6/-15.7/-10.7 cm, 인스턴스 39,266 동일. 프록시 재빌드 필요.
   **사용자 결정: 나무 바람 끔(임시).** 10-06: 2 m 거리는 수관 중심↔각 뷰 카메라 거리라 환경맵 카메라(씬 캡쳐)에서는 켜졌음 →
   `bEvaluateWorldPositionOffset=false`(숲 컴포넌트 24 + 스폰너 템플릿 2)로 완전히 끔(10-01 문서 3.3절). 후속은 스켈레탈 복귀 + DynamicWind를 다른 이름의 프로젝트 플러그인으로
   복사(추천) 또는 Voxelize 끄고 스태틱+WPO.

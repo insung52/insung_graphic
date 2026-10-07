@@ -145,6 +145,12 @@
 수관 중심 2 m 안의 나무에서 WPO가 켜져 자작 잎 flutter(1.5)와 복셀 텍스처 미끄러짐이 캡쳐 화면에만 보였다. → 거리 제한 대신
 **`bEvaluateWorldPositionOffset=false`**로 완전히 끔(모든 뷰, WPO 비용도 0). 바람을 다시 넣을 때 true로 되돌릴 것.
 
+**2026-10-07 — 머티리얼에서도 끔**: 새 레벨에 SM_Tree_*를 스태틱 메시 액터로 놓으면(컴포넌트 기본 WPO=true) 머티리얼 WPO로 흔들렸다.
+→ 나무 MI 7개(`MI_Baltic_Pine_01_Bark`/`_Bark_Nubs`/`_Foliage`/`Sapling_01_Bark`, `MI_Silver_Birch_01_Bark_Blend`/`_Bark`/`_Foliage`)의
+부모를 **원래 PVE 마스터**(`/ProceduralVegetationEditor/SampleAssets/Materials/MasterMaterials/MA_Foliage_Trees(_TwoBarkBlend)`, WPO 없음)로 되돌림.
+이제 나무는 어디에 놓아도 안 흔들린다. `MF_TitanTreeWind`·마스터 복사본(`Megaplant_Library/Materials/Masters/`)은 보존 — 다시 쓸 땐 MI 부모만
+복사본으로 바꾸면 됨(소나무 MI의 Tree Wind 오버라이드 0.5/0은 MI에 남아 있음, PVE 부모에선 무시됨).
+
 ---
 
 ## 4. C — 나무 바람 후속 선택지 (설계단계)

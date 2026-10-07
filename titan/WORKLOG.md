@@ -1719,6 +1719,149 @@ ID **W133~W134 · P203~P205**, **[C-180] 해결 · [C-179] 확장 · [W131] · [
 
 ---
 
+## 2026-10-06 — 로딩 화면 + 워밍업 + 호스트 시나리오 시작 게이트 (UI/시나리오 세션)
+
+> ⚠ 2026-10-07 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `ui/2026-10-06_loading_screen_design.md`(설계 정본) · `ui/2026-10-06_loading_screen_impl.md`(구현)가 정본.
+
+- 목표는 **"품질은 그대로, 비용을 로딩 시점으로 옮긴다"** — 시나리오 내용(스텝·타이밍·AI 동작)은 안 건드림.
+- 로비 → 게임맵 전환에 페이드아웃 → 로딩 화면(`MoviePlayer`, 에디터에선 구조적으로 비활성) → 워밍업
+  오버레이(Niagara/PSO 선행 + 안정화 대기) → 페이드인. `UTitanLoadingScreenSubsystem`(GameInstance
+  서브시스템이라 트래블을 넘어 생존) 하나가 A~D 단계를 맡는다.
+- **호스트 시나리오 시작 게이트** — 로딩 완료 전에는 어떤 경로로도 시작 불가. 진입점을 전수 조사해
+  (명령어 `BeginScenarioEnemyContact` · 데모 자동 시작 타이머 · 데모 RCWS 자동사격 · 시나리오 Exec 지연
+  타이머 · 재시작 4경로 · 풀시스템 LIG 통제 명령) 전부 게이트 대상으로 넣었다. 모든 스텝이
+  `BeginScenarioSteps()` 하나로 들어오고 호출자가 둘뿐인 것을 확인한 것이 근거.
+- **클라 로딩은 자기 화면 전용** — 호스트에 RPC·신호 0, 호스트 시나리오 시스템에 관여 0.
+- 빌드 완료 + 단독 PIE 동작 확인(워밍업 원점 스폰 버그 수정 포함). 콘솔 거부·재시작·2-PC·`-game` 검증은
+  같은 날 자동 검증 세션에서 일부 수행(아래).
+
+---
+
+## 2026-10-06 — S6 감사 후속 수정 묶음 1·2·3 (성능 세션 3묶음)
+
+> ⚠ 2026-10-07 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `infra_architecture/2026-10-06_s6_fix_batch1.md` · `soldier_ai_lab/ai/2026-10-06_s6_fix_batch2_game_thread.md` ·
+> `infra_architecture/2026-10-06_s6_fix_batch3.md` 가 정본. 출발점은 `2026-09-29_s6_code_audit.md`.
+
+- **사용자 방침**(감사 §8 머리말) 그대로 — *현재 품질 유지, 결과가 바뀌는 최적화는 범위 밖*, 사전 측정
+  없이 수정 후 재측정. 바꾼 항목마다 A/B 스위치를 달았다.
+- **묶음 1** — ① **데칼 FIFO 캡 무효 수정**: `SpawnDecalAtLocation`이 만든 데칼의 Owner가
+  `World->GetWorldSettings()`이고 `UWorld::DestroyActor`가 그 파괴를 거부해서(`LevelActor.cpp:862-866`),
+  캡은 목록에서만 빼고 데칼은 수명(60/30 s)까지 살아 있었다 — **`MaxActiveImpactDecals 200`은 그동안 한 번도
+  동작한 적이 없다**. `DestroyComponent()`로 교체(설계값 200 복원은 사용자 결정). ② 임팩트·총구 Niagara
+  3곳에 엔진 풀 `AutoRelease`(자체 24개 캡 풀을 쓰는 ImpactFire 2곳은 의도적 제외). ③ 소총 투사체 풀
+  `Prefill` API(프레임 분할, 기본 32발/프레임당 4개) + BP 배선 완료. ④ 죽은 동기 로드 제거 ⑤ 로그 감량
+  ⑥ RTSP 수명.
+- **묶음 2 (SoldierLab 게임 스레드)** — 소켓/컴포넌트 캐시 · 원점 선컷 · 필드 광선 중복 제거 · 포즈층 조회
+  캐시. **전부 결과 동일** + `SoldierLab.Perf.*` A/B 스위치.
+- **묶음 3** — 탐지 view×proj를 코너마다가 아니라 스캔당 1회로 · 시나리오 로그 디스크 싱크 주기화
+  (`titan.ScenarioLog.DiskSyncSeconds`) · Monitor1 창 EndPlay 파괴 · UGV/RCWS/탐지/브리지 조회 캐시 ·
+  AmbientFX BeginPlay 선로드 · RCWS 풀 EndPlay 파괴. `AWindSource`는 `stat TitanWind` 실측 평균 ≈0.1 ms로
+  나와 **등록 방식 전환 불필요로 종결**(감사에서 0.57~0.66 ms로 추정했던 항목).
+
+---
+
+## 2026-10-06 — S6 검증 1차 + 에디터 PIE GPU 급저하(스킨 캐시) (검증 세션)
+
+> ⚠ 2026-10-07 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `infra_architecture/2026-10-06_s6_verification.md` · `infra_architecture/2026-10-06_pie_gpu_stall_skin_cache.md`.
+
+- **통과** — 데모 로그 순서와 게이트 해제 순서 · 오버레이 중 콘솔 명령 5종 거부(대기열 없음) · 준비 후
+  재시작 3회(거부 0줄) · 투사체 풀 32 유지 · RTSP 마운트 50/50 재접속(`still-set AppSrc` 0) ·
+  `t.MaxFPS 10` 후 회복 · 시나리오 로그 크래시 내성(마지막 줄이 `MARK`).
+- **미통과·발견** — **L8**: 송출 메인뷰가 오버레이 동안 검정으로 유지되지 않음(0~5.65 s 검정 후 2.4 s 동안
+  검정 아님). **F1**: `-game`에서 로컬 카메라가 10초간 없어 **워밍업 이펙트가 생략**됨(경합). **F3**: GPU가
+  같은 PIE 안에서 ≈28 ↔ ≈165–176 ↔ ≈385–455 ms로 저절로 점프.
+- **F3 추적**(`2026-10-06_pie_gpu_stall_skin_cache.md`) — 범인은 **GPU 스킨 캐시 compute 디스패치**.
+  `r.SkinCache.Mode=0`(`DefaultEngine.ini` 공통)으로 회피. 바운드 아토믹 가설 기각, VRAM 압박 하 D3D12
+  상주 관리 추정[B] — **원인 미확정**. HWRT를 켜게 되면 재검토 필요.
+- ⚠ **측정 PC가 S0과 다르다**(Core Ultra 5 225 / RTX 5060 8 GB, 에디터·Parsec·Chrome 동시 실행) →
+  **S0 수치와의 절대 비교는 무효.** 성능 A/B(묶음 2·3)는 F3 때문에 보류.
+
+---
+
+## 2026-10-07 — RCWS RTSP 특정 방향 끊김 = 비트레이트 기아 (RTSP 세션)
+
+> 원문 `rtsp/2026-10-07_rcws_bitrate_starvation_direction_stutter.md`.
+
+- **증상** — UGV 호스트 단독 PIE에서 Python 데모 클라의 RCWS 메인뷰만 특정 방향에서 fps 급락(PIE fps·CCTV
+  4스트림은 정상).
+- **원인** — 서버 송출은 ≈29.8 fps로 일정, 비동기 인코더 드롭 0. `ugv/rcws`가 `1080p @ 60 fps, 4000 kbps`
+  (CCTV용 기본 비트레이트)로 CBR 인코딩 → 프레임당 ≈8 KB라 복잡한 장면은 skip 블록 위주로 **그림이 안 바뀜**.
+  10-01 비동기화와 무관(P4 diff에 rcParams 변경 없음). `RcwsTargetFps=30` 테스트로 개선 확인(약한 끊김 잔존).
+- **수정** — `UVehicleRtspBridgeComponent::RcwsBitrateKbps = 10000` 추가, 메인뷰·씬캡쳐 폴백 둘 다 적용
+  (≤0이면 4000). 새 UPROPERTY라 정식 빌드 필요, 미서브밋. 지연 증가 없음, 스트림당 10 Mbps 대역폭 확인 필요.
+- **트럭** — 같은 날 `ATitanTruck::RcwsBitrateKbps = 6000`(720p30, UGV 1080p 10000과 같은 픽셀당 예산) 추가.
+- **검증(빌드 후 PIE)** — `ugv/rcws 1080p @ 60 fps, 10000 kbps` 적용 확인(IDR 18→46 KB). 실제 게임 ≈35 fps라
+  60 fps 선언은 PTS가 실시간의 0.58배로 밀리고 비트 예산도 반감 → 약한 끊김 잔존. `BP_UGV_0901`
+  `RcwsTargetFps=30`으로 **해결(사용자 확인)**. 규칙: 선언 fps는 실제 게임 fps 이하로.
+- **남은 것** — P4 서브밋(`VehicleRtspBridgeComponent.h/.cpp`, `TitanTruck.h/.cpp`), C++ 기본 `RcwsTargetFps` 60→30
+  검토, 트럭 6000 kbps 실기 확인, 드론 짐벌 스트림 비트레이트 점검.
+
+---
+
+## 2026-10-07 — SoldierLab 사격 콘 배선 누락(무기가 고정 3°로 쏘고 있었다) + 총구 방향 사격 게이트 (AI 세션)
+
+> 원문 `soldier_ai_lab/ai/2026-10-07_shot_spread_wiring_and_muzzle_gate.md`. 원칙 P206~P207, 값 [C-181]~[C-182],
+> 작업 [W135]~[W136], **[W93] ① 해결**(② `WantsToAim` 남음).
+
+- **계기** — 사용자 제보 "적군 총 정확도가 너무 낮다".
+- **1차 발견** — 무기 BP(`BP_AR4Rifle`, 적군 `BP_AK47Rifle`은 그 자식)가 탄 방향을
+  `RandomUnitVectorInConeInDegrees`로 뽑는데 반각이 BP 변수 `BulletSpreadDegrees` **3.0 고정**이었다 — 조준
+  상태·정착·자세·이동과 무관. 탄착 반경/명중률(사람 반경 45 cm, 균일 근사): 25 m 1.31 m / 11% · 50 m
+  2.62 m / 3% · **100 m 5.24 m / 0.8%**. 한편 `USoldierEngagementComponent::GetShotSpreadDegrees`(09-21 작업:
+  `WeaponSpreadDegrees 0.8` + 정착 2.5°/0.4 s · 반동 0.6°/발 · 이동 흔들림 1.5° · 이동 ×6 · 린 ×1.5 ·
+  맹목 ×15)는 **소비자가 없어 전부 무효**였다. 손해가 이중 — ① 조준을 잘해도 탄은 3° ② **AI는 자기 콘이
+  0.8°라고 믿고** 사격 판정(`TargetRadiusCm 45` × `AimedHitTolerance 2`)을 내려 실제보다 정확하다고 착각한
+  채 방아쇠를 당겼다. 사용자 판단 = "적용 안 되어 있던 게 버그".
+- **수정 1(콘 배선)** — BP만으로는 `Actor|GetComponentByClass`가 `ActorComponent`를 돌려줘 타입 불일치고,
+  **MCP로 pure 캐스트 전환이 불가**(`bIsPureCast` 쓰기 거부)하며 콘은 pure 값 체인이라 exec 캐스트를 끼우려면
+  그래프를 크게 건드려야 했다 → C++에 null-safe 정적 헬퍼
+  `USoldierEngagementComponent::GetShotSpreadDegreesFor(Owner, FallbackDegrees = 3.f)` 추가(컴포넌트 없으면
+  Fallback — 0을 주면 레이저 소총이 된다). BP 배선은 노드 1개(`OwningCharacter → Owner` ·
+  `BulletSpreadDegrees → Fallback` · `ReturnValue → ConeHalfAngleInDegrees`), 기존 직결 끊음. 자식 AK47 자동 적용.
+- **2차 발견** — 사용자 관찰 "달리기 애니메이션이 안 끝났는데 쏜다". 사격 허가의 `bOnTarget`은
+  `angle(AimRotation, DesiredAim)` = **AI 내부의 두 방위**이고 `bHaveAperture`는 총구 **위치**의 레인 판정이라
+  **실제 총구 방향을 보는 게이트가 없었다.** 둘을 메우는 조준 보정 적분기(`Pose/SoldierAIBridgeComponent`,
+  10/s · 데드밴드 0.3° · 60°/s · 누출 6/s)는 `bWeaponOnAim`(AO 활성 · 몽타주 없음 · 피격 아님 ·
+  `WeaponLowered < 0.05`)일 때만 돌아서 **총을 올리는 동안은 보정 0 + 누출**. 실측 로그에 `aimErr 0.0`인데
+  총구 오차 **74~131°** 인 줄들.
+- **수정 2(총구 게이트)** — `USoldierIdentityComponent::GetMuzzleForward` 신규(`GetMuzzleLocation`과 같은
+  소켓·같은 S6 소켓 캐시, 못 찾으면 게이트 통과) + `muzErr ≤ ConeDeg × MuzzleOnTargetConeRatio(1.5) ×
+  Lerp(1, MuzzleUrgentToleranceScale(12), 유효급박도)`. `bAimReady = bOnTarget && 그것`이 사격 허가와
+  `Traversing` 분기 양쪽에 들어간다. 급박도 raw = `max(근접도, SuppressionNow, PoseUrgency)` — 근접도는
+  `AimRushCloseRangeCm 400` 이내 1.0 → `AimRushFadeCm 600` 더해 1000 cm에서 0, **`GetTension()`은 일부러
+  제외**(반감기 20 s라 교전 내내 깔려 상시 완화가 된다). 각도 하한은 두지 않았다(사용자: "등 뒤로 쏠
+  정도면 그냥 놀란 것").
+- **⚠ 문턱이 필요했던 이유(실측)** — 1차 적용은 `MuzzleUrgentToleranceScale 200` + raw 직결이었는데
+  `PoseUrgency` 바닥이 접촉만으로 **0.35**(`UrgencyContactIdle`) · 평상 0.15(`UrgencyIdle`)여서 허용치가 콘의
+  **70~200배** = **게이트가 한 발도 못 막았다**(`muzErr 94`에 `onTarget 1`) → `AimRushThreshold 0.5`
+  (`유효 = clamp((raw − 0.5)/0.5)`) 추가 + 배율 **200 → 12**. 로그도 `rush %.2f/%.2f`(raw/유효) 둘 다 찍어
+  "어느 입력이 올렸는지"와 "실제로 완화가 걸렸는지"를 한 줄에서 구분한다.
+- **PIE 실측(`L_SoldierTest`) ✅** — 근접 `dist=356 … muzErr 6.0 rush 1.00/1.00 cone 5.06`(허용 ≈ 91°, 안
+  기다림) · 중간 `dist=643 … muzErr 18.6 rush 0.70/0.40 cone 4.38`(허용 ≈ 35°) · 중거리
+  `dist=1281 onTarget 0(aimErr 0.0 muzErr 83.2 rush 0.35/0.00) cone 6.31`(허용 9.5° → **보류**: 방위는 완벽한데
+  총구가 83° 벗어남). 사용자 확인 — 근접에서 답답하지 않고 중거리에서는 조준하고 쏜다.
+- **⚠ 환경·도구 함정 3** — ① **P4 서버가 또 바뀌었다**: 옛 `-p 192.168.0.99:1666 -c user4_DESKTOP-81S78B2_4340`
+  은 `Can't create a new user - over license quota`, `-u user4`는 `session has expired` → **오버라이드 없이 그냥
+  `p4 edit`**(현재 `grapicar4` / `insung_desktop1` / 루트 `C:\working\works` / `//dev/main/kadex/titan_example/...`,
+  `p4 info`의 `Server address` = `p4dtest:1666`은 정상) → `infra_architecture/2026-10-01_perforce_server_migration.md`
+  마지막 절에 반영. ② **BP 컴포넌트 템플릿 값이 배치된 레벨 액터에 안 내려간다** — `New_kadex_0811`
+  인스턴스는 따라갔는데 `L_SoldierTest` 병사 6명은 옛 값을 유지해 PIE에서 게이트가 전혀 안 물렸다 →
+  인스턴스 `<액터>.AC_SoldierEngagement`에 직접 쓸 것. ③ **Live Coding은 기존 프로퍼티의 메모리 값을
+  살려둔다** — 신규 `AimRushThreshold`는 기본값으로 나왔지만 테스트로 심은 `MuzzleUrgentToleranceScale 1.0`이
+  새 기본값 12를 가렸다("빌드했는데 값이 안 바뀐 것 같으면 템플릿·인스턴스 값을 먼저 읽을 것").
+- **바뀐 파일** — `Source/SoldierLab/AI/SoldierEngagement.{h,cpp}` · `Source/SoldierLab/AI/SoldierIdentity.{h,cpp}` ·
+  `Content/SoldierLab/Weapons/Blueprints/BP_AR4Rifle`(콘 배선, 컴파일·저장, P4 체크아웃 상태). ⚠ **에디터
+  메모리에만**: 테스트 오버라이드는 12(코드 기본값)로 되돌렸고 **저장 안 함** — 레벨을 저장하면 박힌다.
+- **남은 것** — 총구 소켓(`WeaponMesh`의 `Muzzle`) ↔ 탄이 나가는 무기 액터 `MuzzlePoint` 방향 일치 미실측
+  [C-181] · 본 레벨 `New_kadex_0811`(교전 수십 m = 엄격 구간이 대부분) 미검증 [C-182] ·
+  `WeaponSpreadDegrees 0.8` 진영별 분리(적군만 덜 정확하게) 미적용 [W135] · P4 제출 사용자 승인 대기 [W136] ·
+  [W93] ② `WantsToAim()`.
+
+---
+
 ## 다음에 예정된 것 (이 시점 기준)
 
 > **2026-10-01 진행현황 반영 메모** — 사용자가 진행현황 표에서 다음을 완료로 판정했다(`progress/README.md`

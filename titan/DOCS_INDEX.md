@@ -1,6 +1,6 @@
 # 문서 전체 목록 (DOCS_INDEX)
 
-2026-10-01 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
+2026-10-07 / 진행중 / titan 폴더 전체 .md 문서 카탈로그, 2026-08-31 시스템별 폴더 재편
 반영판(이후 세션별로 항목 추가 중).
 
 폴더는 "시스템 하나당 폴더 하나" 축으로 통일됨(`CLAUDE.md` 참고). `guide/`는 에버그린
@@ -330,6 +330,13 @@
 
 ## `ui/` — WBP 위젯 개발
 
+- `2026-10-06_loading_screen_design.md` / `2026-10-06_loading_screen_impl.md` (2026-10-06, 구현 완료·검증
+  대기) — **최신.** 로비 → New_kadex_0811 전환에 페이드·로딩 화면을 넣고 그 아래서 Niagara/PSO 워밍업과
+  안정화 대기를 한 뒤 페이드인. 목표는 "품질은 그대로, 비용을 로딩 시점으로 옮긴다". 함께 **호스트
+  시나리오 시작 게이트** — 로딩 완료 전에는 명령·데모 자동 시작·재시작·외부 통제 어떤 경로로도 시작
+  불가(진입점 전수 조사표가 설계 §2에 있다). 클라 로딩은 자기 화면 전용(호스트에 RPC 없음).
+  `design`이 정본 설계, `impl`이 실제 구현·설계와의 차이·검증 절차. 검증 결과는
+  `infra_architecture/2026-10-06_s6_verification.md`.
 - `kadex_test_dashboard_wbp_spec.md` (2026-08, 최신) — **현재 실사용 위젯**
   (`UGVTestDashboardWidget`/`SelfDefenseDashboardWidget`/`AxisSelectionWidget`)의
   `BindWidgetOptional` 필드 스펙 + 버그 수정 이력. `guide/ui_dev_guide.md`(구 Monitor1Widget)
@@ -491,10 +498,31 @@
 
 ## `infra_architecture/`
 
-- `2026-10-01_perforce_server_migration.md` (2026-10-01, 완료) — **P4 서버·워크스페이스가 바뀜**
+- `2026-10-06_s6_fix_batch1.md` · `2026-10-06_s6_fix_batch3.md` (2026-10-06, 완료 — 빌드·PIE 1차 검증) —
+  **S6 감사 후속 수정.** 사용자 방침은 *현재 품질 유지, 결과가 바뀌는 최적화는 범위 밖*. 묶음 1 = 데칼 FIFO
+  캡 무효 수정(`SpawnDecalAtLocation`의 Owner가 WorldSettings라 `Destroy()`가 거부돼 **`MaxActiveImpactDecals
+  200`이 한 번도 동작한 적이 없었다** → `DestroyComponent()`) · 임팩트/총구 Niagara 엔진 풀 `AutoRelease` ·
+  소총 투사체 풀 프리필 API(BP 배선 완료) · 죽은 동기 로드 제거 · 로그 감량 · RTSP 수명. 묶음 3 = 탐지
+  view×proj 스캔당 1회 · 시나리오 로그 디스크 싱크 주기화(`titan.ScenarioLog.DiskSyncSeconds`) · Monitor1 창
+  EndPlay 파괴 · 조회 캐시 · AmbientFX 선로드 · RCWS 풀 EndPlay 파괴. `AWindSource`는 실측 ≈0.1 ms로
+  등록 방식 전환 불필요 판정. SoldierLab 게임 스레드 묶음 2는
+  `soldier_ai_lab/ai/2026-10-06_s6_fix_batch2_game_thread.md`.
+- `2026-10-06_s6_verification.md` (2026-10-06, **부분 완료 — 성능 A/B 보류**) — 로딩 화면 + S6 묶음 1·2·3
+  자동 검증 1차. 통과: 데모 로그 순서·게이트 해제 순서, 오버레이 중 콘솔 명령 5종 거부, 재시작 3회,
+  투사체 풀 32 유지, RTSP 마운트 50/50 재접속, `t.MaxFPS` 저하 후 회복, 로그 크래시 내성. **미통과/발견**:
+  L8 송출 메인뷰가 오버레이 동안 검정 유지되지 않음(의문), F1 `-game`에서 워밍업 이펙트 생략(경합),
+  **F3 GPU 급저하**. ⚠ 측정 PC가 S0과 달라 **S0과의 절대 비교는 무효**.
+- `2026-10-06_pie_gpu_stall_skin_cache.md` (2026-10-06, 완료 — 회피 적용, **원인 미확정**) — 에디터 PIE에서
+  GPU가 28 ms → 80~630 ms로 이산 점프하던 현상. 범인은 **GPU 스킨 캐시 compute 디스패치** →
+  `r.SkinCache.Mode=0`(`DefaultEngine.ini` 공통)으로 회피. 바운드 아토믹 가설은 기각, VRAM 압박 하 D3D12
+  상주 관리 추정[B]. 위 검증의 성능 A/B를 막고 있던 현상이다. **HWRT를 켜게 되면 재검토 필요.**
+- `2026-10-01_perforce_server_migration.md` (2026-10-01, 완료 — ★ **2026-10-07 재확인·보강**) — **P4 서버·워크스페이스가 바뀜**
   (`ssl:p4d.grapicar.com:1666` / `grapicar4` / `insung_desktop1` / `//dev/main`). 이전 직후 로컬 수정
   파일이 "안 열린 채 변경 + read-only" 상태가 된 것을 `p4 diff -se` → `p4 edit`로 복구한 절차 포함.
-  **체크아웃이 안 되거나 파일이 read-only로 보이면 이 문서를 먼저 볼 것.**
+  **체크아웃이 안 되거나 파일이 read-only로 보이면 이 문서를 먼저 볼 것.** → ★ **10-07 보강**: 옛 주소를
+  `-p`/`-c` 로 강제하면 옛 서버에 붙어 `over license quota` / `session has expired` 가 나 **라이선스·로그인
+  문제로 오진하게 된다** — 오버라이드 없이 `p4 edit` 할 것. 클라이언트 루트 `C:\working\works` · depot
+  `//dev/main/kadex/titan_example/...` · `p4 info` 의 `Server address` = `p4dtest:1666`(P4PORT 와 달라 보이는 게 정상).
 - `2026-09-29_perf_baseline_s0.md` (2026-09-29, 완료) — **성능 기준선(S0). 실제 전시 구성
   New_kadex_0811 첫 통합 계측.** 숲 정면은 GPU 바운드(프레임 23.9 ms / GPU 21.8), 교전은 게임 스레드
   바운드(28.9 ms, 렌더 스레드는 13.8 ms 대기). 최대 단일 항목 = 수동 `CaptureScene()`의 월드 렌더 상태
@@ -524,6 +552,17 @@
 이 폴더는 자체 인덱스 체계를 갖는다 — 전체 목록은 `soldier_ai_lab/CLAUDE.md` 1절(읽기 순서)과 `soldier_ai_lab/IMPLEMENTED.md`.
 여기에는 titan 본체 상태와 직접 맞물리는 최신 문서만 적는다.
 
+- `ai/2026-10-07_shot_spread_wiring_and_muzzle_gate.md` (2026-10-07, **완료 · `L_SoldierTest` PIE 실측 ✅**) — ★★ **무기가 AI 사격 콘을 안 쓰고 있었다 + 총구 방향 사격 게이트**:
+  ① 제보 "적군 총 정확도가 너무 낮다" → 무기 BP(`BP_AR4Rifle`, 적군 `BP_AK47Rifle` 은 자식)가 **고정 반각 3°** 로 탄을 뿌리고 있었다(BP 변수 `BulletSpreadDegrees`). 09-21 에 만든
+  `GetShotSpreadDegrees`(정착 0.8° + 이동·자세·반동·맹목 배율)는 **소비자가 없어 전부 무효**였고, AI 는 자기 콘이 0.8° 라고 믿고 사격 판정을 내렸다 = **실제보다 정확하다고 착각한 채 쏨**
+  (100 m 명중률 ≈ 0.8%). 수정 = C++ null-safe 정적 헬퍼 `USoldierEngagementComponent::GetShotSpreadDegreesFor(Owner, Fallback 3°)`(BP 만으로는 `GetComponentByClass` 타입 불일치 +
+  MCP pure 캐스트 불가) + BP 노드 1개 — **[W93] ① 해결**(② `WantsToAim` 남음).
+  ② 사용자 "달리기 애니메이션이 안 끝났는데 쏜다" → 사격 허가의 `bOnTarget` 은 **AI 내부의 두 조준 방위**비교고 `bHaveAperture` 는 총구 **위치**의 레인 판정이라 **총구 방향을 보는 게이트가
+  없었다**(실측 `aimErr 0.0` 인데 `muzErr 74~131°` — 총을 올리는 동안 조준 보정 적분기가 멈춘다). 수정 = `USoldierIdentityComponent::GetMuzzleForward` + `bAimReady = bOnTarget && muzErr ≤
+  ConeDeg × 1.5 × Lerp(1, 12, 유효급박도)`, 급박도 = `max(근접 400~1000 cm, 제압, 자세)` (**Tension 은 일부러 제외**). ⚠ 1차 적용은 **문턱이 없어 한 발도 못 막았다**(`PoseUrgency` 바닥 0.35)
+  → `AimRushThreshold 0.5` + 배율 200 → 12. PIE 3구간 실측(근접 full · 중간 부분 · 중거리 `muzErr 83.2` 보류).
+  ③ **6절에 환경 함정 3**: **P4 서버 변경**(옛 주소 `-p`/`-c` 금지) · **BP 컴포넌트 템플릿 값이 배치된 레벨 액터에 안 내려간다** · **Live Coding 은 기존 프로퍼티의 메모리 값을 살려둔다**.
+  원칙 **P206~P207**, 값 [C-181]~[C-182], 작업 [W135]~[W136].
 - `animation/2026-09-30_locomotion_test_harness.md` (2026-09-30~10-01, **진행중(아군 완료 · 적군 적용 대기)**) — ★★ **로코모션 자동 테스터 + 발 미끄러짐·Loop 불안정 해결 (아군)**:
   자동 테스터 `SoldierLab.Test.Locomotion`(신규 `USoldierLocomotionTestSubsystem`, 무인 `Saved/LocoTest.request`) · 기록기 `SoldierAimTrace` 열 확장 · 리포트
   `soldier_ai_lab/tools/locomotion_report.py` 로 원인 셋을 측정 — ① 아군 Loop 8클립 루트 속도 출렁임(swing 53~74%) → 에디터 도구 `SoldierRootSpeedTool` 로 **루트 선형화**
