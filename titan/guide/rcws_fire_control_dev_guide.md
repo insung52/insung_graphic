@@ -319,6 +319,22 @@ static**으로 승격해서 재사용 — 바운딩박스 투영과 완전히 �
 UWidget으로 감싸는" 패턴을 그대로 재사용. `RCWSViewImage`/`RCWSDetectionOverlay`와
 정확히 같은 위치/크기로 겹쳐 배치.
 
+### 6.1 총구 탄도 조준과 포신 레티클 — 서버 계산 + 복제 (2026-10-12)
+
+- `UpdateMuzzleBallisticAim` (**서버/권한 쪽만**) — 카메라 중심 레이트레이스 지점(락온 중이면 타겟)을
+  `MuzzleAimTargetWorldLocation`에 기록하고, 그 지점에 맞게 `Muzzle` 상하각을 탄도(낙차)대로 슬루한다.
+- `UpdateTurretReticleForUI` (**모든 프로세스**) — "현재 총구 각도로 쏘면 어디 맞는가"를
+  `SimulateBallisticLandingPoint`로 예측해 화면에 투영. 화면 중심 고정이 아니라 슬루 중엔 움직이다 수렴한다.
+  `MuzzleAimTargetWorldLocation`이 ZeroVector면 `TurretReticleProjectionDistanceCm`(500 m) 직선 폴백.
+- **리플리케이션**: 발사가 서버(`Multicast_FireEffects`가 서버 총구 방향을 뿌림)이고 카메라도 서버 값 복제
+  (`OnRep_MountRelativeRotation`)이므로, 총구도 클라가 따로 계산하지 않고 서버 상태를 받는다 —
+  `MuzzleAimTargetWorldLocation`(`Replicated`) + `ReplicatedMuzzleRelativeRotation`
+  (`ReplicatedUsing=OnRep_MuzzleRelativeRotation`, 서버가 슬루 직후 Muzzle **상대**회전 기록 → 클라
+  `SetRelativeRotation`; `BeginPlay`에서 초기값 1회 적용). 상대회전인 이유는 마운트·차체 자세가 각자
+  복제되므로 도착 시점 어긋남 방지. 결과적으로 카메라·레티클·트레이서가 같은 서버 시점으로 일치.
+- 이전(~2026-10-11)에는 둘 다 복제되지 않아 2-PC 자체방호 클라에서 레티클이 중심보다 약간 위에 고정됐다
+  (`rcws/2026-10-12_selfdefense_client_turret_reticle_replication.md`, 2-PC 검증 완료(2026-10-12); 클라 포신 메시 비주얼 앙각 반영은 미확인).
+
 ## 7. 발사와 피격
 
 ### 7.1 `ARCWSProjectile` — 풀링되는 발사체
@@ -361,6 +377,14 @@ CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera,
 > (UGV_0901 교전 중 "팡 뒤집힘" 버그). 피격 판정(`OnComponentHit`→`OnHit`)은 스윕 결과만 쓰므로
 > QueryOnly에서도 동일 — 적→UGV/트럭→UGV/전 발사→적 피격 전부 유지. 상세는
 > `vehicle/ugv/2026-09-16_ugv_flip_spin_projectile_physics_body.md`.
+
+> **[2026-10-12] UGV 충돌 정책(병사 쪽 같은 구조 차단).** 병사 캡슐도 PT에선 무한질량 키네마틱이라
+> 정차 중 붙은 적이 UGV를 밀고 전복시킬 수 있었다(유력 후보). 현재 `AUGV0901Pawn`은 자기 모든
+> 프리미티브에서 `Pawn`/`PhysicsBody` 응답을 Ignore(물리 접촉 없음 — 시체·떨어진 총도 통과), 바퀴
+> 트레이스도 Pawn 무시. 대신 `PawnBlocker` 박스(QueryOnly, Pawn만 Block)로 병사를 막고, 서버가 매 틱
+> 겹친 병사를 옆면으로 스윕해서 밀어낸다. 60° 이상 2초 지속 시 자가 복원(토크 → 6초 후 순간이동).
+> 투사체 피격 판정은 Pawn/PhysicsBody 채널과 무관해서 영향 없음. 상세는
+> `vehicle/ugv/2026-10-12_ugv_flip_pawn_collision_and_self_righting.md`.
 
 ### 7.2 데미지 — 표준 엔진 데미지 파이프라인 사용
 

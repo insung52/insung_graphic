@@ -686,6 +686,10 @@ Image의 둥근 모서리 반경과 같은 값으로 맞추면 됨. Slate 레벨
 겹쳐 배치되는 카메라 Image(`MainViewImage`/`UAVCameraImage`/`RCWSViewImage`)의 Brush
 `RoundedBox` 코너 반경과 `CornerRadius` 값을 동일하게 맞춰주면 됨.
 
+> 📌 [2026-10-13] 위 선 박스는 이제 **마커 WBP가 없는 대상의 폴백**이다. `SelfDefenseMonitor1/2`·`UGVTestDashboard`는
+> 대상 종류×진영별 마커 WBP + 실루엣 마스크로 그린다 — `guide/detection_dev_guide.md` §4,
+> `ui/2026-10-13_detection_marker_wbp.md`.
+
 ### ScrollingRulerWidget: non-wrap 모드에서 spine도 눈금 범위 밖으로 안 그려지게 수정(2026-07-11)
 
 **증상**: non-wrap 모드 재설계(바로 위 항목) 이후 눈금은 `MinValue`/`MaxValue` 밖에서 정상적으로

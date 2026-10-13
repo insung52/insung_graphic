@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 2026-10-14 / 완료 / 탐지 마커 실루엣 머티리얼 인스턴스(MI_DetSketch_*) 수정 가이드 — 디자이너 전달용 -->
+<title>탐지 마커 머티리얼 가이드</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1d1f23;
+    --muted: #5c6370;
+    --line: #dfe3e8;
+    --soft: #f5f7f9;
+    --accent: #1f6feb;
+    --warn-bg: #fff6e5;
+    --warn-line: #f0b44c;
+    --ok-bg: #eaf7ee;
+    --ok-line: #4caf6e;
+    --code-bg: #eef1f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  h2 {
+    font-size: 19px;
+    margin: 44px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--fg);
+  }
+  h3 { font-size: 16px; margin: 26px 0 8px; }
+  p { margin: 8px 0; }
+  code {
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: Consolas, "D2Coding", monospace;
+    font-size: 13.5px;
+    word-break: break-all;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  .box { border-left: 4px solid; padding: 10px 14px; margin: 14px 0; border-radius: 0 6px 6px 0; }
+  .warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .ok { background: var(--ok-bg); border-color: var(--ok-line); }
+  .note { background: var(--soft); border-color: var(--accent); }
+  ol li, ul li { margin: 4px 0; }
+  .sw {
+    display: inline-block; width: 16px; height: 16px; border-radius: 3px;
+    border: 1px solid rgba(0,0,0,.25); vertical-align: -3px; margin-right: 6px;
+  }
+  .toc { background: var(--soft); border-radius: 8px; padding: 12px 18px; }
+  .toc ol { margin: 4px 0; padding-left: 20px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .demo { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0; }
+  .demo figure { margin: 0; width: 190px; text-align: center; font-size: 13px; color: var(--muted); }
+  .demo svg { display: block; width: 190px; height: 200px; border-radius: 6px; background: #3b4a3d; }
+  .demo figcaption b { color: var(--fg); display: block; }
+  .tag { display: inline-block; font-size: 12px; padding: 0 7px; border-radius: 10px; font-weight: 600; }
+  .t-edit { background: #dcebff; color: #1a4fa0; }
+  .t-keep { background: #ffe1e1; color: #a02020; }
+  .t-rare { background: #ececec; color: #555; }
+  .anat { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+  .anat svg { width: 260px; height: 220px; background: #3b4a3d; border-radius: 6px; flex: none; }
+  .anat ul { flex: 1; min-width: 240px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>탐지 마커 머티리얼 인스턴스 수정 가이드</h1>
+<p class="sub">KADEX 시뮬레이터 · 탐지 박스 / 실루엣 강조 · 2026-10-14</p>
+
+<div class="toc">
+  <b>목차</b>
+  <ol>
+    <li><a href="#s1">탐지 마커가 무엇으로 이루어져 있나</a></li>
+    <li><a href="#s2">마커 WBP(박스·글자) — 디자인 요청 (12종류)</a></li>
+    <li><a href="#s3">머티리얼 인스턴스 위치와 대상별 대응</a></li>
+    <li><a href="#s4">수정하는 순서</a></li>
+    <li><a href="#s5">파라미터 상세</a></li>
+    <li><a href="#s6">현재 값</a></li>
+    <li><a href="#s7">결과 확인하는 방법</a></li>
+    <li><a href="#s8">주의할 점 / 자주 묻는 것</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s1">1. 탐지 마커가 무엇으로 이루어져 있나</h2>
+
+<p>드론 카메라 화면과 트럭 RCWS 화면에서 대상(병사·차량·낙하산 등)이 탐지되면, 그 위에 <b>마커</b>가 하나씩 붙습니다. 마커는 두 층입니다.</p>
+
+<div class="anat">
+  <svg viewBox="0 0 260 220" aria-label="마커 구성 예시">
+    <defs>
+      <pattern id="hA" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="4" height="8" fill="#ff0000" opacity="0.25"/>
+        <rect x="4" width="4" height="8" fill="#ff0000" opacity="0.15"/>
+      </pattern>
+    </defs>
+    <!-- box frame -->
+    <rect x="70" y="40" width="120" height="160" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="14 92 14 0" />
+    <path d="M70 58 V40 H88 M172 40 H190 V58 M190 182 V200 H172 M88 200 H70 V182" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+    <!-- label -->
+    <rect x="70" y="18" width="96" height="18" fill="rgba(0,0,0,.55)"/>
+    <text x="75" y="31" font-size="11" fill="#fff" font-family="sans-serif">ENEMY  125 m</text>
+    <!-- silhouette -->
+    <g>
+      <circle cx="130" cy="72" r="15" fill="url(#hA)" stroke="#ff0000" stroke-opacity="0.9" stroke-width="2.5"/>
+      <path d="M104 96 Q130 86 156 96 L164 150 L150 150 L150 196 L134 196 L130 160 L126 196 L110 196 L110 150 L96 150 Z"
+            fill="url(#hA)" stroke="#ff0000" stroke-opacity="0.9" stroke-width="2.5" stroke-linejoin="round"/>
+    </g>
+    <!-- callouts -->
+    <text x="196" y="52" font-size="11" fill="#ffd27a" font-family="sans-serif">① 박스</text>
+    <text x="172" y="30" font-size="11" fill="#ffd27a" font-family="sans-serif">② 글자</text>
+    <text x="166" y="130" font-size="11" fill="#ffd27a" font-family="sans-serif">③ 실루엣</text>
+  </svg>
+  <ul>
+    <li><b>① 박스 프레임, ② 글자(종류명 + 거리)</b><br>
+        위젯 블루프린트(<b>WBP</b>)에 있습니다. 지금 것은 테스트용이고, 보내 주실 디자인(XD/피그마)대로 <b>개발 쪽에서 WBP를 새로 만들겠습니다</b>. → <a href="#s2">2절</a></li>
+    <li><b>③ 실루엣</b><br>
+        대상의 실제 모양을 따라 칠하는 반투명 채움과 외곽선입니다. <b>머티리얼 인스턴스(MI)</b>로 색과 투명도를 정하고, <b>직접 수정하실 수 있습니다</b>. → <a href="#s3">3절</a>부터</li>
+  </ul>
+</div>
+
+<div class="box note">
+  실루엣의 <b>모양</b>은 게임이 매 프레임 대상의 실제 메시로 만들어 넣습니다. MI에서는 그 모양을 <b>어떤 색, 어떤 투명도, 어떤 외곽선 두께, 어떤 빗금으로 칠할지</b>만 정합니다.
+  실제 객체인식 장비가 대상 픽셀을 칠해 보여 주는 화면을 흉내 낸 것입니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s2">2. 마커 WBP(박스·글자) — 디자인 요청</h2>
+
+<div class="box ok">
+  <b>지금 들어가 있는 마커 WBP는 기능 확인용 테스트 버전입니다.</b> 현재 모양(박스 + 위쪽 글자 한 줄)에 맞춰 디자인하실 필요는 없습니다.
+  아래 <b>12종류</b>로 나눠 자유롭게 디자인해 주시면, 그 디자인대로 WBP를 다시 만들고 기능은 개발 쪽에서 전부 연결하겠습니다.
+</div>
+
+<h3>2.1 디자인이 필요한 12종류</h3>
+<p>마커가 나오는 화면이 2개, 대상 종류가 6개라서 2 × 6 = 12종류입니다. 종류마다 완전히 다른 디자인이어도 되고, 같은 틀에 색·문구만 바꾼 것이어도 됩니다.</p>
+
+<div class="scroll">
+<table>
+  <tr><th style="width:44px">#</th><th style="width:170px">화면</th><th style="width:130px">대상</th><th>참고</th></tr>
+  <tr><td>1</td><td rowspan="6"><b>RCWS 화면</b><br><span style="font-size:13px;color:var(--muted)">트럭 RCWS · UGV 화면<br>화면이 큼</span></td><td>아군 병사</td><td></td></tr>
+  <tr><td>2</td><td>적군 병사</td><td></td></tr>
+  <tr><td>3</td><td>트럭</td><td>아군 장비</td></tr>
+  <tr><td>4</td><td>UGV</td><td>아군 장비(무인 지상 차량)</td></tr>
+  <tr><td>5</td><td>드론</td><td>아군 장비</td></tr>
+  <tr><td>6</td><td>낙하산</td><td>적 침투 흔적</td></tr>
+  <tr><td>7</td><td rowspan="6"><b>UAV 화면</b><br><span style="font-size:13px;color:var(--muted)">드론 카메라 화면<br>화면이 작음 → 글자·요소를 작게</span></td><td>아군 병사</td><td></td></tr>
+  <tr><td>8</td><td>적군 병사</td><td></td></tr>
+  <tr><td>9</td><td>트럭</td><td>아군 장비</td></tr>
+  <tr><td>10</td><td>UGV</td><td>아군 장비(무인 지상 차량)</td></tr>
+  <tr><td>11</td><td>드론</td><td>아군 장비</td></tr>
+  <tr><td>12</td><td>낙하산</td><td>적 침투 흔적</td></tr>
+</table>
+</div>
+
+<h3>2.2 자유롭게 넣으셔도 되는 것</h3>
+<ul>
+  <li><b>요소 추가는 얼마든지 괜찮습니다.</b> 지금은 종류 이름과 거리만 있지만, 다른 텍스트 정보·아이콘·게이지·장식 등 넣고 싶으신 게 있으면 디자인에 넣어 주세요.
+    <br>예: 진영 표시, 방위, 탐지 신뢰도(%), 추적 번호, 상태 아이콘 등. 게임 데이터로 보여 줄 수 있는 건 개발 쪽에서 연결하겠습니다.</li>
+  <li>글자 위치, 배치, 폰트, 색 모두 자유입니다.</li>
+  <li>정보마다 "고정 문구"인지 "게임 값이 들어가는 칸"인지만 표시해 주시면 됩니다. 예: <code>ENEMY</code> = 고정, <code>125 m</code> = 거리 값.</li>
+</ul>
+
+<h3>2.3 가장 중요: "늘어나는 것"과 "크기가 고정되는 것" 구분</h3>
+<p>박스는 화면에 보이는 대상 크기를 따라갑니다. 멀리 있는 병사는 <b>수십 픽셀</b>, 가까운 트럭은 <b>수백 픽셀</b>입니다.
+그래서 마커 요소는 아래 두 가지로 나뉘어야 합니다. <b>디자인 시안에 요소마다 어느 쪽인지 표시해 주세요.</b></p>
+
+<div class="scroll">
+<table>
+  <tr><th style="width:50%">대상 크기를 따라 <b>늘었다 줄었다 하는 것</b></th><th>대상 크기와 상관없이 <b>크기가 고정되는 것</b></th></tr>
+  <tr>
+    <td>
+      <ul style="margin:0;padding-left:18px">
+        <li>박스의 <b>전체 가로·세로 크기</b>(대상을 감싸는 영역)</li>
+        <li>박스 안쪽 채움 영역</li>
+        <li>실루엣(대상 모양 그대로)</li>
+      </ul>
+    </td>
+    <td>
+      <ul style="margin:0;padding-left:18px">
+        <li><b>박스 외곽선 두께</b></li>
+        <li><b>모서리 장식</b>(꺾쇠 길이 등)</li>
+        <li><b>글자</b>(폰트 크기)</li>
+        <li>아이콘, 게이지, 라벨 배경 등</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+</div>
+
+<div class="demo">
+  <figure style="width:auto">
+    <svg viewBox="0 0 420 200" style="width:420px;max-width:100%;height:auto;aspect-ratio:420/200">
+      <!-- small -->
+      <text x="40" y="58" font-size="11" fill="#fff" font-family="sans-serif">ENEMY 312 m</text>
+      <rect x="40" y="64" width="40" height="64" fill="none" stroke="#fff" stroke-width="1.5"/>
+      <path d="M40 74 V64 H50 M70 64 H80 V74 M80 118 V128 H70 M50 128 H40 V118" fill="none" stroke="#fff" stroke-width="3"/>
+      <!-- large -->
+      <text x="190" y="24" font-size="11" fill="#fff" font-family="sans-serif">ENEMY 41 m</text>
+      <rect x="190" y="30" width="190" height="160" fill="none" stroke="#fff" stroke-width="1.5"/>
+      <path d="M190 40 V30 H200 M370 30 H380 V40 M380 180 V190 H370 M200 190 H190 V180" fill="none" stroke="#fff" stroke-width="3"/>
+      <text x="22" y="160" font-size="11" fill="#ffd27a" font-family="sans-serif">멀리 있는 대상</text>
+      <text x="240" y="115" font-size="11" fill="#ffd27a" font-family="sans-serif">가까이 있는 대상</text>
+    </svg>
+    <figcaption>박스 크기만 달라지고, <b style="display:inline">글자 크기·선 두께·모서리 꺾쇠 길이는 둘 다 같습니다</b>.</figcaption>
+  </figure>
+</div>
+
+<div class="box warn">
+  <b>마커 전체를 그림처럼 확대/축소하는 방식은 안 됩니다.</b> 그렇게 하면 멀리 있는 대상의 글자가 몇 픽셀로 줄어 읽을 수 없고, 가까운 대상은 선이 지나치게 굵어집니다.
+  그래서 시안은 <b>"박스 크기가 바뀌어도 이 요소는 그대로"</b>라는 기준으로 만들어 주세요.
+</div>
+
+<ul>
+  <li><b>작은 박스와 큰 박스 두 가지 예시</b>를 같이 그려 주시면 가장 정확하게 반영할 수 있습니다. 예: 40×60 px, 200×160 px.</li>
+  <li>박스 프레임 이미지는 <b>9-슬라이스</b>로 씁니다. 모서리 부분은 원래 크기를 유지하고 변 부분만 늘어납니다. 그래서 외곽선 두께와 모서리 장식이 늘어나지 않습니다. 모서리 영역 크기(px)를 같이 알려 주세요.</li>
+  <li>고정 크기 요소는 <b>박스의 어디에 붙는지</b> 정해 주세요. 예: 왼쪽 위 모서리 바깥 위쪽, 아래 가운데 등. 박스가 커지고 작아지면 그 위치를 따라 움직입니다.</li>
+  <li>박스가 아주 작을 때(수십 픽셀) 글자가 박스보다 넓어지는 경우도 생각해 주세요. 박스 바깥으로 삐져나와도 되는지, 아니면 다른 배치가 필요한지요.</li>
+</ul>
+
+<h3>2.4 그 밖에 알아 두시면 좋은 것</h3>
+<ul>
+  <li>실루엣(③)은 박스 안쪽에 같이 깔립니다. 박스 디자인과 실루엣 색이 어울리는지 함께 봐 주세요. 실루엣 색은 3절 이후 내용대로 직접 바꾸실 수 있습니다.</li>
+  <li>배경은 대부분 숲·풀밭이라 어둡고 초록빛입니다.</li>
+</ul>
+
+<p><b>보내 주시면 좋은 것</b>: 12종류 디자인 시안(작은 박스·큰 박스 예시), 요소별 "늘어남 / 고정" 표시, 프레임(9-슬라이스 모서리 크기 포함)·아이콘 PNG(투명 배경), 폰트·크기·색, 각 텍스트 칸이 무슨 정보인지 메모.</p>
+
+<!-- ================================================================ -->
+<h2 id="s3">3. 머티리얼 인스턴스 위치와 대상별 대응</h2>
+
+<p>콘텐츠 브라우저 경로: <code>Content / widget / target_detection / Materials</code></p>
+
+<div class="scroll">
+<table>
+  <tr><th>머티리얼 인스턴스</th><th>쓰이는 대상</th><th>현재 색</th></tr>
+  <tr><td><code>MI_DetSketch_SoldierAlly</code></td><td>아군 병사</td><td><span class="sw" style="background:#00ffff"></span>청록</td></tr>
+  <tr><td><code>MI_DetSketch_SoldierEnemy</code></td><td>적군 병사</td><td><span class="sw" style="background:#ff0000"></span>빨강</td></tr>
+  <tr><td><code>MI_DetSketch_Truck</code></td><td>트럭</td><td><span class="sw" style="background:#31d18b"></span>초록</td></tr>
+  <tr><td><code>MI_DetSketch_UGV</code></td><td>UGV(무인 지상 차량)</td><td><span class="sw" style="background:#31d18b"></span>초록</td></tr>
+  <tr><td><code>MI_DetSketch_Drone</code></td><td>드론</td><td><span class="sw" style="background:#31d18b"></span>초록</td></tr>
+  <tr><td><code>MI_DetSketch_Parachute</code></td><td>낙하산(적 침투 흔적)</td><td><span class="sw" style="background:#ffa834"></span>주황</td></tr>
+</table>
+</div>
+
+<ul>
+  <li><b>MI 하나를 고치면 RCWS 화면과 UAV 화면에 모두 반영됩니다.</b> 두 화면이 같은 MI를 씁니다.</li>
+  <li>같은 폴더의 <code>M_UI_DetectionSketch</code>는 부모 머티리얼(계산 로직)입니다. <b>열거나 수정하지 말아 주세요.</b> 수정은 항상 <code>MI_DetSketch_*</code>에서 합니다.</li>
+  <li>진영이 갈리는 건 병사뿐입니다. 트럭·UGV·드론은 항상 아군 장비라 종류당 MI가 하나입니다.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="s4">4. 수정하는 순서</h2>
+
+<ol>
+  <li>콘텐츠 브라우저에서 <code>Content/widget/target_detection/Materials</code>로 이동합니다.</li>
+  <li>(Perforce 사용 시) 수정할 MI를 우클릭하고 <b>Check Out</b>합니다.</li>
+  <li>MI를 <b>더블클릭</b>해서 머티리얼 인스턴스 에디터를 엽니다.</li>
+  <li>오른쪽 <b>Details</b> 패널의 <b>Parameter Groups → Style</b> 그룹을 펼칩니다.</li>
+  <li>바꿀 파라미터 <b>왼쪽 체크박스를 켭니다</b>. 체크해야 값을 바꿀 수 있습니다.</li>
+  <li>값을 바꿉니다. 왼쪽 미리보기 창에 바로 반영됩니다. 색은 색 견본을 클릭해 컬러 피커에서 고릅니다.</li>
+  <li><b>Ctrl+S</b>로 저장합니다. 컴파일은 필요 없습니다.</li>
+</ol>
+
+<div class="box ok">
+  <b>미리보기의 사람 모양은 가짜입니다.</b> 미리보기와 WBP 디자이너에서는 실제 대상이 없어서, 색·투명도를 볼 수 있게 <b>가짜 사람 모양</b>을 대신 보여 줍니다.
+  트럭·드론 MI도 미리보기는 사람 모양입니다. 게임 중에는 실제 대상 모양으로 바뀝니다.
+</div>
+
+<div class="box note">
+  <b>컬러 피커 팁</b>: 언리얼 컬러 피커는 <b>Hex sRGB</b>와 <b>Hex Linear</b> 칸이 따로 있습니다. 디자인 툴(XD/피그마)의 HEX 값은 <b>Hex sRGB</b> 칸에 넣어야 같은 색이 나옵니다.
+  아래 표의 RGB 숫자(0~1)는 Linear 값이고, 괄호 안 HEX가 sRGB 값입니다.
+</div>
+
+<!-- ================================================================ -->
+<h2 id="s5">5. 파라미터 상세</h2>
+
+<p>
+  <span class="tag t-edit">수정</span> 자유롭게 바꿔도 되는 값
+  &nbsp;<span class="tag t-rare">신중</span> 이유가 있을 때만
+  &nbsp;<span class="tag t-keep">고정</span> 건드리지 않음
+</p>
+
+<h3>5.1 실루엣을 칠하는 방식</h3>
+<p>실루엣은 두 부분으로 칠해집니다. 색은 둘 다 <code>OverrideColor</code> 하나이고, 투명도만 따로 정합니다.</p>
+<ul>
+  <li><b>외곽선</b>: 실루엣 가장자리 <b>안쪽</b>으로 <code>OutlineWidthPx</code> 픽셀 두께의 띠. 불투명도 <code>OutlineOpacity</code>.</li>
+  <li><b>채움</b>: 외곽선 안쪽 전부. 불투명도 <code>FillOpacity</code>. 여기에 <b>빗금</b>(<code>HatchSpacingPx</code>, <code>HatchStrength</code>)이 겹칩니다. 빗금은 채움에만 들어가고 외곽선에는 안 들어갑니다.</li>
+</ul>
+
+<div class="demo">
+  <figure>
+    <svg viewBox="0 0 190 200">
+      <defs>
+        <pattern id="p1" width="8.5" height="8.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="4.25" height="8.5" fill="#ff0000" opacity="0.25"/>
+          <rect x="4.25" width="4.25" height="8.5" fill="#ff0000" opacity="0.15"/>
+        </pattern>
+      </defs>
+      <circle cx="95" cy="46" r="18" fill="url(#p1)" stroke="#f00" stroke-opacity=".9" stroke-width="3"/>
+      <path d="M62 74 Q95 62 128 74 L138 132 L120 132 L120 186 L102 186 L95 146 L88 186 L70 186 L70 132 L52 132 Z" fill="url(#p1)" stroke="#f00" stroke-opacity=".9" stroke-width="3" stroke-linejoin="round"/>
+    </svg>
+    <figcaption><b>현재 기본값</b>채움 0.25 · 외곽선 0.9 / 2px · 빗금 6px 강도 0.4</figcaption>
+  </figure>
+  <figure>
+    <svg viewBox="0 0 190 200">
+      <circle cx="95" cy="46" r="18" fill="#f00" fill-opacity=".45" stroke="#f00" stroke-opacity=".9" stroke-width="3"/>
+      <path d="M62 74 Q95 62 128 74 L138 132 L120 132 L120 186 L102 186 L95 146 L88 186 L70 186 L70 132 L52 132 Z" fill="#f00" fill-opacity=".45" stroke="#f00" stroke-opacity=".9" stroke-width="3" stroke-linejoin="round"/>
+    </svg>
+    <figcaption><b>빗금 없음, 진한 채움</b>HatchStrength 0 · FillOpacity 0.45</figcaption>
+  </figure>
+  <figure>
+    <svg viewBox="0 0 190 200">
+      <circle cx="95" cy="46" r="18" fill="none" stroke="#f00" stroke-opacity="1" stroke-width="5"/>
+      <path d="M62 74 Q95 62 128 74 L138 132 L120 132 L120 186 L102 186 L95 146 L88 186 L70 186 L70 132 L52 132 Z" fill="none" stroke="#f00" stroke-opacity="1" stroke-width="5" stroke-linejoin="round"/>
+    </svg>
+    <figcaption><b>외곽선만</b>FillOpacity 0 · OutlineOpacity 1 · 두께 4px</figcaption>
+  </figure>
+  <figure>
+    <svg viewBox="0 0 190 200">
+      <defs>
+        <pattern id="p4" width="17" height="17" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="8.5" height="17" fill="#f00" opacity="0.4"/>
+        </pattern>
+      </defs>
+      <circle cx="95" cy="46" r="18" fill="url(#p4)" stroke="#f00" stroke-opacity=".5" stroke-width="1.5"/>
+      <path d="M62 74 Q95 62 128 74 L138 132 L120 132 L120 186 L102 186 L95 146 L88 186 L70 186 L70 132 L52 132 Z" fill="url(#p4)" stroke="#f00" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+    <figcaption><b>굵은 빗금, 얇은 선</b>HatchSpacing 12 · Strength 1 · FillOpacity 0.4 · 외곽선 1px 0.5</figcaption>
+  </figure>
+</div>
+<p style="font-size:13px;color:var(--muted)">※ 위 그림은 감을 잡기 위한 대략적인 예시입니다. 실제 모습은 미리보기나 게임에서 확인해 주세요.</p>
+
+<h3>5.2 Style 그룹 — 디자인용 값</h3>
+<div class="scroll">
+<table>
+  <tr><th style="width:150px">파라미터</th><th style="width:60px">구분</th><th style="width:80px">기본값</th><th>뜻 / 범위 / 팁</th></tr>
+  <tr>
+    <td><code>OverrideColor</code></td><td><span class="tag t-edit">수정</span></td><td>MI마다 다름</td>
+    <td><b>실루엣 색</b>(채움·외곽선 공통).<br>
+      <b>알파(A) 값은 무시됩니다.</b> 투명도는 아래 Opacity 값들로 조절해 주세요.<br>
+      어두운 숲·풀밭 배경 위에 그려지므로 밝고 채도 높은 색이 잘 보입니다.</td>
+  </tr>
+  <tr>
+    <td><code>FillOpacity</code></td><td><span class="tag t-edit">수정</span></td><td>0.25</td>
+    <td><b>채움 불투명도.</b> 0 = 채움 없음(외곽선만), 1 = 꽉 찬 색.<br>
+      너무 높으면 대상이 가려져 안 보입니다. 보통 0.15~0.4.</td>
+  </tr>
+  <tr>
+    <td><code>OutlineOpacity</code></td><td><span class="tag t-edit">수정</span></td><td>0.9</td>
+    <td><b>외곽선 불투명도.</b> 0 = 외곽선 없음, 1 = 완전 불투명.</td>
+  </tr>
+  <tr>
+    <td><code>OutlineWidthPx</code></td><td><span class="tag t-edit">수정</span></td><td>2</td>
+    <td><b>외곽선 두께(화면 픽셀).</b> 실루엣 가장자리에서 안쪽으로 그만큼 들어온 띠입니다.<br>
+      0 = 외곽선 없음. 1~4 권장.<br>
+      아주 멀리 있어 작게 보이는 대상은 실루엣 자체가 몇 픽셀뿐이라 두꺼우면 전부 외곽선이 됩니다.</td>
+  </tr>
+  <tr>
+    <td><code>HatchSpacingPx</code></td><td><span class="tag t-edit">수정</span></td><td>6</td>
+    <td><b>빗금 간격(화면 픽셀).</b> 줄 하나 + 빈칸 하나의 주기입니다. 줄과 빈칸 폭이 같습니다.<br>
+      빗금은 <b>화면 기준 대각선( / 방향)</b>으로 고정입니다. 대상이 움직여도 빗금은 화면에 붙어 있습니다.<br>
+      4~12 권장. 너무 작으면(2~3) 모아레처럼 지저분해 보일 수 있습니다.</td>
+  </tr>
+  <tr>
+    <td><code>HatchStrength</code></td><td><span class="tag t-edit">수정</span></td><td>0.4</td>
+    <td><b>빗금 진하기.</b> 0 = 빗금 없음(고른 채움), 1 = 빈칸이 완전히 투명.<br>
+      그 사이 값이면 빈칸이 그 비율만큼 옅어집니다.</td>
+  </tr>
+  <tr>
+    <td><code>DilateTexels</code></td><td><span class="tag t-rare">신중</span></td><td>0</td>
+    <td><b>실루엣 살짝 부풀리기</b>(0 또는 1만 의미 있음).<br>
+      멀리 있는 병사의 총열·팔다리처럼 얇은 부분이 끊겨 보일 때 1로 하면 이어집니다.<br>
+      대신 계산량이 약 9배라 <b>필요한 MI에만</b> 켜 주세요.</td>
+  </tr>
+  <tr>
+    <td><code>UseStateColor</code></td><td><span class="tag t-keep">고정</span></td><td>0</td>
+    <td>1로 하면 <code>OverrideColor</code> 대신 게임이 주는 진영 색(아군 파랑/적 빨강/낙하산 노랑)을 씁니다.<br>
+      <b>지금은 종류별 MI 색으로 정하는 방식이라 0으로 둡니다.</b></td>
+  </tr>
+  <tr>
+    <td><code>LockedPulseSpeed</code><br><code>LockedPulseAmount</code></td><td><span class="tag t-keep">고정</span></td><td>6 / 0.3</td>
+    <td>"조준 고정" 상태일 때 깜빡이는 효과용입니다. <b>아직 이 상태가 게임에서 안 나와서 바꿔도 변화가 없습니다.</b></td>
+  </tr>
+</table>
+</div>
+
+<h3>5.3 Preview 그룹</h3>
+<div class="scroll">
+<table>
+  <tr><th style="width:150px">파라미터</th><th style="width:60px">구분</th><th style="width:80px">기본값</th><th>뜻</th></tr>
+  <tr>
+    <td><code>PreviewShape</code></td><td><span class="tag t-keep">고정</span></td><td>1</td>
+    <td>미리보기용 가짜 사람 모양을 켭니다. 게임 중에는 자동으로 실제 실루엣이 우선이라 <b>1로 둬도 게임 화면엔 영향이 없습니다.</b><br>
+      0으로 하면 미리보기·WBP 디자이너에서 아무것도 안 보이게 됩니다.</td>
+  </tr>
+</table>
+</div>
+
+<h3>5.4 Detection 그룹 — 건드리지 않음</h3>
+<p><span class="tag t-keep">고정</span>
+<code>DetectionMask</code>, <code>MaskUVRect</code>, <code>MaskTexelSize</code>, <code>TargetDepthCm</code>, <code>DepthToleranceCm</code>, <code>MaskValid</code>, <code>StateColor</code>, <code>IsLocked</code>, <code>LockProgress</code>, <code>Confidence</code></p>
+<p>게임이 매 프레임 직접 채우는 값입니다. MI에서 바꿔도 게임 중에는 덮어써지고, 미리보기만 이상해질 수 있습니다. <b>체크박스를 켜지 말아 주세요.</b></p>
+
+<!-- ================================================================ -->
+<h2 id="s6">6. 현재 값 (2026-10-14 기준)</h2>
+
+<p>6개 모두 색만 다르고 나머지는 기본값입니다.</p>
+<div class="scroll">
+<table>
+  <tr><th>MI</th><th>OverrideColor (Linear R,G,B)</th><th>Fill</th><th>Outline</th><th>두께</th><th>빗금 간격/강도</th></tr>
+  <tr><td>SoldierAlly</td><td><span class="sw" style="background:#00ffff"></span>0, 1, 1 (#00FFFF)</td><td>0.25</td><td>0.9</td><td>2</td><td>6 / 0.4</td></tr>
+  <tr><td>SoldierEnemy</td><td><span class="sw" style="background:#ff0000"></span>1, 0, 0 (#FF0000)</td><td>0.25</td><td>0.9</td><td>2</td><td>6 / 0.4</td></tr>
+  <tr><td>Truck</td><td><span class="sw" style="background:#31d18b"></span>0.031, 0.638, 0.258 (#31D18B)</td><td>0.25</td><td>0.9</td><td>2</td><td>6 / 0.4</td></tr>
+  <tr><td>UGV</td><td><span class="sw" style="background:#31d18b"></span>0.031, 0.638, 0.258 (#31D18B)</td><td>0.25</td><td>0.9</td><td>2</td><td>6 / 0.4</td></tr>
+  <tr><td>Drone</td><td><span class="sw" style="background:#31d18b"></span>0.031, 0.638, 0.258 (#31D18B)</td><td>0.25</td><td>0.9</td><td>2</td><td>6 / 0.4</td></tr>
+  <tr><td>Parachute</td><td><span class="sw" style="background:#ffa834"></span>1, 0.392, 0.034 (#FFA834)</td><td>0.25</td><td>0.9</td><td>2</td><td>6 / 0.4</td></tr>
+</table>
+</div>
+<p style="font-size:13px;color:var(--muted)">※ 괄호 안 HEX는 Linear 값을 sRGB로 환산한 근사값입니다. DilateTexels는 전부 0입니다.</p>
+
+<!-- ================================================================ -->
+<h2 id="s7">7. 결과 확인하는 방법</h2>
+
+<h3>7.1 빠른 확인 — MI 미리보기</h3>
+<p>MI 에디터 왼쪽 미리보기에 가짜 사람 모양으로 바로 보입니다. 색·투명도·빗금 느낌은 여기서 맞추면 됩니다.</p>
+
+<h3>7.2 마커 전체 모양 — WBP 디자이너</h3>
+<p><code>Content/widget/target_detection/Markers/RCWS/</code> 또는 <code>.../Markers/UAV/</code>의 <code>WBP_DetMarker_*</code>를 열면 박스·글자·실루엣이 같이 보입니다.
+WBP 모양은 테스트용이니 실루엣 색이 어떻게 겹쳐 보이는지만 참고해 주세요. <b>보기만 하고 저장하지 말아 주세요</b>.</p>
+
+<h3>7.3 실제 게임 화면 — 테스트 레벨 <code>L_TD_Test</code></h3>
+<p>시나리오 없이 대상들이 바로 보이게 만든 확인용 레벨입니다.</p>
+<ol>
+  <li><code>Content/widget/target_detection/L_TD_Test</code> 레벨을 엽니다.</li>
+  <li>그대로 <b>Play(PIE)</b>합니다. 트럭 RCWS가 좌우로 훑으며 탐지하고, 드론이 대상들 위에 떠서 내려다봅니다.</li>
+  <li>아군 병사 6명, 적군 병사 6명, UGV, 낙하산 2개가 배치돼 있습니다. 쓰러진 병사는 몇 초 뒤 제자리에서 다시 나타납니다.</li>
+</ol>
+<ul>
+  <li><b>드론 마커</b>는 이 레벨에서는 나오지 않습니다(드론이 하나뿐이라 볼 대상이 없음). <code>MI_DetSketch_Drone</code>은 미리보기로 확인해 주세요.</li>
+  <li>MI를 고친 뒤에는 PIE를 다시 시작하면 확실히 반영됩니다.</li>
+  <li>레벨의 <code>DetectionTestDirector</code> 설정은 바꾸지 않아도 됩니다.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="s8">8. 주의할 점 / 자주 묻는 것</h2>
+
+<div class="box warn">
+  <b>수정은 <code>MI_DetSketch_*</code>에서만</b> 해 주세요. 부모 머티리얼 <code>M_UI_DetectionSketch</code>와 <code>Core/MF_DetectionMaskCoverage</code>는 계산 로직이라, 바뀌면 실루엣이 통째로 안 나올 수 있습니다.
+</div>
+
+<p><b>Q. 채움과 외곽선 색을 다르게 하고 싶어요.</b><br>
+지금 구조로는 한 색만 됩니다. 필요하면 말씀해 주세요. 부모 머티리얼에 외곽선 색 파라미터를 추가하겠습니다.</p>
+
+<p><b>Q. OverrideColor 알파를 낮췄는데 그대로예요.</b><br>
+알파는 무시됩니다. <code>FillOpacity</code> / <code>OutlineOpacity</code>로 조절해 주세요.</p>
+
+<p><b>Q. 실루엣 가장자리가 살짝 계단처럼 보여요.</b><br>
+실루엣은 성능 때문에 화면보다 낮은 해상도로 만듭니다. 외곽선(<code>OutlineWidthPx</code> 2 이상)이 경계를 덮어 줘서 대부분 티가 안 납니다.</p>
+
+<p><b>Q. 실루엣이 검은 사각형으로 나와요.</b><br>
+MI 문제가 아니라 셰이더 갱신 문제입니다. 개발 쪽에 알려 주세요.</p>
+
+<p><b>Q. 종류를 더 나누고 싶어요(예: 적군 차량).</b><br>
+기존 MI를 복제(Duplicate)해서 색을 바꿔 두시고 이름과 용도를 알려 주세요. 해당 대상에 연결하는 건 개발 쪽에서 합니다.</p>
+
+<p><b>Q. 이 실루엣이 LIG로 나가는 영상에도 찍히나요?</b><br>
+아니요. 박스와 실루엣은 시뮬레이터 화면에만 그려지고, 외부로 송출되는 카메라 영상에는 들어가지 않는 구조입니다(실제 송출 영상 최종 확인은 개발 쪽에서 진행 예정).</p>
+
+</div>
+</body>
+</html>

@@ -288,6 +288,13 @@ Saved/HealthLogs/<UTC yyyy.MM.dd-HH.mm.ss>_<호스트>/
 - **장치·연결(`DEV` 태그, 2026-10-01 추가 — 리눅스 확인 완료 `D:\log_1001\3`: 시작 시 오디오 장치(HDMI)·조이스틱 Ready, RTSP 인코더 5개 생성, 조이스틱 USB 뽑기/꽂기 2회 `Device removed`→`Device Ready`, Alt+Tab 포커스 잃음/얻음, 화면 `2560x1440 창 전체화면 / 모니터 2대`, 시작 줄 UObject 47205(수정 확인). RTSP 클라이언트 접속 줄은 접속 클라이언트가 없어 미확인)**: 엔진/플러그인이 이미 남기는 줄을 로그 싱크가 문구로 잡아 같은 시간축에 — 조이스틱 연결·해제·준비(JoystickPlugin `JoystickSubsystem.cpp:744/844`, `JoystickInputDevice.cpp:489`), 오디오 출력 장치 선택·교체 시도(LogAudioMixer/SDL), RTSP 클라이언트 접속·해제·인코더 생성(LogRtspEncoder*). 카테고리는 FName 비교(모든 로그 줄이 지나가는 자리라 할당 없음). 기록기 초기화가 오디오·조이스틱 초기화보다 먼저라(리눅스 엔진 로그 1356 → 1378 → 1546줄) **시작 시 잡힌 장치도 남는다**. 추가로 창 포커스 얻음/잃음(`OnApplicationActivationStateChanged`)과 시작 시 화면 줄(게임 해상도·창 모드·주 모니터·모니터 수).
 - **리눅스 확인(2026-10-01, `D:\log_1001\2`)**: 종료 사유 ✅(창 닫기 → `종료 요청 — Received SDL_EVENT_QUIT` + `RequestExit(bForce=true, ReturnCode=0)`), 새 열 ✅(스왑 0, UObject 47k→84k(로비→본 레벨), CPU 0.8~5.8 코어, 부하 2~3), 시작 줄 ✅. 시작 줄의 `UObject 0`(1초값 비어 있음)은 즉시 읽기로 수정, VRAM 문구 정정(위 3절). 로딩 중 멈춤 경로는 이번 실행에서 로딩이 2 s 미만이라 미발동 — 미검증.
 
+### 14.2d 2026-10-12/13 추가 — UGV 자세 열·`ugv_flip`·RSS 분해 열
+
+- **A 등급 사유 `ugv_flip` 추가**(`IsCriticalSnapshotReason`, `TitanHealthRecorderSubsystem.cpp:105-107`) — 시나리오 모니터가 UGV 전복(기울기 ≥60° 1.5 s)을 확정하면 `LogEvent("UGV", …)` + `RequestSnapshot("ugv_flip")`. 상세 `vehicle/ugv/2026-10-13_ugv_flip_detection_logging.md`.
+- **리눅스 RSS 분해 4열**: 감시 스레드가 `/proc/self/status` 의 `RssAnon`(힙·익명 매핑) / `RssFile`(.so·pak) / `RssShmem`(드라이버 공유 매핑) / `Threads` 를 1 s 마다 — 어느 층이 느는지로 누수 범인을 가른다(리눅스 외 -1). 이 열로 Vulkan 누수 2건을 잡음: `diagnostics/2026-10-13_linux_rss_leak_vulkan.md`.
+- **UGV 자세 6열**(맨 끝): `ugv_tilt_max, ugv_tilt, ugv_pitch, ugv_roll, ugv_angvel_max, ugv_speed_kmh` — 게임 스레드 매 프레임 샘플·1초 최대, UGV 없는 레벨·멈춤 줄은 빈칸. 상세 `vehicle/ugv/2026-10-12_ugv_flip_pawn_collision_and_self_righting.md` (d)절. 블랙박스 바이너리 레코드는 그대로.
+- `health.csv` 끝 열 순서(현재, `TitanHealthRecorderSubsystem.cpp:511-513`): `…,stalled_s,swap_used_mb,uobjects,proc_cpu_cores,load_avg1,rss_anon_mb,rss_file_mb,rss_shmem_mb,threads,ugv_tilt_max,ugv_tilt,ugv_pitch,ugv_roll,ugv_angvel_max,ugv_speed_kmh`.
+
 ### 14.3 빌드·검증 체크리스트
 
 1. 윈도우 에디터 빌드 → `-TitanHealthInEditor` 로 PIE 또는 Standalone 실행 → `Saved/HealthLogs/<세션>/` 에 파일 4종 생성, 로그 `[Health] 블랙박스 기록 →`.

@@ -400,6 +400,25 @@ API: `AddDetectableFaction()` / `SetDetectableFactions()` / `IsFactionDetectable
 - `UDetectionOverlayWidget : public UWidget` — WBP 디자이너에 드래그해서 쓸 수 있는
   래퍼. `LineThickness`/`FriendlyColor`/`EnemyColor` 노출
 
+> 📌 [2026-10-13] **박스는 대상 종류×진영별 WBP로 그린다.** 대상마다 `UDetectionMarkerWidget` 자식 WBP 하나를
+> 박스 UV에 앵커를 늘려 **크기를 바꿔** 배치하므로 WBP 안의 고정 크기 글자는 박스가 작아져도 안 작아진다.
+> 클래스 결정 순서: 오버레이 `MarkerKindRules`(Kind/TargetClass IsA/진영/태그, **첫 매칭 행 승리**) →
+> `MarkerWidgetClassByState` → `MarkerWidgetClass` → 없으면 예전처럼 선. 3개 화면(`SelfDefenseMonitor1/2`·`UGVTestDashboard`)에
+> 6행(병사 아군/적군, 트럭, UGV, 드론, 낙하산) + 기본 마커(`WBP_DetMarker_UAV`/`_RCWS`)가 설정돼 있다.
+> `SetDetectionsFrom(탐지 컴포넌트)`가 카메라 거리를 채우고, WBP의 `DistanceText`(BindWidgetOptional)에 C++가 직접 쓴다.
+> RCWS 자동조준 `Tracking`/`Locked` 상태는 코드에 남아 있지만 **연결 안 됨**(`SetLockState` 호출 없음, 별도 작업 예정).
+> 내부 구조는 `SOverlay{SDetectionOverlay(선), SConstraintCanvas(마커)}`. 에셋 경로·규칙·WBP 레이아웃은
+> `ui/2026-10-13_detection_marker_wbp.md` 3절.
+>
+> 📌 [2026-10-13] **실루엣 강조(정답 마스크).** 마커 WBP에 `MaskImage`가 있으면 오버레이가 탐지 카메라 자식으로
+> `UDetectionMaskCaptureComponent`를 런타임에 붙여, **`DetectedTargets` 액터만** ShowOnly로 그린 저해상도 깊이(R32F, Nearest)를
+> 만들고 마커 머티리얼이 대상 깊이로 잘라 반투명 스케치로 그린다(가림 무관). UMG 전용이라 **LIG RTSP에는 안 실린다**(RTSP는
+> PP 머티리얼 뒤 씬 복사/짐벌 렌더 타깃 — 그래서 PP/스텐실 방식은 불가). 대상 목록은 탐지 스캔을 따르고, 윤곽 갱신 주기만
+> `Mask Update Mode`(매 프레임/고정 Hz/스캔 동기). `UTargetDetectionComponent::GetCompletedScanCount()`가 이 용도로 추가됨.
+> 실루엣 색은 조합별 MI(`MI_DetSketch_*`)의 `OverrideColor`. 경계 처리 HLSL·머티리얼 구조는 같은 문서 4절.
+> 마스크가 안 나오면 콘솔 `Detection.MaskDiag 1` — 오버레이별 단계(`stage=requested`가 정상)·캡처·텍스처 크기를 1초마다 로그.
+> MCP로 머티리얼을 고친 뒤엔 머티리얼 에디터에서 **Apply**를 눌러야 반영된다(같은 문서 9절).
+
 **중요한 전제**: 이 오버레이 위젯은 대응하는 카메라 `Image` 위젯과 **정확히 같은
 위치/크기**로 겹쳐놔야 함 — `ScreenMinUV`/`MaxUV`가 카메라가 찍은 프레임 전체를
 기준으로 한 0..1 비율이기 때문에, 오버레이 위젯의 로컬 0..1 공간이 그 프레임과 1:1로

@@ -133,6 +133,10 @@
 
 ## `rcws/` — RCWS 전용 devlog
 
+- `2026-10-12_selfdefense_client_turret_reticle_replication.md` (2026-10-12, **완료**) — 자체방호 클라
+  RCWS 포신 레티클이 화면에 고정되던 버그. 원인=총구 탄도 상태 미복제 → `MuzzleAimTargetWorldLocation`
+  복제 + `ReplicatedMuzzleRelativeRotation`(OnRep)으로 서버 총구 상태 복제. **2-PC 검증 완료(2026-10-12)**,
+  클라 포신 메시 앙각 반영은 미확인.
 - `2026-09-17_rcws_gunfire_hearing.md` (2026-09-17, **진행중**) — RCWS 청각 보조. 시각 탐지도 응시할
   기억도 없을 때 총구 기준 50m(09-21 확정; SoldierLab 레벨에서 25m는 적 배치 밖이었음) 안 최근 적 총성 방향을 4초 조사하는
   `ERCWSAutoAimPhase::InvestigatingGunfire` 단계(우선순위 시각 → 응시 → 총성 → 스윕, LOS 검사 없음).
@@ -376,7 +380,11 @@
 
 ## `rtsp/` — RTSP 영상 송출
 
-- `2026-09-30_rtsp_async_encode_pipeline_design.md` (2026-09-30, **설계단계**) — **최신.** 렌더 스레드는
+- `2026-10-07_rcws_bitrate_starvation_direction_stutter.md` (2026-10-07, 완료 — 빌드·PIE 검증, 미서브밋) —
+  **최신.** RCWS 1080p 스트림이 특정 방향(나무 많은 복잡한 화면)에서만 끊겨 보인 원인 = **CCTV용 기본
+  비트레이트 4000 kbps를 그대로 쓰고 있었고 선언 fps도 실제보다 높은 60**이었다. `RcwsBitrateKbps`
+  (UGV 10000 · 트럭 6000) 추가 + `RcwsTargetFps=30`으로 해결. 10-01 비동기 인코드 설계와는 무관한 원인.
+- `2026-09-30_rtsp_async_encode_pipeline_design.md` (2026-09-30, **설계단계**) — 렌더 스레드는
   GPU 복사만 기록하고 NVENC 일(대기·CUDA 복사·인코드·Lock·push)은 스트림별 워커 스레드로 옮기는 새 구조
   설계. 리눅스(전시 PC) 우선. 목표 = 렌더 스레드 동기 대기 제거 + 리눅스 서버 지연 ≈100 ms 감소. 과거
   데드락의 정확한 원인을 새 구조의 전제로 정리, 슬롯 링·세션 소유권·수명/종료·검증 계획 포함.
@@ -498,6 +506,14 @@
 
 ## `infra_architecture/`
 
+- `2026-10-07_dlss_frame_generation_feasibility.md` (2026-10-07, 완료 — 조사 전용, 코드 변경 없음) —
+  **DLSS·프레임 생성(FG) 도입 가능성.** 1차 판정은 **비권장** — 전시 PC(리눅스)에서 UE 공식 플러그인이
+  지원되지 않고, 씬캡쳐는 엔진이 스크린 퍼센티지를 100%로 고정해(`SceneCaptureRendering.cpp:950-955`)
+  업스케일 효과가 없다. 저녁에 사용자 요구조건(캡쳐 포함 · 화면 = RTSP 동일 · 리눅스 · 엔진 수정 없이
+  별도 플러그인) 기준으로 재판정(§8): **DLSS SR/DLAA는 플러그인만으로 될 가능성 높음**(`ITemporalUpscaler`
+  + `SetTemporalUpscalerInterface`, 캡쳐 뷰에도 `BeginRenderViewFamily`가 호출됨 — RTSP 플러그인이 이미
+  리눅스 Vulkan+CUDA 선례), **FG는 RTSP만 쉽고 "화면까지 동일"은 대형 R&D**(창은 엔진 프레임당 1회
+  Present). PoC 순서·리스크 목록이 §8에 있다. 당장의 대안은 기존 TSR 스크린 퍼센티지를 그래픽 탭 옵션으로.
 - `2026-10-06_s6_fix_batch1.md` · `2026-10-06_s6_fix_batch3.md` (2026-10-06, 완료 — 빌드·PIE 1차 검증) —
   **S6 감사 후속 수정.** 사용자 방침은 *현재 품질 유지, 결과가 바뀌는 최적화는 범위 밖*. 묶음 1 = 데칼 FIFO
   캡 무효 수정(`SpawnDecalAtLocation`의 Owner가 WorldSettings라 `Destroy()`가 거부돼 **`MaxActiveImpactDecals

@@ -1862,6 +1862,72 @@ ID **W133~W134 · P203~P205**, **[C-180] 해결 · [C-179] 확장 · [W131] · [
 
 ---
 
+## 2026-10-07 — DLSS·프레임 생성 도입 가능성 조사 (조사 전용, 코드 변경 없음)
+
+> ⚠ 2026-10-08 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `infra_architecture/2026-10-07_dlss_frame_generation_feasibility.md` 가 정본.
+
+- **1차 판정: 비권장** — 전시 PC(리눅스)에서 UE 공식 DLSS 플러그인이 지원되지 않고, 씬캡쳐는 엔진이
+  스크린 퍼센티지를 100%로 고정해(`SceneCaptureRendering.cpp:950-955`) 업스케일 이득이 없다.
+  대안은 기존 TSR 스크린 퍼센티지·품질을 그래픽 탭 옵션으로 노출하는 것.
+- **오후 추가** — 공개된 UE+리눅스 DLSS 통합 사례는 없음. 단 NGX 직접 FG SDK는 리눅스 `.so`를 제공한다
+  (공식 OS 요구사항 표기는 Windows만).
+- **저녁 추가(§8) — 사용자 요구조건 기준 재판정.** 조건은 ① 캡쳐에도 적용 ② 언리얼 화면과 RTSP 송출
+  영상이 **둘 다 같게** ③ 리눅스 ④ 엔진 수정 기피, RTSP처럼 별도 플러그인.
+  - 전제는 이미 만족 — 출력마다 원본이 하나라 원본에 적용하면 두 출력이 자동으로 같아진다(캡쳐 RT를
+    위젯과 RTSP가 같이 읽고, 메인 뷰는 뷰 익스텐션이 결과를 복사).
+  - **DLSS SR/DLAA = 플러그인만으로 될 가능성 높음** [A 근거 표] — `ITemporalUpscaler` +
+    `SetTemporalUpscalerInterface`, 캡쳐 포함 모든 뷰 패밀리에 `BeginRenderViewFamily` 호출, Vulkan 확장
+    추가 API 공개, RTSP 플러그인의 리눅스 Vulkan+CUDA 선례. 걸리는 점 = 캡쳐 해상도 100% 고정을
+    플러그인이 덮어써야 함(PoC 필요), 캡쳐 성능 이득은 작고(S1의 해상도 무관 고정비) **화질 위주**,
+    CCTV 라운드로빈으로 히스토리 간격 4틱, 뷰마다 NGX 인스턴스 = VRAM 증가(스킨 캐시 급저하 건에서
+    VRAM 7.4~7.7/8.15 GB였음 유의).
+  - **FG = RTSP만이면 가능, "화면까지 동일"은 대형 R&D** — 창은 엔진 프레임당 1회 Present이므로 중간
+    프레임을 화면에 내려면 Slate 재그리기 + 페이싱 + 자체방호 축 OS 창 2개 동기화가 필요하다.
+    창 백버퍼에 FG를 걸면 캡쳐 패널에 모션벡터가 없어 보간되지 않아 "화면 = RTSP" 조건을 깬다.
+  - PoC 순서와 리스크 목록이 §8에 있다 — **실제 구현은 별도 세션(사용자)**.
+
+---
+
+## 2026-10-12 — 자체방호 클라 RCWS 포신 레티클 고정 = 총구 탄도 상태 미복제 (RCWS 세션)
+
+> 원문 `rcws/2026-10-12_selfdefense_client_turret_reticle_replication.md`.
+
+- **증상** — 2-PC(UGV 호스트 + 자체방호 클라)에서 `USelfDefenseMonitor2Widget`의 포신 레티클이 화면 중심보다
+  약간 위에 고정, 움직이지 않음.
+- **원인** — `UpdateMuzzleBallisticAim`은 서버 전용, `UpdateTurretReticleForUI`는 전 프로세스. 클라는
+  `MuzzleAimTargetWorldLocation`(미복제 → Zero → 500 m 직선 폴백)과 `Muzzle` 앙각(컴포넌트 미복제)이 없어
+  카메라 대비 총구 상대각이 상수 → 레티클 고정(위치는 Muzzle/카메라 시차).
+- **판단** — 발사·카메라 모두 서버 값이라 클라가 총구를 따로 계산하면 레티클↔트레이서가 갈라짐 → 서버 총구
+  상태 복제(방안 A). 클라 권위 전환은 별개의 큰 작업으로 미채택.
+- **수정** — `MuzzleAimTargetWorldLocation` `Replicated` + 신규 `ReplicatedMuzzleRelativeRotation`
+  (`OnRep_MuzzleRelativeRotation`, 상대회전, `BeginPlay` 1회 적용). 권한 쪽(solo/데모) 동작 불변.
+  `guide/rcws_fire_control_dev_guide.md` §6.1 신설.
+- **상태** — 완료. 사용자 정식 빌드 후 2-PC에서 "잘 된다" 확인(2026-10-12).
+- **남은 것** — 클라 포신 메시 비주얼 앙각 반영 여부(미확인), P4 서브밋.
+
+---
+
+## 2026-10-13 — 탐지 박스 WBP 마커화 + 실루엣 마스크 강조 (UI 세션)
+
+> 원문 `ui/2026-10-13_detection_marker_wbp.md`.
+
+- **요청** — UAV/RCWS 탐지 박스(노랑/빨강/파랑)를 WBP로 디자인 가능하게, 박스가 작아져도 글자는 고정, 반투명 강조,
+  Monitor1·2·UGV 테스트 화면 공통. 파랑 = 아군 `FriendlyColor` 오버라이드(0.012, 0.309, 0.708)로 확인.
+- **구현** — `UDetectionMarkerWidget`(앵커를 박스 UV로 늘려 크기 배치) + 오버레이 `MarkerKindRules`(종류×진영, 첫 매칭 승리) +
+  `DistanceText` C++ 바인딩. `UDetectionMaskCaptureComponent`가 탐지 대상만 ShowOnly 깊이 캡처 → `M_UI_DetectionSketch`(MF 경계 처리,
+  빗금, `PreviewShape` 가짜 실루엣)로 UMG에만 그림 → LIG RTSP에 구조적으로 안 실림. 진단 cvar `Detection.MaskDiag`.
+- **에셋** — `/Game/widget/target_detection/`: MF 1, M 1, MI 6(조합별 색), WBP 14(`Markers/RCWS`·`Markers/UAV` 각 7). 3개 화면에 규칙 6행.
+- **함정** — MCP ComponentMask 기본 RG, MCP recompile로는 셰이더 미갱신(에디터 **Apply** 필요), MCP 구조체 배열은 한 원소씩.
+- **결정** — RCWS 자동조준 Tracking/Locked 연동은 범위 밖(코드만 남김, 별도 작업).
+- **상태** — 완료. 에디터 빌드 + UGV 테스트 화면 PIE에서 박스·거리·반투명 실루엣 정상("아주 잘돼").
+- **테스트 레벨(추가)** — 디자이너 확인용 `/Game/widget/target_detection/L_TD_Test`(시나리오 없음, 6종 대상 배치, New_kadex_0811 라이팅 복사) +
+  `ADetectionTestDirector`(축 선택·트럭 RCWS 자동 감시·드론 호버 전 진영 탐지·죽은 병사 재스폰) + `UScenarioRespawnSubsystem::RespawnActor`(1인 재스폰)
+  + GameMode `?Axis=` 없을 때 감독 축 폴백. 4차 에디터 빌드 후 자체방호 축 PIE 검증. 함정: MCP 프로퍼티 맵 간 복사 시 원본 맵 참조로 저장 실패. 문서 10절.
+- **남은 것** — 디자이너 PNG(`BoxImage`), Monitor1/2 PIE, RTSP 누출 없음 확인, `stat gpu`, 2-PC, 신규 에셋 23개(`L_TD_Test.umap` 포함) `p4 add` + 제출.
+
+---
+
 ## 다음에 예정된 것 (이 시점 기준)
 
 > **2026-10-01 진행현황 반영 메모** — 사용자가 진행현황 표에서 다음을 완료로 판정했다(`progress/README.md`
