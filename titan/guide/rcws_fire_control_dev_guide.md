@@ -330,7 +330,8 @@ UWidget으로 감싸는" 패턴을 그대로 재사용. `RCWSViewImage`/`RCWSDet
   - 레이트레이스는 RNG 거리(`URCWSComponent::UpdateRangeTrace`)와 같은 `URCWSComponent::TraceSightLine`
     (2026-10-15~) — `ECC_Visibility` 히트 + 그보다 앞의 Pawn 몸(캐릭터 캡슐/스켈레탈 메시, `NoBounds`·자기 차량
     제외) 오브젝트 쿼리 중 가까운 쪽. SoldierLab 병사는 캡슐·메시 모두 Visibility=Ignore라 Visibility만으론
-    관통했기 때문(`rcws/2026-10-15_rangefinder_trace_passes_through_soldierlab_soldiers.md`, 빌드·실측 대기).
+    관통했기 때문(`rcws/2026-10-15_rangefinder_trace_passes_through_soldierlab_soldiers.md`). 2026-10-15 사용자
+    실측으로 RNG 거리는 확인됨 — 이 무락온 조준점 앙각은 개별 확인 언급 없음.
 - `UpdateTurretReticleForUI` (**모든 프로세스**) — "현재 총구 각도로 쏘면 어디 맞는가"를
   `SimulateBallisticLandingPoint`로 예측해 화면에 투영. 화면 중심 고정이 아니라 슬루 중엔 움직이다 수렴한다.
   `MuzzleAimTargetWorldLocation`이 ZeroVector면 `TurretReticleProjectionDistanceCm`(500 m) 직선 폴백.

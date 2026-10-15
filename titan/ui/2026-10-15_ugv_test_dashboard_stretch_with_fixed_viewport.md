@@ -1,6 +1,6 @@
 # UGV 테스트 대시보드 — 고정 해상도 뷰포트에서 3D와 같이 축별 스트레치
 
-2026-10-15 / 진행중(C++ 완료, 빌드·실측 대기) / 고정 해상도 모드에서 UMG 대시보드가 창 리사이즈를 안 따라가고 잘리던 문제를, WBP 루트를 Slate 래퍼로 감싸 3D와 같은 축별 배율을 걸어 해결.
+2026-10-15 / 완료(2026-10-15 사용자 빌드·실측 확인 — 스트레치 + §5.1 실루엣 마스크 화면비) / 고정 해상도 모드에서 UMG 대시보드가 창 리사이즈를 안 따라가고 잘리던 문제를, WBP 루트를 Slate 래퍼로 감싸 3D와 같은 축별 배율을 걸어 해결.
 
 관련 문서:
 - 렌더 방식 정본: [`../rtsp/rtsp_resolution_customization_0820.md`](../rtsp/rtsp_resolution_customization_0820.md) §5-1 "최종 형태"
@@ -53,7 +53,8 @@ Slate 위젯 **`SUGVFixedViewportStretch`**(`SCompoundWidget`)로 감싼다.
   - 즉 자식은 **"창 = 고정 해상도"였을 때의 레이아웃**으로 배치되고, 3D와 **동일한 변환**이 붙는다.
 - 고정 모드가 아니면 기존처럼 꽉 채움(래퍼가 아무것도 안 함).
 - 디자이너(`IsDesignTime()`)에서는 감싸지 않음.
-- 렌더 트랜스폼은 Slate 히트테스트가 반영하므로 버튼 클릭 위치도 같이 맞는다(실측 대기).
+- 렌더 트랜스폼은 Slate 히트테스트가 반영하므로 버튼 클릭 위치도 같이 맞는다(이론상. 2026-10-15
+  사용자 실측은 스트레치 "성공"까지만 — 클릭 위치를 따로 언급하진 않음).
 
 스위치: `UPROPERTY bStretchWithFixedViewport`(기본 `true`, Category `UGV Dashboard|Layout`) — 끄면 기존 동작.
 
@@ -76,7 +77,7 @@ Slate 위젯 **`SUGVFixedViewportStretch`**(`SCompoundWidget`)로 감싼다.
   예전(표시 영역 비율 = 투영 비율)엔 같은 값이라 안 드러났다.
 - **수정**: `UDetectionOverlayWidget::UpdateMaskRequest` — 해상도는 표시 픽셀 가로를 그대로 쓰되,
   세로를 `가로 / Detector->GetProjectionAspectRatio()`로 맞춤. 고정 모드가 아닌 축(자체방호 등)은
-  두 비율이 원래 같아서 동작 불변. 빌드·실측 대기.
+  두 비율이 원래 같아서 동작 불변. **2026-10-15 사용자 실측 확인**("잘돼").
 - 오버레이 박스/조준점은 UV × 자기 로컬 크기로 그리므로 영향 없음.
 
 ### 5.2 의도된 트레이드오프
@@ -95,6 +96,10 @@ Slate 위젯 **`SUGVFixedViewportStretch`**(`SCompoundWidget`)로 감싼다.
   작업으로 opened 상태였고, 그 위에 최소 Edit로 추가. **미제출.**
 
 ## 7. 남은 작업 (사용자)
+
+> **2026-10-15 사용자 실측 확인** — 빌드 후 대시보드 스트레치 "성공", 실루엣 마스크(§5.1) "잘돼".
+> 아래 2의 세부 항목(버튼 클릭 위치, 로그 배율 값, standalone/패키지별 확인)은 개별 언급이 없어 따로
+> 확인됐다고 적지 않음.
 
 1. 새 UPROPERTY라 **에디터 닫고 정식 빌드**(Live Coding 불가).
 2. PIE와 standalone/패키지에서 창을 가로·세로로 리사이즈하며 확인:

@@ -698,7 +698,7 @@ Image의 둥근 모서리 반경과 같은 값으로 맞추면 됨. Slate 레벨
 > 📌 [2026-10-15, 빌드·실측 대기] `SetDetectionsFrom`은 탐지기의 **`FadingOutTargets`**(UGV가 교전 제외로 막 감춘 대상, 표시 전용)도 그린다 —
 > 매 프레임 `FDetectionMarkerInfo::DisplayOpacity`(신규, 1→0, 기본 3 s)로 선 박스 알파·마커 `SetRenderOpacity`를 낮춘다. `ui/2026-10-15_ugv_detection_hides_engagement_excluded_targets.md`.
 >
-> ⚠️ [2026-10-15, 빌드·실측 대기] **고정 해상도 뷰포트(`SetFixedViewportSize`)에서는 UMG가 창 리사이즈를 안 따라간다** — DPI 스케일이
+> ⚠️ [2026-10-15, 사용자 실측 확인 — 대시보드 스트레치·실루엣 마스크 화면비] **고정 해상도 뷰포트(`SetFixedViewportSize`)에서는 UMG가 창 리사이즈를 안 따라간다** — DPI 스케일이
 > `Viewport->GetSize()`(=고정값) 기준이라 배율은 고정, 배치 영역은 창 → 창을 줄이면 잘림. `UGVTestDashboard`는 `RebuildWidget`에서
 > 루트를 `SUGVFixedViewportStretch`로 감싸 3D와 같은 **축별** 렌더 트랜스폼(창 px / 고정 px)을 건다(`bStretchWithFixedViewport`, 기본 true).
 > 창 비율 ≠ 16:9이면 글자도 3D처럼 늘어남(의도). ⚠️ `GetAbsoluteSize()`는 **렌더 트랜스폼을 포함**한다(`Geometry.h:548`) — 그래서 실루엣

@@ -1,6 +1,6 @@
 # RCWS 거리측정 트레이스가 SoldierLab 병사를 관통 — TraceSightLine 도입
 
-2026-10-15 / 진행중(C++ 완료, 빌드·실측 대기) / RNG 거리·무락온 조준점이 병사 뒤 배경 기준으로 나오던 버그를 Visibility+Pawn 몸 2단 트레이스(`URCWSComponent::TraceSightLine`)로 수정.
+2026-10-15 / 완료(2026-10-15 사용자 빌드·실측 확인 — RNG 거리) / RNG 거리·무락온 조준점이 병사 뒤 배경 기준으로 나오던 버그를 Visibility+Pawn 몸 2단 트레이스(`URCWSComponent::TraceSightLine`)로 수정.
 
 관련 코드: `Source/titan_example/Vehicles/RCWSComponent.h/.cpp`, `Vehicles/RCWSFireControlComponent.cpp`
 레퍼런스: `guide/rcws_fire_control_dev_guide.md` §6.1
@@ -66,9 +66,12 @@ New_kadex_0811에서 `EnemyCombatComponent` 기제는 죽은 코드.
 
 UPROPERTY 변경 없음(Live Coding 가능하나, 헤더에 static 함수 추가라 정식 빌드 권장).
 
-## 검증 항목 (사용자, 대기)
+## 검증 항목 (사용자)
 
-- [ ] UGV/트럭 RNG — 적·아군 병사를 조준하면 그 병사까지 거리.
+> **2026-10-15 사용자 실측 확인** — 빌드 후 RNG 거리 "잘 나와". 사용자가 RNG 표시만 언급했으므로
+> 첫 항목만 확인으로 닫고, 나머지(트럭 개별 확인·숲 뒤 병사·무락온 조준 앙각)는 미확인으로 둔다.
+
+- [x] RNG — 병사를 조준하면 그 병사까지 거리(2026-10-15 사용자 확인. UGV/트럭 중 어느 쪽인지, 적·아군 둘 다인지는 언급 없음).
 - [ ] 병사 없는 곳은 지형 거리(기존과 동일).
 - [ ] 숲 뒤 병사는 잎까지 거리.
 - [ ] 원격 조작 중 병사를 겨눴을 때 조준 앙각이 그 거리 기준(탄착이 병사 근처).
