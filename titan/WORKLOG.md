@@ -1924,11 +1924,169 @@ ID **W133~W134 · P203~P205**, **[C-180] 해결 · [C-179] 확장 · [W131] · [
 - **테스트 레벨(추가)** — 디자이너 확인용 `/Game/widget/target_detection/L_TD_Test`(시나리오 없음, 6종 대상 배치, New_kadex_0811 라이팅 복사) +
   `ADetectionTestDirector`(축 선택·트럭 RCWS 자동 감시·드론 호버 전 진영 탐지·죽은 병사 재스폰) + `UScenarioRespawnSubsystem::RespawnActor`(1인 재스폰)
   + GameMode `?Axis=` 없을 때 감독 축 폴백. 4차 에디터 빌드 후 자체방호 축 PIE 검증. 함정: MCP 프로퍼티 맵 간 복사 시 원본 맵 참조로 저장 실패. 문서 10절.
-- **남은 것** — 디자이너 PNG(`BoxImage`), Monitor1/2 PIE, RTSP 누출 없음 확인, `stat gpu`, 2-PC, 신규 에셋 23개(`L_TD_Test.umap` 포함) `p4 add` + 제출.
+- **남은 것** — 디자이너 PNG(`BoxImage`), Monitor1/2 PIE, RTSP 누출 없음 확인, `stat gpu`, 2-PC. ~~신규 에셋 `p4 add` + 제출~~ → Change 43·44로 제출됨(10-14 확인).
+
+---
+
+## 2026-10-14 — 탐지 박스 추적(칼만) + 화면 가장자리 마커 누출 수정 (UI 세션)
+
+> 원문 `ui/2026-10-14_detection_box_tracking.md`(10-13 마커 작업의 후속).
+
+- **증상** — 박스가 0.1 s 계단식으로 이동. 대상이 화면 밖으로 나갈 때 라벨이 안으로 밀려 들어오다 한 번에 사라지거나, 박스 없이 라벨만 남음.
+- **원인** — ① `ScanIntervalSeconds=0`으로 스캔은 매 틱 돌았지만 세 화면이 `SetDetectionsFrom`을 0.1 s 스로틀된 `RefreshPanel()`에서 불렀음.
+  ② `ScreenMin/MaxUV`가 0..1로 잘려 마커가 가장자리에 붙음 + 탐지기의 NDC ±1.2 여유 안에선 폭 0 박스 + 라벨만 남음.
+- **수정** — 호출을 매 프레임 `RefreshSmoothValues()`로(Monitor1/2·UGV 테스트 화면, 패널 텍스트는 0.1 s 유지), 마커 글자 값 스로틀
+  `MarkerTextRefreshIntervalSeconds`. 오버레이 **박스 추적기**: 스캔마다 `FScanView`(스캔 시점 카메라)로 대상 월드 위치를 측정 → 축별 등속 칼만 →
+  매 프레임 현재 카메라로 투영(관찰자 움직임은 정확히, 대상 움직임은 스캔으로만 추정, 탐지 판정은 스캔 그대로). 지연 보간·정답 재투영·IMM은 기각.
+  `FDetectedTarget::ScreenMin/MaxUVUnclamped` 신규(판정용 잘린 값은 불변) + 화면과 안 겹치면 숨김 + WBP 오버레이 Clip to Bounds.
+- **상태** — 완료. 사용자 정식 빌드 후 PIE "잘 작동함". **P4 Change 45** 제출(소스 13 + `BP_TitanTruck`·`WBP_SelfDefenseMonitor1/2`).
+  `guide/detection_dev_guide.md` §4.1 신설, `guide/ui_dev_guide.md` 갱신 경로 메모.
+- **디자이너 전달물** — `ui/2026-10-14_detection_marker_mi_designer_guide.html`: 디자이너 메일 발송용 HTML. MI(`MI_DetSketch_*`) 튜닝 가이드 +
+  마커 디자인 12종 요청.
+- **남은 것** — 라벨이 화면 위쪽 가장자리에서 먼저 잘리는 레이아웃(디자인과 결정), 급정지 때 박스↔실루엣 어긋남(`MarkerPadding`), 10-13 미검증 항목.
+
+---
+
+## 2026-10-12 — 자체방호 클라 재접속/늦은 접속 버그 3종 (리플리케이션 세션)
+
+> ⚠ 2026-10-14 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `replication/2026-10-12_selfdefense_reconnect_truck_destroyed.md` 가 정본. CL 36·37 제출.
+
+- 클라가 나갔다 다시 들어올 때 세 가지가 어긋났다 — ① 클라 퇴장 시 **엔진 기본 `PawnLeavingGame`이
+  지휘소 트럭을 Destroy** ② 서버의 원격 PC `BeginPlay`가 **주행 중인 UGV를 Manual로 세움**
+  ③ 퇴장자의 **트럭 RCWS 수동 모드가 서버에 잔류**. 셋 다 수정.
+- 2-PC 재접속 검증 — 사용자 "이제 잘된다".
+
+---
+
+## 2026-10-12~13 — UGV 장시간 실행 중 전복: 병사 캡슐 접촉 차단 + 자가 복원 + 감지·로깅 (UGV 세션)
+
+> ⚠ 2026-10-14 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `vehicle/ugv/2026-10-12_ugv_flip_pawn_collision_and_self_righting.md`(원인·수정) ·
+> `vehicle/ugv/2026-10-13_ugv_flip_detection_logging.md`(감지·기록)가 정본.
+
+- 무인 장시간 실행에서 **정차 중인 UGV가 뒤집힌 사건.** 적 병사가 붙어 있던 상황이라 **병사 캡슐
+  (무한질량 키네마틱)** 이 유력 후보.
+- 수정: UGV가 `Pawn`/`PhysicsBody`와 **물리 접촉하지 않게** 하고, 대신 **전용 차단 박스(QueryOnly)로
+  병사를 서버에서 밀어냄**. 바퀴 트레이스도 Pawn 제외. 그래도 뒤집히면 **자가 복원**(토크 → 안 되면
+  순간이동). `health.csv`에 자세 컬럼 추가.
+- 감지·기록(10-13): 시나리오 모니터가 기울기·회전속도를 0.25초로 보고 급격한 자세 변화·전복·회복을
+  **주변 물체 목록과 함께** `events.log`에 남기고, 전복 시 블랙박스 `ugv_flip` 보존본(A 등급)을 요청.
+  **실전 발동은 아직 미관측** — 감지·기록만이고 원인 수정은 아니다.
+- 남은 것: 장시간 2-PC 재실행에서 재발 여부.
+
+---
+
+## 2026-10-12~13 — 리눅스 호스트 메모리 누수 2건(Vulkan RHI 엔진 버그) 원인 확정 + cvar 우회 (진단 세션)
+
+> ⚠ 2026-10-14 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `diagnostics/2026-10-13_linux_rss_leak_vulkan.md`(기술) · `diagnostics/2026-10-13_linux_memory_leak_report.md`
+> (보고용 정리본)가 정본.
+
+- **블랙박스 `health.csv`가 잡아낸 첫 실제 문제.** 리눅스 호스트 RSS가 분당 ≈40 MB씩 일정하게 증가
+  (2시간에 4.4 → 9.2 GB) — **15 GB PC 기준 3~4시간이면 거의 다 차서** 스왑 → 강제 종료가 될 상태였다.
+- 좁힌 근거: 오브젝트 수·액터 수·VRAM은 일정(게임 데이터 증가 아님) + **윈도우(D3D12)는 증가 없음**
+  → 리눅스 전용 Vulkan 경로. RTSP(GStreamer)는 클라 없으면 데이터를 안 만들어 원인에서 제외.
+- 원인 = **UE 5.8.2 Vulkan RHI 버그 2건** — 병렬 렌더패스(UE-392081, 엔진 소스로 확정) + 스테이징 버퍼
+  추적 배열(80 B/건). **프로젝트 코드 문제가 아니다.**
+- 조치 = `Config/Linux/LinuxEngine.ini` **2줄**(엔진 수정·재빌드 불필요): `RHIThread=1`(40 → 11.5 MB/분)
+  + `MemoryBacktrace=0`(→ 0.8 MB/분).
+- 결과: **약 98% 감소**, 15.5시간·113회 연속 실행에서 ≈0.5 MB/분 · 스왑 0 · 프레임 저하 없음.
+
+---
+
+## 2026-10-15 — UGV 자율주행 예상 경로 오버레이(대시보드 전용, RTSP 미송출) (UGV 세션)
+
+> 원문 `vehicle/ugv/2026-10-15_ugv_path_preview_overlay.md`.
+
+- **배경** — 예전 Niagara 리본(`PathPreviewFX`)이 두 번째 이동 명령부터 찢어져 꺼 둔 상태. 새 요구: UGV 테스트 대시보드에서만,
+  RTSP·씬 캡처·트럭 RCWS 뷰에는 없음, 지형 위 깊이감, 실제 주행 같은 부드러운 곡선.
+- **왜 렌더러 확장인가** — UGV RCWS RTSP는 메인뷰 복사본(VisualizeDepthOfField after-pass, After-Tonemapping PP 체인 뒤)이라
+  Niagara/메시/데칼/`bHiddenInSceneCapture`/`OnlyOwnerSee`/PP 머티리얼 전부 송출에 샌다. 신규 플러그인 `UGVPathOverlay`가 같은
+  after-pass에 우선순위 -100(RTSP 복사는 0, 내림차순 체인)으로 붙어 **복사 뒤·UI 앞**에 깊이 → 월드 복원으로 경로 띠를 칠함.
+- **경로** — `AUGVAIController::BuildPredictedDrivePath`: 현재 차량 자세에서 실제와 같은 lookahead + 순수추종 κ=2sinα/L_d 전방 시뮬,
+  컷오프 각 이상은 제자리선회. Z는 경로당 1회 내비메시 투영 지면 프로파일(200 cm). 0.1 s마다 재시뮬(선이 항상 차량에서 시작).
+  표시 조건은 `UUGVPathPreviewSubsystem`(대시보드 실제 생성 + 뷰 타깃 UGV + 이동 중 + `titan.UGVPath.Enable`).
+- **상태(최종)** — **완료(1차 구현 + 경계 AA 시간 누적, 사용자 확인)**. 리눅스 셰이더 컴파일·`stat GPU` 비용은 미확인.
+  P4 기본 CL(미제출, 다른 세션 파일과 섞임 — 제출 시 분리).
+- **남은 것** — 시각 튜닝, 옛 `PathPreviewFX`/BP `OnPathUpdated` 배선·TEMP 진단 로그 정리, 리본 찢어짐 원인(가설 2개)은 미검증.
+- **2차 개정(같은 날 오후)** — 첫 테스트(컴퓨트 셰이더 교체 후) 정상 동작 확인.
+  - 화살표 끊김 원인 = 0.1 s 재예측마다 s가 차량에서 0으로 재시작 → 패턴이 달린 거리(~28 cm@10 km/h)만큼 뒤로 튐. 이동 명령(`PathRevision`)당
+    1회 예측·고정 + 매 프레임 차량 투영(차량 s 뒤는 숨김), 선 이탈 >75 cm 또는 잘린 예측 끝 근처에서만 rebase(≥0.5 s, s 이어짐)로 수정.
+  - 디자이너 커스터마이즈: 신규 `UUGVPathStyleAsset`(대시보드 "Path Preview Style", 비우면 내장 패턴) + 패턴 머티리얼 → 렌더 타깃 합성,
+    거리별 불투명도 곡선. 스타일 cvar 5개 제거(남은 것 `Enable`/`OutputSpacingCm`).
+  - 풀 위 색 번짐은 랜드스케이프 필터 보류(Substrate라 셰이딩 모델 ID 불가, 커스텀 뎁스 안은 비용 미측정).
+- **3~6차 개정(같은 날, 최종)** — 문서를 "현재 동작 우선 + 이력 요약표"로 재편.
+  - 오르막 예측 끊김: 예측 Z를 출발 높이에 고정 → lookahead(3D 거리)가 지난 구간에 붙음 → Z를 지면 프로파일+지면 위 높이로.
+  - 풀 위 색 번짐: 내비 Z 허용치 120 cm 대신 **바퀴와 같은 콜리전 트레이스로 잰 지면 높이**(가로 5곳+중간점 굴곡 허용치)로 높이 마스크.
+  - 렌더러를 FieldCS(깊이 해상도) → CompositeCS(출력 해상도, bilinear) 2패스로, **TSR 지터 보정**(slomo 떨림 해결),
+    **마스크 시간 누적**(속도/ClipToPrevClip 재투영 + 3×3 클램프, R16F 히스토리, cvar `titan.UGVPath.Temporal`/`TemporalAlpha`) — 경계 계단 "어느정도 해결".
+  - 남은 것: disocclusion/급회전 시 계단, 지면 샘플링 히치 2.0~4.5 ms/(재)생성, rebase 5~15초 주기, 예시 스타일 에셋 없음, 리눅스·GPU 비용 미확인.
+
+---
+
+## 2026-10-15 — 운용 화면 묶음 3건: 축 선택 저장 · 대시보드 스트레치 · 교전 제외 대상 감추기 (UI 세션)
+
+> ⚠ 2026-10-15 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문 `ui/2026-10-15_*` 3건이 정본.
+> 셋 다 **C++ 완료 / 빌드·WBP·실측 대기**.
+
+- **축 선택 화면**(`..._axis_selection_ugv_dashboard_toggle_and_saved_choices.md`) — "UGV 테스트 화면 표시"
+  체크박스 추가 + **데모 모드·UGV 테스트 화면·접속 IP를 패키지 종료 후에도 유지**(매번 다시 고르지
+  않아도 되게).
+- **대시보드 스트레치**(`..._ugv_test_dashboard_stretch_with_fixed_viewport.md`) — 고정 해상도 모드에서
+  UMG 대시보드가 창 리사이즈를 안 따라가고 잘리던 문제. WBP 루트를 Slate 래퍼로 감싸 **3D 뷰와 같은
+  축별 배율**을 건다.
+- **교전 제외 대상 감추기**(`..._ugv_detection_hides_engagement_excluded_targets.md`) — UGV RCWS가 쏘지
+  않는 적(교전 제외 = 도주 3분대)이 탐지 화면에는 계속 떠 있어 **"보이는데 안 쏨"** 모순이 있었다.
+  탐지에서도 빼고(**LIG UDP 송신 포함**) 화면 박스는 약 3초 페이드아웃. 사격 스위치
+  `bRespectEnemyTargetingExclusion`을 그대로 따르므로 트럭 쪽은 영향 없음.
+
+---
+
+## 2026-10-15 — RCWS 거리측정 트레이스가 병사를 관통 (RCWS 세션)
+
+> ⚠ 2026-10-15 문서 정리 때 WORKLOG 누락 발견 → 사후 기록. 원문
+> `rcws/2026-10-15_rangefinder_trace_passes_through_soldierlab_soldiers.md`. C++ 완료 / 빌드·실측 대기.
+
+- 거리측정 값과 락온 없는 조준점이 **병사를 통과해 뒤 배경 기준**으로 나왔다.
+- Visibility + Pawn 몸 2단 트레이스(`URCWSComponent::TraceSightLine`)로 수정.
+
+---
+
+## 2026-10-15 — 잎 인식 업스케일러 기획 + `anti_aliasing/` 폴더 신설 (렌더 세션)
+
+> ⚠ 2026-10-15 문서 정리 때 WORKLOG·폴더 등록 누락 발견 → 사후 기록. 원문
+> `anti_aliasing/2026-10-15_foliage_aware_upscaler_design.md`. **설계단계.**
+
+- 10-14에 정적 잎 얼룩(반짝임)의 원인을 **잎 노멀의 서브픽셀 분산**으로 확정했다 — 눈 판정 소거법
+  (Unlit에서 사라짐 · 노멀 고정에서 사라짐)으로 좁혔고 **Nanite와는 무관**하다. 수관 노멀 블렌드안은
+  사용자가 기각. ⚠ 측정기 점수와 눈으로 보는 결과가 일치하지 않는다는 것도 같이 확인됐다.
+- 기획: **TSR을 플러그인으로 복제해 교체**하고, 잎 픽셀만 기하로 판정해 더 오래 누적한다 —
+  **엔진 수정 없음.** DLSS가 라이선스로 막힌 뒤의 대안 축이다(`CURRENT_STATE.md` §19).
 
 ---
 
 ## 다음에 예정된 것 (이 시점 기준)
+
+> **⚠ 2026-10-15 문서 정리 — devlog 미작성 추가 1건**
+> **에디터 PIE 렌더 워커 크래시(10-15)** — 드론 조이스틱 조작 중 크래시. **에디터 전용 Nanite 경합**으로
+> 판정했고 **우리 코드와 무관 · 패키징 빌드에는 없다**. PDB 없이 `.pdata` + vtable로 지점을 특정한
+> 과정 자체가 기록 가치가 있다. 현재 세션 메모리에만 있다 → `diagnostics/` 또는 `nanite/`에 devlog.
+
+> **⚠ 2026-10-14 문서 정리 — devlog 미작성 2건**
+> 아래 둘은 작업·판정이 끝났는데 `titan/` 어디에도 기록이 없다(세션 메모리에만 있음). 진행현황에는
+> 반영했고 `progress/4_잔여과제.tsv` '정리'에 등록했다.
+> 1. **DLSS 시험 적용과 보류 판정(10-07)** — 조사 문서(`infra_architecture/2026-10-07_dlss_frame_generation_feasibility.md`)
+>    는 "비권장" 단계까지만 적혀 있다. 그 뒤 실제로 메인뷰 + 캡쳐 6개까지 윈도우에서 동작시켜 TSR보다
+>    확실히 낫다는 판정을 받고, 리눅스 PC 환경 점검도 통과했으나, **RTX SDK 라이선스가 별도 합의 없는
+>    군용 사용을 제한**해 보류하고 프로젝트에서 떼어 `kadex/_backup/2026-10-07_dlss_poc`로 옮겼다.
+>    → 조사 문서에 §10으로 결과·보류 사유·백업 위치를 추기하는 것이 맞다.
+> 2. **패키징 전용 GC Disregard 크래시(10-12)** — Input 탭에서 조이스틱 Hat 배정 후 ~25초 뒤 "멈춤"이
+>    실제로는 `Fatal: Encountered 1 object(s) breaking Disregard for GC assumptions`였다. 생성자
+>    `FObjectFinder`로 로드된 IMC는 쿠킹 빌드에서 Disregard for GC 집합이라 런타임 `NewObject` 모디파이어를
+>    끼우면 검증에 걸린다(에디터엔 이 집합이 없어 PIE로 절대 재현 안 됨). `AddToRoot` + 추적 배열로 수정.
+>    **블랙박스 `events.log`의 STALL 직전 ERR 줄로 원인을 가린 첫 사례**라 그 자체로 기록 가치가 있다.
+>    → `ui/ingame_settings_input_system.md` 또는 `diagnostics/`에 신규 devlog.
 
 > **2026-10-01 진행현황 반영 메모** — 사용자가 진행현황 표에서 다음을 완료로 판정했다(`progress/README.md`
 > 09-29 오후·10-01 항목): 자체방호축 카메라 버그 2-PC 검증 · RCWS 청각 보조 PIE · UGV 자율주행 4차

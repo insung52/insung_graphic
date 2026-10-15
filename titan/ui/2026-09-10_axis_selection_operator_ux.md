@@ -261,3 +261,6 @@ C++만 손댔다. `.uasset`은 하나도 안 건드렸다.
 4. `guide/`에 축 선택 화면 문서가 없다. WBP까지 끝나 화면이 확정되면 그때 신설 검토.
 5. **보류**: 고급 옵션을 `WBP_GameSettings`의 비어 있는 Network 탭으로 이사 — 운용자용 화면이라
    로비에서 바로 만지는 편이 낫다는 판단(2026-09-10 사용자 확정).
+
+> 후속(2026-10-15): UGV 테스트 화면 체크박스 + 데모/접속 IP 영구 저장 →
+> [`2026-10-15_axis_selection_ugv_dashboard_toggle_and_saved_choices.md`](2026-10-15_axis_selection_ugv_dashboard_toggle_and_saved_choices.md)

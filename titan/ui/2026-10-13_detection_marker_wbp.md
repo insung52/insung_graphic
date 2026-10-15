@@ -6,6 +6,9 @@
 
 ## 0. 현재 상태 + 남은 것 (2026-10-13 기준, 여기부터 읽을 것)
 
+> 📌 [2026-10-14] **후속: 박스 추적(칼만) + 화면 가장자리 마커 누출 수정** → [`ui/2026-10-14_detection_box_tracking.md`](2026-10-14_detection_box_tracking.md).
+> 박스는 이제 매 프레임 갱신(오버레이 추적기가 스캔 사이를 메움), 배치는 자르지 않은 UV(`ScreenMin/MaxUVUnclamped`) 기준. 아래 3.6절 "위치 보간 없음"은 더 이상 사실이 아니다.
+
 옛 인계 TODO(MF/머티리얼 그래프, 마커 WBP, 3개 화면 지정, 에디터 빌드)는 **전부 끝났다**. 에셋 경로·규칙은 3절, 머티리얼은 4.5절.
 
 | 항목 | 상태 |
@@ -18,7 +21,7 @@
 | PIE | New_kadex_0811 UGV 테스트 화면에서 박스·거리·반투명 실루엣 정상("아주 잘돼") |
 | 디자인 확인용 테스트 레벨 `L_TD_Test` | 완료 — 시나리오 없이 6종 대상을 한 화면에 놓고 자체방호/UGV 축으로 바로 PIE. `ADetectionTestDirector` + 1인 재스폰. 자체방호 축 PIE 검증(10절) |
 | Tracking/Locked(RCWS 자동조준 연동) | **범위 밖으로 뺌**(사용자 결정) — 코드는 남겨 두고 미사용, 별도 작업 |
-| P4 | 아무것도 제출 안 함(사용자가 "제출"이라고 할 때만). 신규 에셋 23개(+`L_TD_Test.umap`)는 **아직 `p4 add` 안 됨** — 8절 |
+| P4 | **제출 완료** — Change 43·44(2026-10-13), 후속 Change 45(2026-10-14). 8절 |
 
 **남은 것**: 6절.
 
@@ -154,7 +157,7 @@ RCWS 자동조준 연동은 **별도 작업**(사용자 결정). 그때 `SelfDef
 - 마커는 `HitTestInvisible`. 디자이너 미리보기 인스턴스는 `RF_Transient`.
 - `MarkerSize`/`Min Marker Size`는 오버레이의 **지난 프레임 지오메트리** 기준 — 최소 크기가 한 프레임 늦게 적용.
 - 거리 = 탐지 카메라(`GetCamera()`) ↔ 대상 액터, cm/100(레벨 1:1).
-- 박스 좌표·갱신 주기는 그대로(탐지 0.1 s 스캔, 위치 보간 없음).
+- ~~박스 좌표·갱신 주기는 그대로(탐지 0.1 s 스캔, 위치 보간 없음).~~ → 2026-10-14부터 매 프레임 + 오버레이 박스 추적기(칼만), 거리는 추적 위치 기준·글자 값은 `MarkerTextRefreshIntervalSeconds`(0.1 s)마다. `ui/2026-10-14_detection_box_tracking.md`.
 
 ## 4. 실루엣 강조 — 정답 마스크 캡처 + UMG 머티리얼
 
@@ -316,8 +319,9 @@ return float4(coverage, interior, outline, 0);
 - 선택: `MinMarkerSize`(드론 32 / RCWS 64).
 - **Tracking/Locked ↔ RCWS 자동조준 연동**: 별도 작업(코드 남아 있음, 2절).
 - `Detection.MaskDiag`는 디버깅 끝나면 0(기본값이 0이라 콘솔로 켰을 때만 해당).
-- P4: 신규 에셋 23개(`L_TD_Test.umap` 포함) `p4 add` 후 사용자 지시 시 제출(8절).
-- 후보: 박스 위치 보간(0.1 s 계단), 같은 깊이 겹친 대상의 완전 분리(대상별 ID 인코딩), 레거시 위젯 `SetDetectionsFrom` 적용 여부.
+- ~~P4: 신규 에셋 23개 `p4 add` 후 제출~~ → 제출 완료(Change 43·44, 8절).
+- ~~후보: 박스 위치 보간(0.1 s 계단)~~ → **완료(2026-10-14)** — 원인은 화면 위젯 0.1 s 스로틀, 오버레이 칼만 추적기로 해결. `ui/2026-10-14_detection_box_tracking.md`.
+- 후보: 같은 깊이 겹친 대상의 완전 분리(대상별 ID 인코딩), 레거시 위젯 `SetDetectionsFrom` 적용 여부.
 
 ## 7. 빌드 기록
 
@@ -329,13 +333,15 @@ return float4(coverage, interior, outline, 0);
 - 2026-10-13(4차, 테스트 레벨): 사용자가 에디터 타깃 빌드 — `ADetectionTestDirector`(신규 UCLASS), GameMode `InitNewPlayer` 축 폴백,
   `UScenarioRespawnSubsystem::RespawnActor`. 에디터에 클래스 확인, 빌드 에러 보고 없음.
 
-## 8. P4 상태 (미제출 — 사용자가 "제출"이라고 할 때만)
+## 8. P4 상태 (전부 제출됨 — 2026-10-14 `p4 describe -s`로 확인)
 
-| 구분 | 파일 |
-|---|---|
-| edit | `Content/widget/WBP_SelfDefenseMonitor1.uasset`, `WBP_SelfDefenseMonitor2.uasset`, `WBP_UGVTestDashboard.uasset`; `TargetDetectionComponent.h/.cpp`, `DetectionOverlayWidget.h/.cpp`, `SelfDefenseMonitor1Widget.cpp`, `SelfDefenseMonitor2Widget.cpp`, `UGVTestDashboardWidget.cpp`; `titan_exampleGameMode.cpp`, `UI/ScenarioRespawnSubsystem.h/.cpp` |
-| add | `DetectionMaskCaptureComponent.h/.cpp`, `DetectionMarkerWidget.h/.cpp`, `DetectionTestDirector.h/.cpp` |
-| **아직 add 안 됨** | `Content/widget/target_detection/` 신규 에셋 **23개**(MF 1, M 1, MI 6, WBP 14, 레벨 `L_TD_Test.umap` 1) — 제출 전 `p4 add` 필요 |
+| Change | 날짜 | 내용 |
+|---|---|---|
+| **43** | 2026-10-13 08:10 | 마커·마스크 본편 — `Content/widget/target_detection/` 신규 에셋 22개(MF 1, M 1, MI 6, WBP 14) add, `WBP_SelfDefenseMonitor1/2`·`WBP_UGVTestDashboard`·`BP_TestPlayerController` edit, `DetectionMaskCaptureComponent.h/.cpp`·`DetectionMarkerWidget.h/.cpp` add, `TargetDetectionComponent.h/.cpp`·`DetectionOverlayWidget.h/.cpp`·`SelfDefenseMonitor1/2Widget.cpp`·`UGVTestDashboardWidget.cpp` edit (+ `Build/Linux/FileOpenOrder/EditorOpenOrder.log`) |
+| **44** | 2026-10-13 08:47 | 테스트 레벨 — `L_TD_Test.umap`·`DetectionTestDirector.h/.cpp` add, `ScenarioRespawnSubsystem.h/.cpp`·`titan_exampleGameMode.cpp`·`BP_TitanTruck`·`BP_UGV_0901` edit |
+| **45** | 2026-10-14 00:34 | 후속(박스 추적 + 가장자리 누출) — `ui/2026-10-14_detection_box_tracking.md` 7절 |
+
+(설명 문자열은 콘솔 인코딩 때문에 깨져 보여 내용은 파일 목록으로 대조함.)
 
 ## 9. 함정 (이번 작업에서 발견)
 

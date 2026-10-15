@@ -237,11 +237,15 @@ if (bRespectEnemyTargetingExclusion)
 - 플래그의 출처(SoldierLab): 분대 배정 `FSoldierAssignment::bTargetableByOwnSideWeapons` → `USoldierLabBridgeSubsystem::SyncSoldiers`
   가 매 틱 `SetTargetableByFriendlyForces` 로 복사(`SoldierLabBridgeSubsystem.cpp:200-201`). 같은 플래그를 SoldierLab **아군 보병**은
   브리지 없이 `USoldierEngagementComponent::IsContactExcluded` 로 직접 읽는다(09-21) — RCWS 와 보병이 같은 명령 한 줄로 같은 적을
-  뺀다. 제외된 적은 탐지 목록(`DetectedTargets`)에는 **그대로 남는다**(HUD 박스는 보임) — 표적 선정에서만 빠진다.
+  뺀다. ~~제외된 적은 탐지 목록(`DetectedTargets`)에는 그대로 남는다~~ → **2026-10-15부터(빌드·실측 대기) 이 스위치가 켜진 RCWS의
+  탐지 컴포넌트도 그 적을 `DetectedTargets`에서 뺀다**(`UTargetDetectionComponent::bHideTargetsExcludedByFireControl`, 기본 true —
+  `detection_dev_guide.md` §3.6). UGV 화면 박스는 약 3 s 페이드 후 사라지고 LIG UDP 탐지 보고에서도 빠진다. 트럭은 스위치 false라 계속 탐지·사격.
 - ⚠ **스티키 표적(3.1절)은 제외를 안 본다** — 유지 조건은 "`DetectedTargets` 에 아직 있는가"뿐(`UpdateAutoAim`
   `:584-613`, `bTargetDetectedNow` 는 액터·진영만 비교). 제외 순간 이미 물고 있던 적은 **시야를 1 s 넘게 잃을 때까지
   계속 쏜다**, 그 뒤 새로 고를 때에야 제외가 먹는다. 구 이펙트 때부터 같은 틈(도주 병사가 곧 사선을 끊어 실무에선 짧다).
   막으려면 `:613` 의 놓아주는 조건에 제외 검사 한 줄 → `soldier_ai_lab/OPEN_ITEMS.md` [W106].
+  📌 2026-10-15 탐지 쪽 제외(위) 이후로는 UGV에서 물고 있던 적도 `DetectedTargets`에서 즉시 빠지므로 `TargetRetentionGraceSeconds`(1 s)
+  뒤 놓아줄 것으로 보인다(코드 읽기 추정, 미실측 — 지금 줄 번호는 `:672-699`).
 - **시나리오 재시작이 초기값(false)으로 되돌린다**(2026-09-22, `ResetForScenarioRestart` — 8.10절). 안 되돌리면 2회차부터
   UGV 가 `SetTargetable false` 행 전에도 일부 적을 건너뛴다.
 - 관련: `level_new_kadex_0811/2026-09-21_soldierlab_migration_new_kadex_0811.md` 5절 · `soldier_ai_lab/squad/2026-09-21_break_contact_and_targeting_exclusion.md` 5절.
@@ -323,6 +327,10 @@ UWidget으로 감싸는" 패턴을 그대로 재사용. `RCWSViewImage`/`RCWSDet
 
 - `UpdateMuzzleBallisticAim` (**서버/권한 쪽만**) — 카메라 중심 레이트레이스 지점(락온 중이면 타겟)을
   `MuzzleAimTargetWorldLocation`에 기록하고, 그 지점에 맞게 `Muzzle` 상하각을 탄도(낙차)대로 슬루한다.
+  - 레이트레이스는 RNG 거리(`URCWSComponent::UpdateRangeTrace`)와 같은 `URCWSComponent::TraceSightLine`
+    (2026-10-15~) — `ECC_Visibility` 히트 + 그보다 앞의 Pawn 몸(캐릭터 캡슐/스켈레탈 메시, `NoBounds`·자기 차량
+    제외) 오브젝트 쿼리 중 가까운 쪽. SoldierLab 병사는 캡슐·메시 모두 Visibility=Ignore라 Visibility만으론
+    관통했기 때문(`rcws/2026-10-15_rangefinder_trace_passes_through_soldierlab_soldiers.md`, 빌드·실측 대기).
 - `UpdateTurretReticleForUI` (**모든 프로세스**) — "현재 총구 각도로 쏘면 어디 맞는가"를
   `SimulateBallisticLandingPoint`로 예측해 화면에 투영. 화면 중심 고정이 아니라 슬루 중엔 움직이다 수렴한다.
   `MuzzleAimTargetWorldLocation`이 ZeroVector면 `TurretReticleProjectionDistanceCm`(500 m) 직선 폴백.

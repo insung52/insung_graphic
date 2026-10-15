@@ -689,6 +689,27 @@ Image의 둥근 모서리 반경과 같은 값으로 맞추면 됨. Slate 레벨
 > 📌 [2026-10-13] 위 선 박스는 이제 **마커 WBP가 없는 대상의 폴백**이다. `SelfDefenseMonitor1/2`·`UGVTestDashboard`는
 > 대상 종류×진영별 마커 WBP + 실루엣 마스크로 그린다 — `guide/detection_dev_guide.md` §4,
 > `ui/2026-10-13_detection_marker_wbp.md`.
+>
+> 📌 [2026-10-14] **탐지 오버레이 갱신 경로**: 세 화면은 `SetDetectionsFrom`을 `RefreshPanel()`(`RefreshIntervalSeconds` 0.1 s)이 아니라
+> **매 프레임 `RefreshSmoothValues()`**에서 부른다(위 리본과 같은 이유 — 스로틀이 박스를 계단식으로 만들었음). `UGVTestDashboard`는
+> `CachedRCWS` 조기 return 앞. 스캔 사이는 오버레이 박스 추적기(칼만)가 메우고, 마커 거리 글자 값만 `MarkerTextRefreshIntervalSeconds`(0.1 s)마다.
+> 화면 밖으로 나가는 마커는 오버레이 **Clipping = Clip to Bounds**로 자른다. `guide/detection_dev_guide.md` §4.1, `ui/2026-10-14_detection_box_tracking.md`.
+>
+> 📌 [2026-10-15, 빌드·실측 대기] `SetDetectionsFrom`은 탐지기의 **`FadingOutTargets`**(UGV가 교전 제외로 막 감춘 대상, 표시 전용)도 그린다 —
+> 매 프레임 `FDetectionMarkerInfo::DisplayOpacity`(신규, 1→0, 기본 3 s)로 선 박스 알파·마커 `SetRenderOpacity`를 낮춘다. `ui/2026-10-15_ugv_detection_hides_engagement_excluded_targets.md`.
+>
+> ⚠️ [2026-10-15, 빌드·실측 대기] **고정 해상도 뷰포트(`SetFixedViewportSize`)에서는 UMG가 창 리사이즈를 안 따라간다** — DPI 스케일이
+> `Viewport->GetSize()`(=고정값) 기준이라 배율은 고정, 배치 영역은 창 → 창을 줄이면 잘림. `UGVTestDashboard`는 `RebuildWidget`에서
+> 루트를 `SUGVFixedViewportStretch`로 감싸 3D와 같은 **축별** 렌더 트랜스폼(창 px / 고정 px)을 건다(`bStretchWithFixedViewport`, 기본 true).
+> 창 비율 ≠ 16:9이면 글자도 3D처럼 늘어남(의도). ⚠️ `GetAbsoluteSize()`는 **렌더 트랜스폼을 포함**한다(`Geometry.h:548`) — 그래서 실루엣
+> 마스크 RT가 창 비율이 되어 탐지 투영(16:9)과 어긋났다 → `UpdateMaskRequest`가 마스크 세로를 `가로 / GetProjectionAspectRatio()`로 맞춤
+> (**마스크 RT 화면비 = 탐지 투영 화면비**가 계약, 표시 픽셀 비율이 아님).
+> **대시보드 밖에 `AddToViewport`되는 다른 UGV축 위젯은 미적용** — 같은 증상이면 같은 래퍼가 필요. `ui/2026-10-15_ugv_test_dashboard_stretch_with_fixed_viewport.md`.
+>
+> 📌 [2026-10-15] **UGV 자율주행 예상 경로 띠**(지형 위 화살표 띠)는 UMG가 아니라 렌더러 확장(`Plugins/UGVPathOverlay`)이 그린다 —
+> `UGVTestDashboard`가 떠 있는 동안에만(NativeConstruct/Destruct에서 `UUGVPathPreviewSubsystem`에 등록/해제), RTSP 메인뷰 복사 **뒤**라
+> 송출엔 안 나간다. 모양은 대시보드 기본값 **"Path Preview Style"**(`UUGVPathStyleAsset`, 비우면 내장 패턴). 끄기 `titan.UGVPath.Enable 0`.
+> 상세·디자이너 가이드는 `vehicle/ugv/2026-10-15_ugv_path_preview_overlay.md` §3–§4.
 
 ### ScrollingRulerWidget: non-wrap 모드에서 spine도 눈금 범위 밖으로 안 그려지게 수정(2026-07-11)
 

@@ -148,7 +148,7 @@ SoldierLab 병사(`BP_Soldier_Hostile`/`BP_Soldier_Friendly`, `Source/SoldierLab
 | `EngageRangeCm` | ROE 의 사거리 — 이보다 먼 접촉엔 안 쏨. 0 = 무제한(≈95 m, 총의 가치 판단) | 접근 단계 보존용(09-18) |
 | `Aggression` | 0.5 = 개인 가중치 그대로. 높으면 땅의 가치 ↑·사격 없는 자리 비용 ↑ | 적 교전 0.8 · 아군 방어 0.3 |
 | `StaggerMin/MaxSeconds` | 개체별 출발 지연 범위 | Withdraw 의 "한두 명씩" |
-| `bTargetable` | `SetTargetable` 전용. **false** = UGV RCWS 와 SoldierLab 아군 보병이 이 분대를 안 쏜다(보고 숨는 건 그대로), 이동형지휘소는 계속 쏜다. 09-21 부터 이 행이 UGV RCWS `bRespectEnemyTargetingExclusion` 도 켠다 | |
+| `bTargetable` | `SetTargetable` 전용. **false** = UGV RCWS 와 SoldierLab 아군 보병이 이 분대를 안 쏜다(보고 숨는 건 그대로), 이동형지휘소는 계속 쏜다. 09-21 부터 이 행이 UGV RCWS `bRespectEnemyTargetingExclusion` 도 켠다. **10-15 부터(빌드·실측 대기) UGV 는 사격뿐 아니라 감지에서도 이 분대를 뺀다**(UGV 화면 박스 약 3 s 페이드 후 사라짐, LIG UDP 탐지 보고·UGV 기준 `EnemyDetected` 에서도 빠짐) — 트럭 탐지·사격은 무관(`ui/2026-10-15_ugv_detection_hides_engagement_excluded_targets.md`) | |
 | `SuppressAreaRadiusCm` | `SuppressArea` 전용, 0 = 해제, 중심 = ZoneIndex 존 | |
 | `Quota` | 정원제 — 구역 동사 직전에 `SquadIds` 분대들의 생존자 합이 이 수가 되도록 같은 진영 다른 분대에서 목적지에 가까운 순으로 **`SquadId` 를 바꿔** 편입(영구). 0 = 끔. `SquadIds` 비우면 무시 | 2차 10 · 3차 5 |
 

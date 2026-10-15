@@ -70,6 +70,20 @@
 > 쪽이고 차량은 생성자 한 줄이라 그쪽에 묶었다). 원칙 P192 — "시체·떨어진 물체는 차량 서스펜션에 지면으로 보이면 안 된다;
 > 채널에서 빼되 물리 접촉은 남긴다". 서스펜션/차량 물리를 만질 때 같이 볼 것.
 
+- `2026-10-15_ugv_path_preview_overlay.md` (2026-10-15, 완료 — 1차 구현 + 경계 AA 시간 누적, 사용자 확인) —
+  **최신.** UGV 자율주행 예상 경로를 대시보드에 그린다. 찢어지던 Niagara 리본 대신 **RTSP 메인뷰 복사
+  뒤에 붙는 렌더러 확장**(컴퓨트 2패스 + 마스크 시간 누적)이 깊이 기반으로 지형 위에 곡선을 얹는 구조 —
+  그래서 **RTSP 송출 영상에는 안 실린다**(실제 메시로 하면 RTSP로 새기 때문에 택한 방식). 경로는 이동
+  명령당 1회 예측해 고정, 모양은 디자이너용 `UUGVPathStyleAsset`. 남은 한계 목록은 문서 말미.
+- `2026-10-12_ugv_flip_pawn_collision_and_self_righting.md` (2026-10-12, 완료 — 빌드·PIE 검증, 장시간
+  2-PC 재실행 검증 대기) — **최신.** 무인 장시간 실행 중 **정차한 UGV가 뒤집힌 사건.** 유력 후보는
+  **병사 캡슐(무한질량 키네마틱)** — 차량이 Pawn/PhysicsBody와 물리 접촉하지 않게 하고, 전용 차단
+  박스로 병사를 밀어내도록 바꿨다. 더해서 **전복 시 자가 복원**(토크 → 안 되면 순간이동)과
+  `health.csv` 자세 컬럼 추가.
+- `2026-10-13_ugv_flip_detection_logging.md` (2026-10-13, 완료 — 빌드·패키징됨, **실전 발동 미관측**) —
+  위 수정의 감지·기록 쪽. 시나리오 모니터가 기울기·회전속도를 0.25초로 보고 급격한 자세 변화·전복·
+  회복을 **주변 물체 목록과 함께** `events.log`에 남기고, 전복 시 블랙박스 `ugv_flip` 보존본(A 등급)을
+  요청한다. 감지·기록만 — 원인 수정은 위 문서.
 - `2026-09-10_ugv_0901_suspension_tuning.md` (2026-09-10) — 레벨의 작은 바위에 콜리전을 켠 뒤
   승차감 튜닝. **Chaos 5.8 서스펜션은 힘이 아니라 PBD 컨스트레인트로 풀린다**는 구조(차체 운동/
   그립/바퀴 비주얼이 서로 다른 코드), **`SpringPreload`·`RollbarScaling`이 엔진에서 죽은 값**이라는
@@ -133,6 +147,9 @@
 
 ## `rcws/` — RCWS 전용 devlog
 
+- `2026-10-15_rangefinder_trace_passes_through_soldierlab_soldiers.md` (2026-10-15, 진행중 — C++ 완료,
+  빌드·실측 대기) — **최신.** 거리측정과 락온 없는 조준점이 **병사를 통과해 뒤 배경 기준**으로 나오던
+  버그. Visibility + Pawn 몸 2단 트레이스(`URCWSComponent::TraceSightLine`)로 수정.
 - `2026-10-12_selfdefense_client_turret_reticle_replication.md` (2026-10-12, **완료**) — 자체방호 클라
   RCWS 포신 레티클이 화면에 고정되던 버그. 원인=총구 탄도 상태 미복제 → `MuzzleAimTargetWorldLocation`
   복제 + `ReplicatedMuzzleRelativeRotation`(OnRep)으로 서버 총구 상태 복제. **2-PC 검증 완료(2026-10-12)**,
@@ -297,8 +314,24 @@
 - `2026-09-28_megaplants_nanite_foliage_test_handoff.md` / `2026-09-28_megaplants_test_results.md`
   (2026-09-28, 완료) — Megaplants 식생 라이브러리 성능 테스트 인계서와 결과.
 
+## `anti_aliasing/` — 안티에일리어싱·업스케일러 (2026-10-15 신설)
+
+- `2026-10-15_foliage_aware_upscaler_design.md` (2026-10-15, **설계단계**) — **잎 인식 업스케일러 기획.**
+  정적 잎 얼룩(반짝임)의 원인은 **잎 노멀의 서브픽셀 분산**으로 확정됐고(Nanite 무관 — 눈 판정
+  소거법으로 Unlit·노멀 고정에서 사라지는 것을 확인), TSR로는 못 잡는다. 계획은 **TSR을 플러그인으로
+  복제해 교체**하고 잎 픽셀만 기하로 판정해 더 오래 누적하는 것 — **엔진 수정 없음.** DLSS가 라이선스로
+  막힌 뒤의 대안 축이다(`infra_architecture/2026-10-07_dlss_frame_generation_feasibility.md` §19 참고).
+
 ## `diagnostics/` — 현장 사고 분석·자체 진단 (2026-10-01 신설)
 
+- `2026-10-13_linux_memory_leak_report.md` (2026-10-13, 완료) — **보고용(비개발자 독자) 정리본.** 리눅스
+  호스트 메모리가 분당 ≈40 MB씩 늘어나 **15 GB PC 기준 3~4시간이면 거의 다 차는** 상태였다. 원인은
+  UE 5.8.2 Vulkan RHI 버그 2건(프로젝트 코드 아님), 조치는 `Config/Linux/LinuxEngine.ini` 2줄 —
+  **40 → 0.8 MB/분(약 98% 감소)**, 15.5시간·113회 연속 실행에서 ≈0.5 MB/분·스왑 0·프레임 저하 없음.
+  **이 문제를 처음 잡아낸 것이 블랙박스 `health.csv`다.**
+- `2026-10-13_linux_rss_leak_vulkan.md` (2026-10-13, 완료 — 밤샘 최종 확인 대기) — 위 건의 기술 원문.
+  버그 2건 = 병렬 렌더패스(UE-392081) + 스테이징 버퍼 추적 배열. 윈도우(D3D12)는 증가 없고 오브젝트·
+  액터·VRAM은 일정했다는 점으로 리눅스 전용 Vulkan 경로로 좁힌 과정, cvar 2줄의 근거와 단계별 실측.
 - `2026-10-01_lig_0928_incident_log_analysis.md` (2026-10-01, **완료(분석) — 원인 미확정**) — **이 폴더의
   출발점.** LIG 현장 9/28 사고 4건(MUM-T PC 게임 스레드 정지 2건, 자기방호 PC 그래픽 장치 분실/X11 종료
   2건)을 보내온 엔진 로그로 정리. 두 PC가 드라이버·엔진 CL·패키지가 모두 달라 한 요인으로 묶이지 않는다.
@@ -334,6 +367,23 @@
 
 ## `ui/` — WBP 위젯 개발
 
+- **[2026-10-15 묶음]** (셋 다 C++ 완료 / 빌드·WBP·실측 대기)
+  - `2026-10-15_axis_selection_ugv_dashboard_toggle_and_saved_choices.md` — 축 선택 화면에 "UGV 테스트
+    화면 표시" 체크박스 추가 + **데모 모드·UGV 테스트 화면·접속 IP를 패키지 종료 후에도 유지**.
+  - `2026-10-15_ugv_test_dashboard_stretch_with_fixed_viewport.md` — 고정 해상도 모드에서 UMG 대시보드가
+    창 리사이즈를 안 따라가고 잘리던 문제. WBP 루트를 Slate 래퍼로 감싸 **3D와 같은 축별 배율**을 적용.
+  - `2026-10-15_ugv_detection_hides_engagement_excluded_targets.md` — **"보이는데 안 쏨" 모순 제거.**
+    UGV RCWS가 쏘지 않는 적(교전 제외 = 도주 3분대)을 UGV 탐지에서도 빼고(**LIG UDP 송신 포함**)
+    화면 박스는 약 3초 페이드아웃. 사격 스위치 `bRespectEnemyTargetingExclusion`을 그대로 따르므로
+    트럭 쪽은 영향 없음.
+- `2026-10-13_detection_marker_wbp.md` (2026-10-13, 완료 — UGV 테스트 화면 PIE 확인, **Monitor1/2·RTSP·
+  2-PC 미검증, 디자이너 PNG 대기**) / `2026-10-14_detection_box_tracking.md` (2026-10-14, 완료 — PIE 확인,
+  P4 Change 45 제출) — **최신.** 탐지 박스를 대상 종류 × 진영별 디자이너 WBP(`UDetectionMarkerWidget`)로
+  교체(글자 크기 고정, 거리만 C++ 바인딩) + **탐지된 대상만 그리는 저해상도 "정답 마스크" 캡처**
+  (`UDetectionMaskCaptureComponent`)를 UMG 머티리얼로 반투명 스케치 강조 — **LIG RTSP 영상에는 안 실린다.**
+  디자인 확인용 테스트 레벨 `L_TD_Test` 포함. 후속 문서는 박스 계단 이동의 진짜 원인(**화면 위젯의
+  0.1초 패널 스로틀**)을 고치고 대상별 등속 칼만 추적기를 넣어 매 프레임 추종하게 한 것 + 0..1로 잘린
+  UV/1.2 여유 때문에 마커가 화면 가장자리에 붙거나 글자만 남던 문제 수정.
 - `2026-10-06_loading_screen_design.md` / `2026-10-06_loading_screen_impl.md` (2026-10-06, 구현 완료·검증
   대기) — **최신.** 로비 → New_kadex_0811 전환에 페이드·로딩 화면을 넣고 그 아래서 Niagara/PSO 워밍업과
   안정화 대기를 한 뒤 페이드인. 목표는 "품질은 그대로, 비용을 로딩 시점으로 옮긴다". 함께 **호스트
@@ -413,6 +463,10 @@
 
 ## `replication/`
 
+- `2026-10-12_selfdefense_reconnect_truck_destroyed.md` (2026-10-12, 완료 — CL 36·37 제출, 2-PC 재접속
+  검증 "이제 잘된다") — **최신.** 자체방호 클라가 나갔다 다시 들어올 때 어긋나던 3종: ① 클라 퇴장 시
+  **엔진 기본 `PawnLeavingGame`이 지휘소 트럭을 Destroy**했다 ② 서버의 원격 PC `BeginPlay`가 주행 중인
+  UGV를 Manual로 세웠다 ③ 퇴장자의 트럭 RCWS 수동 모드가 서버에 남았다. 셋 다 수정.
 - `2026-09-17_enemy_anim_death_replication_gaps.md` (2026-09-17, 완료·2-PC 실기 검증 대기) — ★★
   **Chronicle 리플레이로 드러난 클라이언트 결함 4건**(리플레이 = 클라이언트 하나 더이므로 자체방호
   클라이언트도 동일). (1) 적군 `GaitTopSpeed`/`IsSprinting` 미복제 → 서버 전용 틱만 쓰는 값이라

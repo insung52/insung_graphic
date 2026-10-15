@@ -236,6 +236,8 @@ Dest width out of bounds for: 'BackBuffer0' <- 'Tonemap', [1703,1080] <- copying
   폴백(창 해상도 맞추기 + 리스케일)으로 내려가고 경고를 남긴다.
 - 안전망은 그대로: `FMainViewFrameSource`의 복사가 항상 스케일 가능한 블릿이라, 어떤 구성에서도
   **스트림은 정확히 Resolution으로 나가고 크래시는 없다.**
+- 후속(2026-10-15): UMG 위젯이 이 스케일링을 안 따라가는 문제(DPI 스케일이 고정 크기 기준이라 창을 줄이면 잘림) →
+  [`../ui/2026-10-15_ugv_test_dashboard_stretch_with_fixed_viewport.md`](../ui/2026-10-15_ugv_test_dashboard_stretch_with_fixed_viewport.md)
 
 #### 참고: PIE fps 저하
 

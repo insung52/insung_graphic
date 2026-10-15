@@ -70,6 +70,8 @@ titan_example/Source/titan_example/UI/
    순회하며 자기 자신을 뺀 모든 대상을 평가, `DetectedTargets` 배열을 갱신
 4. `UMissionDashboardWidget`이 매 0.2초(`TextRefreshIntervalSeconds`)마다
    `DetectedTargets`를 해당 카메라의 `UDetectionOverlayWidget`으로 넘겨서 그림
+   (2026-07 기준 레거시 경로. 현재 화면 `SelfDefenseMonitor1/2`·`UGVTestDashboard`는 매 프레임
+   `SetDetectionsFrom` + 오버레이 박스 추적 — 4.1절)
 
 ## 2. UDetectableTargetComponent / UDetectableTargetSubsystem
 
@@ -99,8 +101,9 @@ bool(`DetectableTargetComponent.h:67`, 접근자 `:70-73`, 기본 true). 구 `UE
 SoldierLab 병사에는 이것뿐이다. **쓰는 곳**: `USoldierLabBridgeSubsystem::SyncSoldiers` 가 매 틱 분대 배정
 `FSoldierAssignment::bTargetableByOwnSideWeapons` 를 복사(`SoldierLabBridgeSubsystem.cpp:200-201` — 시나리오 `IssueSquadOrder`
 `SetTargetable false` 행이 원천). **읽는 곳**: `URCWSFireControlComponent` 표적 선정·총성 조사 — 단 **`bRespectEnemyTargetingExclusion`
-이 켜진 RCWS(UGV)만** 읽고 트럭은 안 읽는다(`rcws_fire_control_dev_guide.md` 3.3절). 탐지 스캔·`DetectedTargets`·HUD 박스에는
-**영향 없음** — 제외된 적도 탐지는 된다. SoldierLab 아군 보병은 이 컴포넌트를 거치지 않고 배정 플래그를 직접 읽는다
+이 켜진 RCWS(UGV)만** 읽고 트럭은 안 읽는다(`rcws_fire_control_dev_guide.md` 3.3절). **2026-10-15부터 같은 스위치로 그 액터의
+탐지 스캔도 이 적을 뺀다**(§3.6 `bHideTargetsExcludedByFireControl` — UGV `DetectedTargets`·HUD 박스·LIG UDP에서 빠짐, 트럭 탐지는 그대로;
+그 전엔 "제외된 적도 탐지는 된다"였음). SoldierLab 아군 보병은 이 컴포넌트를 거치지 않고 배정 플래그를 직접 읽는다
 (`USoldierEngagementComponent::IsContactExcluded`).
 
 **차량이 SoldierLab 보병의 표적이 되는 경로 (2026-09-23 갱신)** — 차량의 `DetectableTargetComponent`(진영)를
@@ -354,6 +357,8 @@ Beer-Lambert)을 따로 구해 곱한다. 계산은 SoldierLab 모듈의 `USoldi
 | `TSet<EMilitaryFaction> DetectableFactions` | 비어 있음 | 비어 있으면 **전부 탐지**(기존 동작). 값을 넣으면 그 진영만 탐지 |
 | `float MinScreenSizeFraction` | 0 | 화면에서 이 비율보다 작게 보이는 대상은 무시. 0이면 끔 |
 | `bool bIgnoreBreakingContactTargets` (2026-09-23) | false | 철수 중인 대상(`UDetectableTargetComponent::bBreakingContact`)을 스캔에서 통째로 뺀다. **`ADronePawn` 생성자에서만 켠다** |
+| `bool bHideTargetsExcludedByFireControl` (2026-10-15, 빌드·실측 대기) | **true** | 같은 액터의 `URCWSFireControlComponent`가 `bRespectEnemyTargetingExclusion=true`이고 대상이 교전 제외(`bTargetableByFriendlyForces` / 구 `bTargetableByAlliesAndUGV` false)면 `DetectedTargets`에서 뺀다 = **"안 쏘는 적은 안 보인다"**(사격 표적 선정과 같은 조건·같은 스위치). 실제로 걸리는 건 시나리오 `SetTargetable(false)` 뒤의 **UGV뿐** — 트럭은 스위치가 false, FireControl 없는 드론은 무관. 판정 상태(Confidence 등)를 지우므로 제외가 풀리면 처음부터 재획득. 스위치는 서버 전용(복제 안 됨) |
+| `float ExcludedTargetFadeOutSeconds` (2026-10-15) | 3 | 위로 빠지기 **직전까지 감지돼 있던** 대상만 이 시간 동안 표시 전용 배열 **`FadingOutTargets`**(`FDetectedTarget::FadeOutStartTime/FadeOutDuration` 채움)에 박스를 계속 넣는다 — 오버레이·실루엣 마스크만 읽고 UDP/사격/트리거는 안 읽음. 처음부터 제외된 대상은 아예 안 나타남. 0 이하 = 즉시 사라짐 |
 
 API: `AddDetectableFaction()` / `SetDetectableFactions()` / `IsFactionDetectable()`.
 
@@ -424,6 +429,31 @@ API: `AddDetectableFaction()` / `SetDetectableFactions()` / `IsFactionDetectable
 기준으로 한 0..1 비율이기 때문에, 오버레이 위젯의 로컬 0..1 공간이 그 프레임과 1:1로
 맞아떨어져야 함(8.1절 트러블슈팅에서 이 전제가 깨진 게 아닌지 의심했다가 결국
 아니었던 것으로 결론).
+
+### 4.1 박스 표시 경로 — 갱신 주기·추적·자르지 않은 UV (2026-10-14 기준)
+
+**갱신 주기**: 세 화면(`SelfDefenseMonitor1/2`·`UGVTestDashboard`)은 `SetDetectionsFrom(탐지기)`를 **매 프레임**
+(`RefreshSmoothValues()`) 부른다 — 패널 텍스트용 `RefreshPanel()`(0.1 s)이 아니다. 탐지 스캔 자체는 `ScanIntervalSeconds`(권장 0.1)
+그대로이고, 스캔 사이는 아래 추적기가 메운다. 마커 거리 글자 **값**만 `MarkerTextRefreshIntervalSeconds`(기본 0.1)마다 바뀐다.
+
+**박스 추적(`Detection Overlay|Tracking`, `bTrackBoxes` 기본 true, `SetDetectionsFrom` 경로 전용)**:
+- 탐지기는 스캔마다 `FScanView`(카메라 위치/회전/FOV/화면비/월드 시각)를 남긴다 — `GetLastScanView()`, `GetProjectionAspectRatio()`.
+- 오버레이는 `GetCompletedScanCount()`가 바뀔 때마다 대상별로 **월드 위치를 측정**(박스 중심 UV를 스캔 시점 카메라로, 대상 루트 바운드
+  중심의 view 깊이만큼 역투영 = "거리계가 있는 실제 시스템") → 축별 **등속 칼만**(Q = `TrackManeuverAccelCmPerSec2`², R = `TrackMeasurementNoiseCm`²)으로
+  위치·속도 추정. 크기는 cm로 저장, `TrackSizeResponse`로 lerp.
+- 매 프레임 추정 위치(예측 상한 `TrackMaxExtrapolationSeconds`, 보정 점프는 `TrackCorrectionBlendSeconds` 지수 감쇠 오프셋)를 **현재 카메라**로
+  투영 → 관찰자 움직임은 오차 없이, 대상 움직임은 스캔으로만 추정. 표시 거리 = 추적 위치까지 거리.
+- 박스가 뜨고 사라지는 것은 **스캔 판정 그대로**(스캔에 없는 대상의 추적은 즉시 삭제). `SetDetections`(레거시, 카메라 없음)는 추적 없이 스캔 박스.
+  - 예외(2026-10-15): `SetDetectionsFrom`은 `FadingOutTargets`(§3.6)도 `LastDetections`에 붙이고 추적도 유지한다. 불투명도 `1-(now-start)/duration`을
+    매 프레임 계산해 `FDetectionMarkerInfo::DisplayOpacity`로 넘기고(선 박스 = 색 알파 곱, 마커 WBP = `SetRenderOpacity`), 0 이하가 되면 뺀다.
+    실루엣 마스크(`UDetectionMaskCaptureComponent::RebuildShowOnlyList`)도 페이드 대상을 포함. 상세: `ui/2026-10-15_ugv_detection_hides_engagement_excluded_targets.md`.
+- 한계: 실루엣은 매 프레임 실제 위치라 급정지 때 박스가 잠깐 어긋나 실루엣 가장자리가 마커 사각형에 잘릴 수 있음 — `MarkerPadding`.
+
+**자르지 않은 UV**: `FDetectedTarget`에 `ScreenMinUVUnclamped/ScreenMaxUVUnclamped`(카메라 앞 코너 전부, `ProjectWithViewProjectionUnclamped`)가 있다.
+기존 `ScreenMin/MaxUV`는 계속 0..1로 잘리고 **RCWS 조준·판정은 이쪽을 쓴다(불변)**. 오버레이(마커·선 박스·추적 측정)는 자르지 않은 값을 쓰고
+(비어 있으면 = Min==Max면 잘린 값으로 폴백), 박스가 [0,1]과 **전혀 안 겹치면 마커를 숨긴다** — 탐지기의 ±1.2 NDC 여유와 별개인 표시 규칙.
+화면 밖으로 나간 부분은 화면 WBP 오버레이의 **Clipping = Clip to Bounds**가 자른다. 잘린 값으로 배치하면 마커가 가장자리에 붙고, 1.2 여유 띠
+안에선 폭 0 박스 + 라벨만 남는다. 상세: `ui/2026-10-14_detection_box_tracking.md`.
 
 ### WBP 설정 방법
 

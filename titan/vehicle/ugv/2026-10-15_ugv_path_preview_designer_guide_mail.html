@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<!-- 2026-10-15 / 완료 / UGV 자율주행 예상 경로 시각화 — 디자이너용 수정 방법 안내 메일(HTML 본문). 에셋은 이미 세팅됨(MI/DA/마스크 PNG 수정 방식). 기술 상세는 2026-10-15_ugv_path_preview_overlay.md §4. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UGV 경로 시각화 수정 가이드</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f3f5f7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f5f7;">
+<tr>
+<td align="center" style="padding:24px 12px;">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:680px; background-color:#ffffff; border:1px solid #dfe3e8; border-radius:8px;">
+
+<!-- 머리 -->
+<tr>
+<td style="padding:28px 32px 20px 32px; border-bottom:3px solid #19b4d9; font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;">
+<p style="margin:0 0 6px 0; font-size:12px; color:#6b7785; letter-spacing:0.5px;">KADEX 시뮬레이터 · UGV 테스트 대시보드</p>
+<h1 style="margin:0; font-size:22px; line-height:1.35; color:#1d2733;">UGV 자율주행 예상 경로 시각화 — 색·모양·속도 수정 방법</h1>
+</td>
+</tr>
+
+<!-- 본문 -->
+<tr>
+<td style="padding:24px 32px 8px 32px; font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif; font-size:14px; line-height:1.7; color:#2b3540;">
+
+<p style="margin:0 0 14px 0;">안녕하세요.</p>
+<p style="margin:0 0 14px 0;">UGV가 자율주행을 시작하면 앞으로 달려갈 경로를 지형 위에 띠 모양(하늘색 바탕 + 흐르는 흰 화살표)으로 보여 주는 기능이 들어갔습니다. 필요한 에셋은 모두 만들어서 연결해 두었으니, <b>아래 에셋의 값만 바꾸시면</b> 색과 모양, 속도를 원하시는 대로 조정하실 수 있습니다.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0; background-color:#eef9fc; border-left:4px solid #19b4d9;">
+<tr><td style="padding:12px 16px; font-size:13px; line-height:1.7; color:#2b3540;">
+<b>먼저 알아 두실 점</b><br>
+· 이 경로는 <b>UGV 테스트 대시보드의 UGV 화면에서만</b> 보입니다. RTSP 송출 영상이나 쿼드캠 등 다른 카메라에는 나가지 않습니다.<br>
+· 지형에만 칠해집니다. 나무·병사·차량이 앞에 있으면 가려지고, <b>풀 위에는 일부러 칠하지 않습니다</b>(바퀴가 밟는 실제 지면만).<br>
+· 차량이 지나온 부분은 사라지고, 무늬는 땅에 고정된 채 차량이 그 위를 지나갑니다.<br>
+· <b>PIE에서 자율주행을 켜 둔 채로 값을 바꾸면 바로 화면에 반영</b>됩니다. 재시작이 필요 없습니다.
+</td></tr>
+</table>
+
+<!-- 0 -->
+<h2 style="margin:26px 0 10px 0; font-size:17px; color:#1d2733;">어디서 무엇을 바꾸나요?</h2>
+<p style="margin:0 0 8px 0;">모든 에셋은 <span style="font-family:Consolas,monospace; font-size:13px; background-color:#f3f5f7; padding:1px 5px;">/Game/Vehicles/UGV/Effects/PathPreview/</span> 폴더에 있습니다.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px 0; border:1px solid #dfe3e8; font-size:13px;">
+<tr style="background-color:#1d2733; color:#ffffff;">
+<td style="padding:8px 10px; width:36%;"><b>에셋</b></td><td style="padding:8px 10px;"><b>여기서 바꾸는 것</b></td>
+</tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>MI_UGVPathPattern</b><br><span style="color:#6b7785;">머티리얼 인스턴스</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">색, 밝기, 투명도, 화살표 흐르는 속도, 무늬 텍스처</td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>T_UGVPathArrow_Mask</b><br><span style="color:#6b7785;">마스크 PNG</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">화살표·배경·외곽선의 <b>모양</b></td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>DA_UGVPathStyle</b><br><span style="color:#6b7785;">스타일 데이터 에셋</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">띠 폭, 화살표 간격, 시작 위치, 페이드, 표시 길이</td></tr>
+<tr><td style="padding:8px 10px;"><b>C_UGVPathOpacityAhead</b><br><span style="color:#6b7785;">커브(Curve Float)</span></td><td style="padding:8px 10px;">차량에서 멀어질수록 옅어지는 정도</td></tr>
+</table>
+<p style="margin:0 0 16px 0; font-size:13px; color:#6b7785;">연결 순서: WBP_UGVTestDashboard → DA_UGVPathStyle → MI_UGVPathPattern → M_UGVPathPattern(원본 머티리얼, 수정 불필요)</p>
+
+<!-- 1 -->
+<h2 style="margin:26px 0 10px 0; font-size:17px; color:#1d2733;">1. 색 · 밝기(이미시브) · 투명도 — MI_UGVPathPattern</h2>
+<p style="margin:0 0 10px 0;">머티리얼이 Unlit이라서 <b>이미시브가 곧 화면에 보이는 색</b>입니다. 부위마다 <b>색 × 밝기</b>로 정해지고, 투명도는 따로 정합니다. MI를 열면 아래처럼 그룹별로 나뉘어 있습니다.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px 0; border:1px solid #dfe3e8; font-size:13px;">
+<tr style="background-color:#1d2733; color:#ffffff;">
+<td style="padding:8px 10px; width:20%;"><b>부위</b></td><td style="padding:8px 10px;"><b>색</b></td><td style="padding:8px 10px;"><b>밝기</b></td><td style="padding:8px 10px;"><b>투명도</b></td>
+</tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>배경</b> (Band)</td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">BandColor<br><span style="color:#6b7785;">하늘색 0.43 / 0.80 / 1.0</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">BandBrightness<br><span style="color:#6b7785;">1</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">BandOpacity<br><span style="color:#6b7785;">0.35</span></td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>외곽선</b> (Edge)</td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">EdgeColor<br><span style="color:#6b7785;">0.67 / 0.92 / 1.0</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">EdgeBrightness<br><span style="color:#6b7785;">1</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">EdgeOpacity<br><span style="color:#6b7785;">0.8</span></td></tr>
+<tr><td style="padding:8px 10px;"><b>화살표</b> (Arrow)</td><td style="padding:8px 10px;">ArrowColor<br><span style="color:#6b7785;">흰색 0.96 / 0.99 / 1.0</span></td><td style="padding:8px 10px;">ArrowBrightness<br><span style="color:#6b7785;">1</span></td><td style="padding:8px 10px;">ArrowOpacity<br><span style="color:#6b7785;">0.92</span></td></tr>
+</table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0; background-color:#fff7e8; border-left:4px solid #f0a020;">
+<tr><td style="padding:10px 14px; font-size:13px; line-height:1.7; color:#2b3540;">
+· 색 값은 <b>화면에 보이는 값 그대로</b>(0~1)입니다. 레벨 노출과 상관없습니다. 이미지 툴의 색상값이라면 RGB 수치 ÷ 255로 넣으시면 됩니다.<br>
+· <b>밝기를 1보다 크게 줘도 흰색에서 잘릴 뿐, 빛이 번지는(Bloom) 효과는 생기지 않습니다.</b> 이 경로는 화면 후처리가 끝난 뒤에 그려지는 구조라서입니다. 더 진하게 보이게 하려면 밝기보다 <b>투명도를 올리는 것</b>이 효과적입니다.
+</td></tr>
+</table>
+
+<!-- 2 -->
+<h2 style="margin:26px 0 10px 0; font-size:17px; color:#1d2733;">2. 모양 — 마스크 PNG (T_UGVPathArrow_Mask)</h2>
+<p style="margin:0 0 10px 0;">화살표·배경·외곽선의 모양은 <b>PNG 한 장의 채널</b>에 흑백으로 들어 있습니다. 흰색 = 그 부위, 검은색 = 없음입니다. 색은 PNG가 아니라 위 1번의 MI에서 정하므로, PNG에는 모양만 그리시면 됩니다.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 12px 0; border:1px solid #dfe3e8; font-size:13px;">
+<tr><td style="padding:8px 10px; width:24%; border-bottom:1px solid #eef1f4; background-color:#fdeceb;"><b>R 채널</b></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">배경(띠) 영역 — 보통 전체 흰색</td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4; background-color:#e9f7ec;"><b>G 채널</b></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">화살표 모양</td></tr>
+<tr><td style="padding:8px 10px; background-color:#e8f0fd;"><b>B 채널</b></td><td style="padding:8px 10px;">외곽선(띠 양쪽 가장자리)</td></tr>
+</table>
+
+<p style="margin:0 0 6px 0;"><b>PNG 방향</b> — 띠를 위에서 내려다본 모습입니다.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px 0; border:1px solid #9fdcec; font-size:12px; text-align:center;">
+<tr>
+<td style="padding:6px; width:18%;">&nbsp;</td>
+<td style="padding:6px; background-color:#dff4fa; color:#1d2733;" colspan="3"><b>가로</b> → 차량이 나아가는 방향 (PNG 한 장 = 한 칸, 계속 반복)</td>
+</tr>
+<tr>
+<td style="padding:8px 6px; background-color:#dff4fa; color:#1d2733;"><b>위쪽</b><br>띠 왼쪽</td>
+<td style="padding:8px 6px; background-color:#c6ecf6;" rowspan="3">PNG 왼쪽 끝</td>
+<td style="padding:8px 6px; background-color:#b3e5f3;" rowspan="3">&gt; &nbsp; 화살표 끝은 오른쪽을 향하게 &nbsp; &gt;</td>
+<td style="padding:8px 6px; background-color:#c6ecf6;" rowspan="3">PNG 오른쪽 끝<br>(= 다음 칸 시작)</td>
+</tr>
+<tr><td style="padding:8px 6px; background-color:#dff4fa; color:#1d2733;"><b>가운데</b></td></tr>
+<tr><td style="padding:8px 6px; background-color:#dff4fa; color:#1d2733;"><b>아래쪽</b><br>띠 오른쪽</td></tr>
+</table>
+<ul style="margin:0 0 16px 0; padding-left:20px;">
+<li style="margin-bottom:4px;">현재 PNG는 512 × 128px이고, 한 칸이 땅 위 <b>450cm × 180cm</b>에 깔립니다(가로·세로 축척이 다릅니다). 그래서 PNG에서는 화살표가 살짝 눌려 보이는 게 정상입니다.</li>
+<li style="margin-bottom:4px;">수정한 PNG는 같은 텍스처에 <b>Reimport</b>하시면 됩니다. 새 텍스처로 임포트한다면 <b>sRGB 끄기, Compression Settings = Masks</b>로 맞춘 뒤 MI의 <b>MaskTexture</b>에 넣어 주세요.</li>
+<li>왼쪽·오른쪽 끝이 자연스럽게 이어지도록(타일링) 그려야 칸 사이에 이음매가 생기지 않습니다.</li>
+</ul>
+
+<!-- 3 -->
+<h2 style="margin:26px 0 10px 0; font-size:17px; color:#1d2733;">3. 화살표 속도 · 간격 · 띠 폭</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px 0; border:1px solid #dfe3e8; font-size:13px;">
+<tr style="background-color:#1d2733; color:#ffffff;">
+<td style="padding:8px 10px; width:30%;"><b>항목</b></td><td style="padding:8px 10px; width:24%;"><b>위치 · 기본값</b></td><td style="padding:8px 10px;"><b>설명</b></td>
+</tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>흐르는 속도</b></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">MI · FlowSpeed<br><span style="color:#6b7785;">0.8</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">단위는 <b>초당 몇 칸</b>. 실제 속도 = FlowSpeed × 한 칸 길이(기본 0.8 × 4.5m ≈ 초당 3.6m). 0이면 멈추고, 음수면 거꾸로 흐릅니다.</td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>화살표 간격</b><br>(한 칸 길이)</td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">DA · Tile Length Cm<br><span style="color:#6b7785;">450</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">PNG 한 장이 땅 위 몇 cm에 깔리는지</td></tr>
+<tr><td style="padding:8px 10px;"><b>띠 폭</b></td><td style="padding:8px 10px;">DA · Half Width Cm<br><span style="color:#6b7785;">90 (폭 1.8m)</span></td><td style="padding:8px 10px;">띠 폭의 절반</td></tr>
+</table>
+<p style="margin:0 0 16px 0; font-size:13px; color:#6b7785;">간격이나 폭을 크게 바꾸면 PNG가 같이 늘어나서 화살표가 납작하거나 길쭉해집니다. 그럴 때는 PNG의 화살표 모양도 함께 조정해 주세요.</p>
+
+<!-- 4 -->
+<h2 style="margin:26px 0 10px 0; font-size:17px; color:#1d2733;">4. 그 밖의 설정 — DA_UGVPathStyle · 커브</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px 0; border:1px solid #dfe3e8; font-size:13px;">
+<tr><td style="padding:8px 10px; width:34%; border-bottom:1px solid #eef1f4;"><b>Opacity</b> <span style="color:#6b7785;">(1)</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">전체 투명도 배율 — 띠 전체를 한 번에 옅게/진하게</td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>Start Offset Cm</b> <span style="color:#6b7785;">(400)</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">차량 위치부터 이 거리까지는 안 그림(차체 위에 칠해지지 않게)</td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>Fade In / Fade Out Cm</b> <span style="color:#6b7785;">(300 / 150)</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">시작 부분이 서서히 나타나는 길이 / 목적지 앞에서 사라지는 길이</td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>Max Length M</b> <span style="color:#6b7785;">(300)</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">차량 앞으로 몇 m까지 보여 줄지</td></tr>
+<tr><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;"><b>C_UGVPathOpacityAhead</b><br><span style="color:#6b7785;">(커브)</span></td><td style="padding:8px 10px; border-bottom:1px solid #eef1f4;">멀수록 옅어지게. X = 차량 앞 거리(m), Y = 투명도 배율(0~1).<br>현재 값: 0m → 1.0, 80m → 1.0, 200m → 0.55, 300m → 0.3, 500m → 0.01<br><span style="color:#6b7785;">표시 길이(Max Length M)보다 먼 키는 화면에 나오지 않습니다. 끝에서 거의 사라지게 하려면 마지막 키의 거리를 Max Length M과 맞춰 주세요.</span></td></tr>
+<tr><td style="padding:8px 10px;"><b>Ground 항목</b></td><td style="padding:8px 10px;">풀·지면 판정용이라 보통은 그대로 두시면 됩니다. 띠에 구멍이 숭숭 나 보이면 <b>Height Tolerance Cm</b>을 조금 올리고, 풀에 색이 묻으면 조금 내리세요.</td></tr>
+</table>
+
+<!-- 5 -->
+<h2 style="margin:26px 0 10px 0; font-size:17px; color:#1d2733;">5. 팁</h2>
+<ul style="margin:0 0 16px 0; padding-left:20px;">
+<li style="margin-bottom:6px;">원본 머티리얼(M_UGVPathPattern)은 건드리지 않고 <b>MI만 수정</b>하시면 됩니다.</li>
+<li style="margin-bottom:6px;">머티리얼 미리보기 창과 실제 화면은 조금 다르게 보일 수 있으니, 최종 확인은 꼭 PIE에서 해 주세요.</li>
+<li style="margin-bottom:6px;"><b>가는 선·작은 무늬는 멀리서 뭉개집니다.</b> 멀리까지 또렷하게 보이려면 무늬를 굵게 그리거나 화살표 간격을 늘리세요.</li>
+<li style="margin-bottom:6px;">띠와 맞닿은 물체(풀, 차체 모서리) 가장자리가 잠깐 계단처럼 보일 수 있습니다. 후처리 이후에 그리는 구조상의 한계이고 디자인 문제는 아닙니다.</li>
+<li>잠깐 끄고 비교하고 싶으시면 콘솔에 <b style="font-family:Consolas,monospace;">titan.UGVPath.Enable 0</b>(다시 켜기 <span style="font-family:Consolas,monospace;">1</span>)을 입력하세요.</li>
+</ul>
+
+<p style="margin:20px 0 6px 0;">기술적인 세부 내용은 개발 문서 <span style="font-family:Consolas,monospace; font-size:13px;">titan/vehicle/ugv/2026-10-15_ugv_path_preview_overlay.md</span>의 4장에 있습니다. 원하시는 표현이 잘 안 나오거나 궁금한 점이 있으면 편하게 말씀해 주세요.</p>
+<p style="margin:0 0 24px 0;">감사합니다.</p>
+
+</td>
+</tr>
+
+<!-- 꼬리 -->
+<tr>
+<td style="padding:14px 32px; border-top:1px solid #eef1f4; background-color:#f9fafb; border-radius:0 0 8px 8px; font-family:'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif; font-size:12px; color:#8a95a1;">
+KADEX 시뮬레이터 개발 · 2026-10-15 · UGV 자율주행 예상 경로 시각화
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+</body>
+</html>
