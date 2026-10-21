@@ -799,8 +799,16 @@ BP에 배치된 `UCineCameraComponent`가 그 본 소켓에 붙어 있고, 코�
 - `C`키 시점 순환에 짐벌이 포함된다 — 짐벌이 실제로 어디를 보는지(렌즈/DOF까지) 메인 화면에서
   바로 확인할 수 있다.
 - 캡쳐는 라운드로빈(`GimbalRoundRobinSlot`/`Count`)으로 매 프레임 안 돈다.
-- 자체방호축에서만 캡쳐가 살아있다 — 다른 축 프로세스에서는 `bDisableGimbalCapture`로 꺼서
+- 기본적으로 자체방호축에서만 캡쳐가 살아있다 — 다른 축 프로세스에서는 `bDisableGimbalCapture`로 꺼서
   아무도 안 보는 풀퀄리티 캡쳐가 도는 걸 막는다.
+  - **예외(2026-10-21, 빌드 대기): 로컬 화면이 요청하면 다른 축(UGV 호스트)에서도 캡쳐한다.**
+    `SetGimbalCaptureRequestedByLocalDisplay(bool)`가 요청 수(`LocalGimbalDisplayRequests`)를 세고,
+    `UpdateGimbalCapture()` 게이트는 `bDisableGimbalCapture && LocalGimbalDisplayRequests <= 0`일 때만 return —
+    `bDisableGimbalCapture`는 그대로 두므로 축 판정 콜백과의 호출 순서 무관. 현재 호출자는 UGV 테스트 대시보드
+    (`UAVViewImage`가 WBP에 있을 때만 NativeConstruct/Destruct에서 등록/해제). 호스트 복제본은
+    `TickRemoteInterpolation`이 짐벌 본·줌까지 갱신하므로 영상이 맞게 나온다(§15). 비용: 2프레임에 1회 풀 씬 렌더
+    추가. 로그 `[Drone] 로컬 화면 짐벌 영상 요청 등록/해제 — 요청 수 N, 축 판정 캡쳐 끔=0/1.`
+    → `ui/2026-10-21_ugv_test_dashboard_uav_view.md`.
 
 ### 12.2 본 회전 — 컴포넌트 공간 절대값 (함정)
 

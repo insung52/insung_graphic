@@ -57,6 +57,8 @@
 | `ZoomRibbon` | Open Scrolling Ruler Widget — `bWrapMode=false, MinValue=0.5, MaxValue=10.0, bInvertAxis=true, bShowSpine=true, bMirrored=true, ValueBreakpoints={0.5,1,2,4,8,16}` |
 | `ZoomText` | Text — 형식 "2.5x" |
 | `QuadCamFrontImage` / `QuadCamRearImage` / `QuadCamLeftImage` / `QuadCamRightImage` | Image |
+| `UAVViewImage` | Image — **(2026-10-21 추가, 빌드·배치 대기)** 드론(`ADronePawn`) 짐벌 영상. QuadCam 4분할 자리에 배치하는 용도(QuadCam 이미지는 빼도 됨). **이 위젯이 있을 때만** UGV 호스트에서도 짐벌 캡쳐가 돈다(없으면 비용 0). 이미지 픽셀 크기에 맞춰 RT 리사이즈. `ui/2026-10-21_ugv_test_dashboard_uav_view.md` |
+| `UAVViewDetectionOverlay` | Detection Overlay — **(2026-10-21 추가)** `UAVViewImage`와 동일 위치/크기로 겹쳐 배치, 드론 `TargetDetection` 결과를 매 프레임 그림 |
 
 ### RCWS 상태 (`FRCWSStatusData` + `RCWSFireControl->CurrentMode`)
 

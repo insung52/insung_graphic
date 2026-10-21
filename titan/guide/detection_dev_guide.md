@@ -449,6 +449,14 @@ API: `AddDetectableFaction()` / `SetDetectableFactions()` / `IsFactionDetectable
     실루엣 마스크(`UDetectionMaskCaptureComponent::RebuildShowOnlyList`)도 페이드 대상을 포함. 상세: `ui/2026-10-15_ugv_detection_hides_engagement_excluded_targets.md`.
 - 한계: 실루엣은 매 프레임 실제 위치라 급정지 때 박스가 잠깐 어긋나 실루엣 가장자리가 마커 사각형에 잘릴 수 있음 — `MarkerPadding`.
 
+**실제 위치 스냅 스위치(`bSnapBoxesToTrueTarget`, 기본 false, 2026-10-21 추가 — 빌드·검증 대기)**:
+- false = 위 칼만 추적기(`bTrackBoxes`를 따름). true = 추적기·예측 없이 **매 프레임 대상 실제 바운드를 현재 카메라로 투영**(`bTrackBoxes`보다 우선).
+- `SetDetectionsFrom`이 현재 카메라 행렬만 잡고 추적기는 `Reset`(false로 되돌리면 다음 스캔부터 재획득). 박스는
+  `UTargetDetectionComponent::ProjectActorVisualBoxUnclamped`(스캔과 같은 8코너 + 자르지 않은 투영), 거리 = 바운드 중심↔카메라.
+  대상 파괴 시 스캔 박스, 카메라 뒤/바운드 없음이면 숨김. 이후 화면 겹침 판정·Clip to Bounds는 동일. `SetDetections`(레거시)는 영향 없음.
+- 탐지 판정·페이드아웃·Confidence·RCWS 조준·UDP 보고는 0.1 s 스캔 그대로. true에선 위 실루엣 어긋남 한계가 없다.
+  상세: `ui/2026-10-21_detection_box_true_position_switch.md`.
+
 **자르지 않은 UV**: `FDetectedTarget`에 `ScreenMinUVUnclamped/ScreenMaxUVUnclamped`(카메라 앞 코너 전부, `ProjectWithViewProjectionUnclamped`)가 있다.
 기존 `ScreenMin/MaxUV`는 계속 0..1로 잘리고 **RCWS 조준·판정은 이쪽을 쓴다(불변)**. 오버레이(마커·선 박스·추적 측정)는 자르지 않은 값을 쓰고
 (비어 있으면 = Min==Max면 잘린 값으로 폴백), 박스가 [0,1]과 **전혀 안 겹치면 마커를 숨긴다** — 탐지기의 ±1.2 NDC 여유와 별개인 표시 규칙.

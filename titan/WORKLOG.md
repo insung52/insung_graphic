@@ -2066,6 +2066,30 @@ ID **W133~W134 · P203~P205**, **[C-180] 해결 · [C-179] 확장 · [W131] · [
 
 ---
 
+## 2026-10-21 — UGV 테스트 대시보드에 UAV(드론) 짐벌 영상 표시 (UI 세션)
+
+> 원문 `ui/2026-10-21_ugv_test_dashboard_uav_view.md`. **C++ 완료 / 빌드·WBP 배치·성능 A/B 대기**(P4 opened·미제출).
+
+- 요구: UGV 테스트 대시보드의 QuadCam 4분할 자리에 드론 짐벌 영상을 띄움(QuadCam은 빠져도 됨).
+- 드론 짐벌 캡쳐는 자체방호축에서만 돌았다 → `ADronePawn::SetGimbalCaptureRequestedByLocalDisplay` 요청 카운트를 추가해
+  **로컬 화면이 요청하면 UGV 호스트에서도 캡쳐**(축 판정과 호출 순서 무관).
+- 대시보드 BindWidgetOptional `UAVViewImage` / `UAVViewDetectionOverlay` 신설 — `UAVViewImage`가 있을 때만 요청, RT는 이미지 크기로 리사이즈.
+- 검토: 시뮬 주체는 데모/풀로 세션 시작 시 고정, 호스트 복제본이 짐벌 본·줌까지 보간 갱신하므로 영상 정합. 풀 모드는 30Hz 보간이라
+  약간 덜 부드러울 수 있음. 성능은 QuadCam을 빼도 RTSP CCTV 캡쳐가 계속 돌아 이득 거의 없고, 짐벌이 2프레임에 1회 풀 씬 렌더를 추가 —
+  UGV 호스트 GPU 여유 미계측.
+
+---
+
+## 2026-10-21 — 탐지 박스 "실제 위치 스냅" BP 스위치 (UI 세션)
+
+> 원문 `ui/2026-10-21_detection_box_true_position_switch.md`. **C++ 완료 / 정식 빌드·검증 대기**(P4 4파일 opened·미제출).
+
+- 10-14에 기각했던 A안(매 프레임 실제 위치 재투영)을 사용자 요청으로 `UDetectionOverlayWidget::bSnapBoxesToTrueTarget`(기본 false) 스위치로 추가.
+  true면 칼만 추적기 대신 매 프레임 대상 바운드를 현재 카메라로 투영(`UTargetDetectionComponent::ProjectActorVisualBoxUnclamped` 신규).
+- 탐지 판정·페이드·Confidence·RCWS 조준·UDP는 0.1 s 스캔 그대로. `guide/detection_dev_guide.md` §4.1 갱신.
+
+---
+
 ## 다음에 예정된 것 (이 시점 기준)
 
 > **⚠ 2026-10-15 문서 정리 — devlog 미작성 추가 1건**

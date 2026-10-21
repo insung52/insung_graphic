@@ -710,6 +710,12 @@ Image의 둥근 모서리 반경과 같은 값으로 맞추면 됨. Slate 레벨
 > `UGVTestDashboard`가 떠 있는 동안에만(NativeConstruct/Destruct에서 `UUGVPathPreviewSubsystem`에 등록/해제), RTSP 메인뷰 복사 **뒤**라
 > 송출엔 안 나간다. 모양은 대시보드 기본값 **"Path Preview Style"**(`UUGVPathStyleAsset`, 비우면 내장 패턴). 끄기 `titan.UGVPath.Enable 0`.
 > 상세·디자이너 가이드는 `vehicle/ugv/2026-10-15_ugv_path_preview_overlay.md` §3–§4.
+>
+> 📌 [2026-10-21, 빌드·WBP 배치 대기] **UGV 테스트 대시보드에 UAV 짐벌 영상**: BindWidgetOptional `UAVViewImage`(Image) +
+> `UAVViewDetectionOverlay`(같은 위치/크기)를 QuadCam 4분할 자리에 배치하면 드론 `CameraRenderTarget`이 뜨고 `TargetDetection` 박스가
+> 매 프레임 그려진다. `UAVViewImage`가 있을 때만 드론에 로컬 화면 캡쳐를 요청(`SetGimbalCaptureRequestedByLocalDisplay`)해 UGV 호스트에서도
+> 짐벌 캡쳐가 돈다(2프레임에 1회 풀 씬 렌더 추가). RT는 이미지 픽셀 크기에 맞춰 리사이즈(UGV축에선 RTSP 소스가 아니라 고정 해상도 모드에서도).
+> QuadCam을 화면에서 빼도 RTSP CCTV용 캡쳐는 계속 돌아 GPU 이득은 거의 없다. `ui/2026-10-21_ugv_test_dashboard_uav_view.md`.
 
 ### ScrollingRulerWidget: non-wrap 모드에서 spine도 눈금 범위 밖으로 안 그려지게 수정(2026-07-11)
 
