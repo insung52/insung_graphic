@@ -88,7 +88,8 @@ velocityone_tester_offline.tar.gz 내 joystick_reader.py 참고해서 입력 신
   - 기본 에셋 경로 `/Game/Input/Actions/IA_DroneGimbalLook`은 ConstructorHelpers로 물어 둔다. 에셋이 없으면 경고만 남긴다.
   - 짐벌 환산과 권한 분기는 예전 GimbalOnly 경로와 같다(2-PC 검증된 경로).
 - `ApplyLookDeadZone`: 원형 데드존 `CameraLookDeadZone`(기본 0.1). H2와 메인 스틱 짐벌이 같이 쓴다.
-- `DoRCWSUAVAxisToggle`(Button_8): 자기방호축에서는 무시한다. 버튼은 전부 RCWS로 가야 하고, 대상은 토글이 정한다.
+- ~~`DoRCWSUAVAxisToggle`(Button_8): 자기방호축에서는 무시한다.~~ **2026-11-05 제거**(액션 프로퍼티·바인딩·핸들러·Input 탭 행).
+  이 세션이 Input 탭에 "UGV축 전용"으로 남겨 뒀지만 UGV축은 드론을 다루지 않아 쓸 곳이 없었다(사용자 지적).
 
 `UI/SelfDefenseMonitor2Widget`: `TruckManualControlCheckBox`를 모드 A로 연결했다(체크 표시는 TruckRCWS 단독일 때도 켜짐).
 `UI/SelfDefenseMonitor1Widget`: `UAVGimbalManualControlCheckBox`를 코드에서 숨기고 바인딩하지 않는다. 드론 전체 수동 토글은 그대로다.
@@ -154,8 +155,17 @@ velocityone_tester_offline.tar.gz 내 joystick_reader.py 참고해서 입력 신
 2. 모드 B: 메인 스틱 = 비행, 비틀기 = 요, hat = 짐벌, H2는 무반응.
 3. A ↔ B 전환: 상호배타인지(한쪽 체크가 꺼짐), 전환 직후 스틱이 죽지 않는지, B를 해제할 때 576km/h 역주행이 재발하지 않는지.
 4. 둘 다 해제(전자동): 트럭 RCWS가 수동 진입 전 모드로 복귀하는지, 드론 짐벌이 기본 자세로 돌아가는지.
-5. Button_8은 자기방호축에서 무반응이어야 한다(로그 "[자체방호] 축전환 버튼 무시").
+5. ~~Button_8은 자기방호축에서 무반응이어야 한다.~~ 축전환 버튼 자체가 제거됨(2026-11-05). Input 탭에 "RCWSUAVAxisToggle" 행이 안 보여야 한다.
 6. UGV축 RCWS 조준 감도(데드존 0.1)가 괜찮은지.
+
+### 2026-11-05 후속 수정 — 모드 A에서 짐벌이 기본 자세로 끌려감
+- 증상(사용자): 모드 A에서 메인 스틱으로 드론 카메라를 돌려도 특정 방향으로 천천히 되돌아감.
+- 원인: `ADronePawn::UpdateGimbalRecon`의 Idle 단계(자율비행 중, 정찰 시작 전)가 `TickGimbalHomeReturn`
+  (기본 자세 요 0 / 피치 −15°, 20°/s)을 **수동 판정 없이** 불렀다. 모드 A는 비행이 자동이라 이 함수에 계속 들어온다.
+  다른 단계(낙하산 관찰/교전 프레이밍)는 이미 `IsGimbalManuallyControlled()`로 막혀 있었다.
+- 수정: 복귀를 `!IsGimbalManuallyControlled()`일 때만. 수동을 끄면 다음 틱부터 복귀·트래킹이 다시 동작한다.
+- 확인 포인트: 모드 A에서 짐벌을 돌려 놓고 손 떼면 그 자리에 머무는지(단계 무관) → 모드 A 해제 시 기본 자세/교전 프레이밍으로 돌아가는지.
+  참고로 짐벌 요는 기체 기준이라, 자동 비행 중 기체가 선회하면 화면 방향도 같이 돈다. 이건 복귀와 별개다.
 7. 2-PC(자체방호 = 클라이언트)에서 모드 A의 짐벌과 RCWS가 서버 쪽 화면/RTSP에 반영되는지.
 8. Input 탭
    - 처음 열면 모든 칸이 비어 있는지(새 슬롯). 맨 위 안내표와 섹션 제목이 보이는지. "메인 스틱 (비행)" 행은 없는지.

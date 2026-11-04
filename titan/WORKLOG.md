@@ -2090,6 +2090,43 @@ ID **W133~W134 · P203~P205**, **[C-180] 해결 · [C-179] 확장 · [W131] · [
 
 ---
 
+## 2026-11-04 — LIG 11/04 피드백 반영 (4개 세션 병렬: 프로토콜 · 드론 탐지 · 조이스틱 · RCWS)
+
+> 정본 인계 `documents/feedback_1104/2026-11-05_handoff.md`, 작업 목록 `documents/feedback_1104/2026-11-04_feedback_1104_work_list.md`,
+> LIG 질문 `documents/feedback_1104/2026-11-04_lig_questions_feedback_1104.md`. **P4 Change 527로 제출(11/05).**
+
+- 원본: LIG 메일(`email.md`) + ICD 0806/1104 엑셀 + K05.1 위치보고 전문 엑셀 + 드론 박스 샘플 JSON + VelocityOne 테스터.
+  UI·카메라(U1~U6)는 메일 머리말대로 디자이너 협의 후로 보류.
+- **S1 프로토콜**(`protocol/2026-11-04_icd_1104_and_selfdefense_report.md`) — ICD 1104 키 오타 3건, `UGV_RCWS_Status` Azimuth/Elevation(+90)/TotalBullet,
+  `Runtime`(HH-MM-SS, 프로세스 기동 누적), 원격 조향 감도 하향. 자기방호 드론 위치보고 K05.1(`SelfDefenseReportSubsystem`, 1Hz, UDP 기본 꺼짐),
+  해발 `SceneZeroMslMeters=794`. 팀장 `ICD_정합성_수정사항.md` 대조로 **B5 `RC_Movement` 속도 지령(60°/s, 3초 무수신 정지) · B4 `RC_RemoteDriving` 0.5초 타임아웃 · B1 주기 실시간 dt** 추가.
+- **S2 드론 탐지**(`vehicle/drone/2026-11-04_drone_detection_json_and_box_reprojection.md`) — 드론 BoundingBox JSON 생성부(샘플 키·자릿수, 1024×576, 보이는 대상만),
+  드론 RTSP 1024×576, RCWS 박스 송신 시점 재투영 20Hz, F1 탐지 화면비 동기화.
+- **S3 조이스틱**(`ui/2026-11-04_joystick_velocityone_h2_rcws.md`) — 수동 토글 2개 상호배타(모드 A: H2=트럭 RCWS + 메인 스틱=드론 카메라 / 모드 B: 드론 전체 수동),
+  Input 탭을 물리 조작부 중심으로 개편(`TitanInputPresentation.h`, 저장 슬롯 v2). `guide/joystick_camera_control_dev_guide.md` 갱신.
+- **S4 RCWS**(`rcws/2026-11-04_rcws_auto_reload_ammo200_muzzle_elevation_clamp.md`) — 최대 탄수 200, 소진 1.5초 뒤 자동 재장전, 총구 탄도 회전도 차체 기준 −20~60°.
+  IR 녹색 틴트 → 흑백(`M_PP_RCWS_IR`). `guide/rcws_fire_control_dev_guide.md` §15.
+- 노트북에서 UGV축·자체방호축 기본 동작 확인. LIG 질문 Q1~Q5 + 이해 확인 2건 초안 작성(발송 여부 미확인).
+
+---
+
+## 2026-11-05 — 11/04 피드백 데스크톱 검증 + 추가 수정 3건 + ugv_controller_demo 자동 검증기
+
+> 정본 `documents/feedback_1104/2026-11-05_handoff.md` §2·§3, 데모 `rc_mockup_tools/2026-11-05_ugv_controller_demo_icd1104_autoverify.md`.
+> **P4 Change 528(데모 폴더 신규 add)·529(추가 수정) 미제출 — 사용자 submit 예정.**
+
+- **ugv_controller_demo ICD 1104 반영 + `tools/verify_1104.py`**(별도 세션) — B1 주기·ICD 키/범위·B5·B4·제어권 정리·UE 로그(K05.1/F1)를 한 번에 PASS/FAIL.
+  **UGV축 PIE 실행 결과 PASS 30 / FAIL 0**: B1 20.01/10.01/1.00Hz, B5 58.2°/s(R²=0.996)·두절 3.00초 정지, B4 0.67초 감속 시작·0.84초 정지, K05.1 평균 1.001초, F1 경고 0건.
+  인계 남은 검증 2~6번 종료. 7(Input 탭)·8(조이스틱 모드 A/B)은 사용자 확인.
+- **추가 수정(CL 529)**: ① `RCWSUAVAxisToggle`(Button_8 "RCWS ↔ 드론 축전환") 제거 — UGV축은 드론을 안 다루고 자기방호축은 수동 토글이 대상을 정해서 쓸 곳이 없었다(사용자 지적).
+  ② Input 탭 [조작 안내] 글씨 검은색. ③ 모드 A에서 드론 짐벌이 기본 자세(요 0/피치 −15°)로 끌려가던 버그 — `UpdateGimbalRecon` Idle 단계가
+  `TickGimbalHomeReturn`을 수동 판정 없이 부르던 것, `!IsGimbalManuallyControlled()`일 때만 복귀로 수정.
+- 검증 세션 관찰: 제어권 반납 시 UE DriveMode가 Idle로 남음 / B5 링크 생존은 메시지 종류 무관 → 통제기가 스틱 중립 때 0을 안 보내면 포탑이 계속 돈다.
+  안전로직은 넣지 않고 LIG 질문 후보 Q6로 추가.
+- **보류(사용자 결정 "드론은 나중에")**: 드론 JSON 형식 대조, 드론 RTSP 데스크톱 재확인. 드론 JSON 파일 출력은 시간당 약 200MB라 기본 꺼짐, 송신은 LIG 회신 대기.
+
+---
+
 ## 다음에 예정된 것 (이 시점 기준)
 
 > **⚠ 2026-10-15 문서 정리 — devlog 미작성 추가 1건**

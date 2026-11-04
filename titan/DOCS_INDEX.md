@@ -44,7 +44,7 @@
 - `quadcam_usage_guide.md` (2026-06-24) — QuadCamModule 사용법.
 - `titan_dev_status.md` (2026-06-25) — QuadCamModule 내부 아키텍처+VRAM 버그 수정.
   `quadcam_usage_guide.md`와 병합 검토 대상.
-- `rcws_fire_control_dev_guide.md` (2026-07-12~14, 이후 절별 추기 — 09-21 **3.3절** 시나리오 표적 제외 `bRespectEnemyTargetingExclusion` 경로 신설 · 09-22 **8.10절** 시나리오 재시작 `ResetForScenarioRestart`(RCWS 두 컴포넌트가 되돌리는 것/남기는 것)) — RCWS 조준/발사 메커니즘. 최신은
+- `rcws_fire_control_dev_guide.md` (2026-07-12~14, 이후 절별 추기 — 09-21 **3.3절** 시나리오 표적 제외 `bRespectEnemyTargetingExclusion` 경로 신설 · 09-22 **8.10절** 시나리오 재시작 `ResetForScenarioRestart`(RCWS 두 컴포넌트가 되돌리는 것/남기는 것) · 11-04 **15절** 탄약 200발·자동 재장전·고각 제한) — RCWS 조준/발사 메커니즘. 최신은
   `protocol/ugv_rc_feature_gap_analysis.md`/`protocol/selfdefense_rc_feature_gap_analysis.md`.
 - `pixelstreaming_setup_guide.md` (2026-07-06) — Pixel Streaming. RTSP로 방향 잡힌 뒤
   실사용 여부 불명.
@@ -52,8 +52,8 @@
   동작. 레벨은 1:1(08-26 재스케일), 보정은 랜드스케이프 코너 2점(Scale≈1.0006, 회전 -86.23°, 씬
   +X≈남), `GetDistanceScaleFactor` 용도별 분류, 미니맵 상수 8개, 동쪽 오버행 주의. 옛 스크래치
   메모는 하단에 접어서 보존.
-- `joystick_camera_control_dev_guide.md` (2026-07-08) — 조이스틱 RCWS/UAV 조작. 최신
-  버튼맵은 `protocol/selfdefense_rc_feature_gap_analysis.md` §3.
+- `joystick_camera_control_dev_guide.md` (2026-07-08, **11-04 자기방호 수동 토글 모드 A/B 재편 배너 추기 · 11-05 Button_8 축전환 제거·모드 A 짐벌 복귀 수정 반영**) — 조이스틱 RCWS/UAV 조작. 최신
+  버튼맵은 `protocol/selfdefense_rc_feature_gap_analysis.md` §3(⚠ 그 표의 Button_8 축전환은 11-05에 제거됨).
 - `detection_dev_guide.md` (2026-07-09, §2 에 09-18 총성 버스 · 09-21 `bTargetableByFriendlyForces` 소비자 · 09-22 시나리오 재시작 시 등록/`ForceRescan` · **09-23 분대 맥락(`SquadId`/`bBreakingContact`) 복제 + always relevant 부수효과**, §3.6 에 드론 전용 `bIgnoreBreakingContactTargets` 추기) — 객체 탐지(BBox) 모사.
 - `mcp/unreal-mcp-claude-code.md`, `mcp/additional-mcp-integrations.md` (원날짜 불명) —
   unreal-mcp/Claude Code 연동 설정.
@@ -109,6 +109,9 @@
 
 ## `vehicle/drone/`
 
+- `2026-11-04_drone_detection_json_and_box_reprojection.md` (2026-11-04, 구현 완료 — CL 527; 박스 재투영·F1은 11-05 검증, 드론 JSON 형식 대조·RTSP 재확인은 보류) —
+  LIG 11/04 피드백 S2(D1~D5). 드론 BoundingBox JSON 생성부(파일 출력 기본 꺼짐, 송신은 LIG 회신 대기), 드론 RTSP 1024×576,
+  RCWS 박스 송신 시점 재투영 20Hz, F1 탐지 화면비 동기화.
 - `drone_flight_dev_guide.md` (최종 2026-09-15, 09-16 §10.2 정정 — 서브스테핑은 의도적으로 끈 게 아니라
   엔진 기본값) — **드론 시스템 에버그린 레퍼런스.** 로터별
   추력→강체운동 물리, 자율비행(Pure Pursuit+제동곡선), **교전 관측 이동(16절)**,
@@ -147,8 +150,11 @@
 
 ## `rcws/` — RCWS 전용 devlog
 
+- `2026-11-04_rcws_auto_reload_ammo200_muzzle_elevation_clamp.md` (2026-11-04, 완료 — CL 527, 노트북 사용자 확인) — **최신.**
+  LIG 11/04 피드백 S4. 최대 탄수 600→200, 소진 1.5초 뒤 자동 재장전, 총구 탄도 회전도 차체 기준 −20~60° 제한.
+  레퍼런스 `guide/rcws_fire_control_dev_guide.md` §15.
 - `2026-10-15_rangefinder_trace_passes_through_soldierlab_soldiers.md` (2026-10-15, 진행중 — C++ 완료,
-  빌드·실측 대기) — **최신.** 거리측정과 락온 없는 조준점이 **병사를 통과해 뒤 배경 기준**으로 나오던
+  빌드·실측 대기) — 거리측정과 락온 없는 조준점이 **병사를 통과해 뒤 배경 기준**으로 나오던
   버그. Visibility + Pawn 몸 2단 트레이스(`URCWSComponent::TraceSightLine`)로 수정.
 - `2026-10-12_selfdefense_client_turret_reticle_replication.md` (2026-10-12, **완료**) — 자체방호 클라
   RCWS 포신 레티클이 화면에 고정되던 버그. 원인=총구 탄도 상태 미복제 → `MuzzleAimTargetWorldLocation`
@@ -367,6 +373,9 @@
 
 ## `ui/` — WBP 위젯 개발
 
+- `2026-11-04_joystick_velocityone_h2_rcws.md` (2026-11-04, 완료 — CL 527, 11-05 검증 사용자 확인) — LIG 11/04 피드백 S3(J1~J4).
+  자기방호 수동 토글 2개 상호배타(모드 A: H2=트럭 RCWS + 메인 스틱=드론 카메라 / 모드 B: 드론 전체 수동), Input 탭 물리 조작부 중심 개편
+  (`TitanInputPresentation.h`, 저장 슬롯 v2). 11-05 추기: Button_8 축전환 제거, 모드 A 짐벌 기본 자세 복귀 버그 수정(CL 529, 미제출).
 - **[2026-10-15 묶음]** (셋 다 C++ 완료 / 빌드·WBP·실측 대기)
   - `2026-10-15_axis_selection_ugv_dashboard_toggle_and_saved_choices.md` — 축 선택 화면에 "UGV 테스트
     화면 표시" 체크박스 추가 + **데모 모드·UGV 테스트 화면·접속 IP를 패키지 종료 후에도 유지**.
@@ -411,6 +420,10 @@
 
 ## `protocol/` — LIG 원격통제기 UDP/JSON 프로토콜
 
+- `2026-11-04_icd_1104_and_selfdefense_report.md` (2026-11-04, 완료 — CL 527, 11-05 자동 검증 PASS) — **최신.** LIG 11/04 피드백 S1.
+  ICD 1104(키 오타 3건, `UGV_RCWS_Status` Azimuth/Elevation/TotalBullet, `Runtime`, 조향 감도), 드론 위치보고 K05.1
+  (`SelfDefenseReportSubsystem`, 송신은 LIG 회신 대기), 해발 `SceneZeroMslMeters=794`, §7 ICD 정합성 B5/B4/B1.
+  (같은 날 `protocol_icd.md`·`lig_icd_ugv_rc_full.md`·`ugv_rc_feature_gap_analysis.md`에도 1104 내용 추기.)
 - `protocol_icd.md` (최종 2026-08-31, 09-15 §3.3/§4.1 RTSP 전송 "TCP만"→"TCP/UDP 둘 다, TCP 권장"
   정정) — **필드 단위 명세, 가장 자주 참조되는 핵심 문서.**
 - `ugv_rc_feature_gap_analysis.md` (최종 2026-08-31) — UGV축 cmd별 구현 상태 대조표.
@@ -528,6 +541,9 @@
 - `udp_protocol_client/README.md` (2026-08-15), `rtsp_viewer_test/README.md` (2026-08-17) —
   UDP/RTSP 테스트 도구.
 - `hq_stub/README.md` (2026-08-06) — NATS 기반이라 전송계층 UDP 통일 결정으로 보류 상태.
+- `2026-11-05_ugv_controller_demo_icd1104_autoverify.md` (2026-11-05, 완료 — CL 528 미제출) — **최신 RC 테스트 기준.**
+  `ugv_controller_demo`(별도 폴더 `C:\working\works\kadex\ugv_controller_demo`) ICD 1104·B4·B5 반영 + 자동 검증기 `tools/verify_1104.py`.
+  UGV축 PIE 실행 **PASS 30 / FAIL 0**. ⚠ `udp_protocol_client/rc_mock_client.py`(09-03 구버전)는 쓰지 말 것.
 
 ## `packaging/` — 패키징/배포 실행 절차
 
@@ -828,6 +844,13 @@
 - `response_0828.md` (2026-08-28) — LIG 1차 답변 원문. `protocol/lig_questions_0816.md`에
   반영 완료.
 - `문의내용0806.md` (2026-08-06) — 최초 LIG 문의 원문.
+- **`feedback_1104/` — LIG 11/04 피드백 묶음 (2026-11-04~05)**
+  - `2026-11-05_handoff.md` (2026-11-05, 구현·검증 완료 / LIG 회신 대기) — **정본.** 구현 요약, P4 CL 527(제출)·528·529(미제출), 검증 결과, 11/05 추가 수정, 남은 일.
+  - `2026-11-04_feedback_1104_work_list.md` (2026-11-04, 11-05 상태표 추가) — 세션별 작업 목록(P/D/J/R/U ID)과 항목별 현재 상태.
+  - `2026-11-04_lig_questions_feedback_1104.md` (2026-11-04, 11-05 후보 Q6 추가) — LIG 질문 Q1~Q5, 이해 확인 2건, 통보 사항, §F 송부용 예시. 발송 여부 미확인.
+  - `ICD_정합성_수정사항.md` (2026-11-04) — 팀장님 ICD 정합성 점검(B5/B4/B1 반영, 나머지 보류 — 이유는 작업 목록).
+  - `email.md`, `xlsx변경사항.md` — LIG 메일 원문, ICD 엑셀 변경 사용자 메모.
+  - `2026-11-04_icd_1104_changes.md` / `_k051_position_report_spec.md` / `_drone_detection_json_spec.md` (설계단계) — 초기 분석본, **틀린 곳 있음**(질문 문서 §E 정정 목록).
 - (비-md 원본: PDF/PPTX/xlsx — 인덱스 대상 아님.)
 
 ## `_archive/` — 보관된 문서

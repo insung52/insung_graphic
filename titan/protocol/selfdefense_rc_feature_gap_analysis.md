@@ -1,5 +1,9 @@
 # 자체방호축 RC 프로토콜 — ICD 커맨드 ↔ 실제 구현 갭 분석 (2026-08-16, 2026-08-17 갱신)
 
+> ⚠ **2026-11-05**: 아래 표의 `RCWSUAVAxisToggleAction`(Button_8, TruckRCWS ↔ UAVGimbal 축전환)은 **제거됐다.**
+> 11/04부터 조이스틱 대상은 수동 조종 토글(모드 A = 트럭 RCWS + 드론 카메라, 모드 B = 드론 전체 수동)이 정한다.
+> 콘솔 `SetCameraControlTarget`은 남아 있다. 상세: `ui/2026-11-04_joystick_velocityone_h2_rcws.md`.
+
 `protocol_icd.md` §4(자체방호축)의 원칙 — "네트워크 메시지가 아니라 같은 프로세스 내 함수
 호출, §3.2의 UGV축 대응 함수와 개념적으로 동일한 것들을 로컬로 부르면 됨" — 을 기준으로,
 UGV축 ICD(`lig_icd_ugv_rc_full.md`) 커맨드를 개념 대응시켜 `titan_examplePlayerController.*`

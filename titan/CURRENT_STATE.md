@@ -20,8 +20,8 @@ UDP+JSON, LIG 정식 ICD(`protocol/lig_icd_ugv_rc_full.md`) 기준 구현 완료
 
 ## 2. 자체방호(이동형지휘소)축 로컬 통합 — 거의 완료
 
-조이스틱 입력 → RCWS/UAV 짐벌 배선 완료(EO/IR, 발사모드, 장전, 안전/암, 축전환, 조준 브레이크
-전부 연결·실측). 상세: `protocol/selfdefense_rc_feature_gap_analysis.md`.
+조이스틱 입력 → RCWS/UAV 짐벌 배선 완료(EO/IR, 발사모드, 장전, 안전/암, 조준 브레이크
+전부 연결·실측). Button_8 축전환은 2026-11-05에 제거됐다. 조이스틱 대상은 수동 조종 토글(모드 A/B)이 정한다(§23). 상세: `protocol/selfdefense_rc_feature_gap_analysis.md`.
 
 ## 3. RTSP 영상 송출 — 완료
 
@@ -538,6 +538,8 @@ SoldierLab 병사로 교체하며 "3분대 도주 제외"가 **조용히 죽어 
 RC_OperationMode=EMERGENCY 레거시 가능성, 차량 시동 관련 커맨드 존재 여부, "LLM" 발언 확인,
 NavMesh 기능 회신, ObjectClass 회신.
 
+- **[2026-11-05] LIG 11/04 피드백 질문** — Q1~Q5 + 이해 확인 2건(+후보 Q6), 발송 여부 미확인. §23 참고.
+
 - **[2026-09-22 신규] 지도 이미지 지리참조 답장 대기** — LIG 가 픽셀 스케일(ScaleX/Y/Z)+타이포인트(I,J,K,X,Y,Z)를 요청
   (시뮬레이션개발팀 경유). 현재 `m_map.png` 기준 수치·답장 초안 완료(`protocol/2026-09-22_minimap_georeference_for_lig.md` 부록),
   발송만 남음. 지도 재생성(동쪽 확장·UTM 정렬)은 별도 제안.
@@ -769,6 +771,31 @@ NavMesh 기능 회신, ObjectClass 회신.
 - ⚠ **devlog 미작성 1건 추가** — 에디터 PIE 렌더 워커 크래시(10-15, 드론 조이스틱 조작 중). **에디터
   전용 Nanite 경합**으로 판정, **우리 코드 무관 · 패키징엔 없음.** PDB 없이 `.pdata`+vtable로 지점을
   특정한 과정이 기록 가치가 있다. WORKLOG 머리 메모 참고.
+
+---
+
+## 23. LIG 11/04 피드백 — 구현·검증 완료, LIG 회신 대기 (2026-11-04~05)
+
+> 정본 인계 `documents/feedback_1104/2026-11-05_handoff.md`, 항목별 상태표 `documents/feedback_1104/2026-11-04_feedback_1104_work_list.md` 상단.
+
+- **구현**(11/04, 4개 세션, **P4 Change 527 제출**): ICD 1104(키 오타·RCWS_Status 3필드·Runtime·조향 감도), ICD 정합성 B5/B4/B1,
+  드론 위치보고 K05.1 · 드론 BoundingBox JSON 생성부 · 드론 RTSP 1024×576 · RCWS 박스 재투영, 조이스틱 모드 A/B + Input 탭 개편,
+  RCWS 200발·자동 재장전·총구 고각 제한, IR 흑백. devlog는 `protocol/`·`vehicle/drone/`·`ui/`·`rcws/`의 `2026-11-04_*`.
+- **검증**(11/05 데스크톱): `ugv_controller_demo/tools/verify_1104.py` UGV축 PIE **PASS 30 / FAIL 0**(B1 주기, B5 58.2°/s·3초 정지,
+  B4 0.84초 정지, 키/범위, K05.1 1.001초, F1 경고 0건). Input 탭·조이스틱 모드 A/B는 사용자 확인.
+- **11/05 추가 수정(Change 529, 미제출)**: Button_8 `RCWSUAVAxisToggle`(RCWS ↔ 드론 축전환) 제거, Input 탭 [조작 안내] 글씨 검은색,
+  모드 A 드론 짐벌이 기본 자세로 끌려가던 버그(Idle 단계 홈 복귀가 수동 판정 없이 돌던 것) 수정.
+- 드론 JSON: 생성은 짐벌 캡처마다(~30Hz) 동작, 파일 출력(`bWriteDetectionReportFile`)은 시간당 약 200MB라 기본 꺼짐, 송신(`bEnableUdpSend`)은 LIG 회신 대기라 꺼짐.
+
+남은 것:
+- **P4 submit(사용자)** — Change 528(`ugv_controller_demo` 신규 add)·529(11/05 추가 수정).
+- **LIG 질문 메일 발송 여부 미확인** — `documents/feedback_1104/2026-11-04_lig_questions_feedback_1104.md` §F 초안(Q1~Q5 + 이해 확인 2건).
+  11/05 후보 질문 Q6(스틱 중립 시 `RC_Movement` 0 송신 여부 — 안 보내면 포탑이 계속 돈다) 추가.
+- **LIG 회신 후** — K05.1·드론 JSON 전송 경로/래퍼/주기, Runtime 리셋 지점, IR 흑백 의미.
+- **VelocityOne 실장비 매핑**(J3) — Input 탭 배정 후 버튼표 LIG 회신.
+- **UI·카메라 U1~U6** — 디자이너 협의 후.
+- **보류(사용자 결정 "드론은 나중에")** — 드론 JSON 형식 샘플 대조, 드론 RTSP 데스크톱 재확인.
+- UE 관찰(안 고침): 원격 제어권을 반납하면 DriveMode가 Idle로 남아 로컬 주행은 UE에서 Manual로 다시 바꿔야 한다.
 
 ---
 

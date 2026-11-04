@@ -101,7 +101,8 @@ void DoCameraLook(const FInputActionValue& Value)
 > - **모드 B**(드론 화면 토글, `UAV`): 메인 스틱은 비행, hat은 짐벌. H2 입력은 버린다.
 > - 위에 적힌 "짐벌만 수동(`UAVGimbal`)" 토글과 사이클릭→짐벌 우회, `bInvertDroneGimbalOnlyTilt`는 폐지됐다.
 >   `IMC_DroneManual`은 모드 B에서만 올라간다.
-> - `CameraLookDeadZone`(원형 데드존, 기본 0.1)이 추가됐고, 자기방호축에서는 Button_8 축전환을 무시한다.
+> - `CameraLookDeadZone`(원형 데드존, 기본 0.1)이 추가됐다. Button_8 축전환(`RCWSUAVAxisToggle`)은
+>   2026-11-05에 제거됐다 — 자기방호축은 수동 조종 토글이 대상을 정하고, UGV축은 드론을 다루지 않는다.
 >
 > 상세(모드별 입력표, IMC 충돌 회피 규칙, 입력 탭 행 구성)는 `ui/2026-11-04_joystick_velocityone_h2_rcws.md`.
 
