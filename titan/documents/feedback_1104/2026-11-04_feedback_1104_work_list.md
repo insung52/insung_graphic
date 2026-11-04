@@ -1,9 +1,12 @@
 # LIG 피드백(11/04) 작업 목록
 
-2026-11-04 / 설계단계(구현 전) / LIG 11/04 수정요청을 세션별 작업으로 정리 — 4개 세션 코드 분석 결과와 사용자 결정 반영. 각 작업에 "LIG 답 없이 시작 가능 여부"를 표시.
+2026-11-04 / 구현 완료(P4 change 527, 2026-11-05), 일부 검증·LIG 답 대기 / LIG 11/04 수정요청을 세션별 작업으로 정리 — 4개 세션 코드 분석 결과와 사용자 결정 반영.
+
+> **2026-11-05 상태**: 아래 "바로" 항목과 J1·J4, ICD 정합성 B5·B4·B1, W5 F1, P6(IR)·J2 에디터 작업까지 전부 구현·제출됨(change 527).
+> 남은 검증·대기 항목과 다른 PC 이어받기 절차는 **`2026-11-05_handoff.md`** 가 정본.
 
 원본: `email.md`, ICD 엑셀 0806/1104·`기동플랫폼_위치보고전문형식.xlsx`(비번 titan), `sample1_boxed_metadata.json`, `velocityone_tester_offline.tar.gz`.
-LIG 질문: `2026-11-04_lig_questions_feedback_1104.md` (질문 Q1~Q4, 이해 확인 B-1·B-2).
+LIG 질문: `2026-11-04_lig_questions_feedback_1104.md` (질문 Q1~Q5, 이해 확인 B-1·B-2, 송부용 예시 §F).
 
 > 메일 머리말: UI 수정·카메라 시점 변경은 후순위(디자이너 협의 후). 구현 항목 위주로 진행.
 > 규모는 빌드·검증 포함 추정. 빌드는 사용자가 한다.
@@ -19,6 +22,16 @@ LIG 질문: `2026-11-04_lig_questions_feedback_1104.md` (질문 Q1~Q4, 이해 �
 | **S3** 조이스틱 | 수동 토글 2개 재편(모드 A: H2=트럭 RCWS + 메인 스틱=드론 카메라 / 모드 B: 드론 전체 수동) | 약 1일 | J1 코드 완료 | J2 에디터, J3 실장비 |
 | **S4** RCWS | 자동 재장전, 최대 탄수, 고각 제한, 초기화 시간 회신 | 반나절~1일 | R1~R4 | R3 범위(디자인팀 질문) |
 | S5 UI·카메라 (보류) | 패널 색·로고·드론 패널 이동·명칭·카메라 위치 | 약 1일 | — | 디자이너 협의 |
+
+### 추가로 진행된 작업 (11/04 중 결정)
+
+| 항목 | 결과 |
+|---|---|
+| 팀장님 `ICD_정합성_수정사항.md` 대조 | B5 `RC_Movement` 속도 지령(60°/s), B4 `RC_RemoteDriving` 0.5s 타임아웃 정지, B1 주기 송신 실시간 dt — 구현(S1). 나머지(A6/A7 ACK, B3, A8, C3~C10, D1, D3)는 기존 LIG 답변·방침으로 보류 |
+| W5 박스 어긋남 재분석 | 우리 송신 계산 경로에 계통 오차 없음(ugv_controller_demo 겹쳐보기로 정상 확인). F1(탐지 화면비 매 스캔 동기화)만 반영, F2/F3·디버그 도구는 안 함 |
+| P7 해발 | `SceneZeroMslMeters=794` 단일 오프셋으로 확정(지형을 많이 손봐서 DEM 비율 보정 무의미) |
+| P6 IR / J2 에디터 | MCP로 처리: `M_PP_RCWS_IR` 틴트 회색화, `IA_DroneGimbalLook` 생성, `DA_TitanInputSchema` DroneGimbalLook 행 추가. WBP는 사용자 |
+| 8000 포트 수신 지연 의심 | 구버전 rc_mock_client 테스트 결과였고 데모로는 정상 → 문제 없음으로 종결 |
 
 ---
 
@@ -56,6 +69,7 @@ LIG 질문: `2026-11-04_lig_questions_feedback_1104.md` (질문 Q1~Q4, 이해 �
 |---|---|---|---|---|
 | J1 | 수동 조종 토글 재편 (사용자 결정) | 메일 5 | **코드 완료** | 토글 2개, 서로 상호배타, 둘 다 끄면 전자동. **모드 A**(Monitor2 토글): 트럭 RCWS + 드론 카메라 동시 수동 — H2 미니스틱(ABS_RX/RY) = RCWS, 메인 스틱 = 드론 짐벌, RCWS 버튼은 전부 트럭. **모드 B**(Monitor1 토글): 드론 전체 수동 — 메인 스틱 = 비행, hat = 짐벌(명세 외 기능이나 유지). "짐벌만 수동" 토글 폐지(A에 흡수), 드론 줌은 조이스틱 미배정, 자기방호축에서 축전환(Button_8) 무시. 데드존 0.1. 상세 `ui/2026-11-04_joystick_velocityone_h2_rcws.md` |
 | J2 | 에디터 작업 | | 후순위 | `IA_DroneGimbalLook`(Axis2D) 생성(없으면 모드 A 짐벌 미동작), `DA_TitanInputSchema` "드론 카메라(메인 스틱)" 행 추가·CameraLook 표시명 변경, Monitor2 토글 라벨 변경·Monitor1 "짐벌만 수동" 체크박스 삭제 |
+| J4 | Input 탭 조작부 중심 개편 (사용자 결정) | | **코드 완료** | 축·햇은 물리 조작부(메인 스틱 X/Y, H2 X/Y, 비틀기, 스로틀 레버, 햇 4방향) 단위로 한 번만 배정, 조작부↔동작 연결은 코드 고정(`Input/TitanInputPresentation.h`). 메인 스틱 한 줄이 모드 A 드론 카메라·모드 B 비행 IMC 양쪽에 같은 키·Negate로 들어감. RCWS 버튼은 기능별 배정 유지. 탭 상단에 모드 A/B 안내표. 저장 슬롯 `TitanInputBindings_v2`로 바꿔 기존 배정 초기화(키보드 기본값 없음). rowName·DA 에셋 불변 |
 | J3 | 실장비 매핑 | velocityone_tester | 장비 필요 | 키 배정은 패키지 인게임 Input 탭에서 PC별로. Joystick Viewer로 축·버튼 번호(예측: RCWS Axis_3/4, 드론 카메라·사이클릭 Axis_0/1, 요 Axis_2, 스로틀은 Axis_3 금지→레버 Axis_5, 짐벌 Hat_0), 극성, 드리프트, B20 확인 후 버튼표 LIG 회신 |
 
 수정 파일: `titan_examplePlayerController.cpp/.h`, `IMC_MouseLook`, `IMC_DroneManual`, `DA_TitanInputSchema`, `Config/DefaultInput.ini`, 조이스틱 가이드 문서.

@@ -114,6 +114,37 @@ velocityone_tester_offline.tar.gz 내 joystick_reader.py 참고해서 입력 신
   - Monitor1에서 "짐벌만 수동" 체크박스와 라벨을 삭제한다(코드에서는 이미 숨김. 라벨만 남아 보일 수 있다).
 - [ ] **실측(J3)**: 인게임 Joystick Viewer로 SDL 장치명, 축/버튼 번호, H2가 정말 연속값인지, 극성, 드리프트 크기, B20을 확인한다.
 
+## 5-1. Input 탭 개편 — 조작부 중심 (2026-11-04 2차)
+
+사용자 지적: Input 탭 라벨이 행 이름(CameraLook, DroneCyclic …)이라 지금 조작 체계(H2 / 메인 스틱 / 햇 / 모드 A·B)와
+맞지 않는다. 결정한 내용은 다음과 같다.
+- **조작부 중심**으로 바꾼다. 축과 햇은 물리 조작부 단위로 **한 번만** 배정한다. 동작 연결은 코드 표에 고정한다.
+  RCWS 기능 버튼은 기능별로 배정한다.
+- **저장 초기화, 빈 배정으로 시작한다**(키보드 기본값도 없음).
+- **모드 안내표**(읽기 전용)를 탭 위쪽에 둔다.
+- 동작 연결의 기본값은 velocityone_tester를 따른다(H2 = RCWS 조준, 메인 스틱 = 모드 A 드론 카메라 / 모드 B 비행, 햇 = 모드 B 드론 카메라).
+
+구현:
+- 신규 파일 `Input/TitanInputPresentation.h`(코드 표): 행마다 표시명, 섹션, 순서, **KeySourceRow**, 모드 A/B 안내 문구를 둔다.
+  - `DroneCyclic`의 KeySourceRow는 `DroneGimbalLook`이다. 그래서 Input 탭에 "메인 스틱 (X / Y)" 한 줄만 나오고,
+    그 배정이 모드 A 카메라(IMC_MouseLook)와 모드 B 비행(IMC_DroneManual)에 같이 들어간다. 두 IMC는 동시에 올라가지 않는다.
+  - 따라가는 행은 원본 행의 Negate도 같이 쓴다. 그래서 Negate의 의미는 "장비 극성 맞추기"(앞으로 밀면 -1)이고,
+    기능별 극성은 코드가 맡는다(비행 = `bInvertDroneManualCyclicPitch`, 카메라 = raw 그대로).
+  - 표를 DA가 아니라 코드에 둔 이유: 모드별 의미가 PlayerController 모드 로직과 한 몸이고, 바이너리 DA의 구조체 배열을
+    MCP로 고치는 건 위험하다. DA는 행/액션/IMC/Role 정의만 맡는다. 표에 없는 행은 "기타" 섹션에 행 이름으로 나온다.
+- `UTitanInputBindingSubsystem`
+  - 저장 슬롯을 `TitanInputBindings_v2`로 바꿨다(옛 슬롯은 무시).
+  - SeedDefaults는 DefaultGroups를 시드하지 않고, 보이는 행마다 빈 그룹을 하나씩 만든다.
+  - ApplyToMappingContexts는 따라가는 행에 원본 행의 키를 심는다.
+- `GameSettingsWidget::RefreshKeybindList`: 맨 위에 모드 안내표, 그 아래 섹션 제목 + 순서대로 행. 따라가는 행은 숨긴다.
+  TextBlock은 코드에서 만들므로 WBP 수정은 필요 없다.
+- `KeybindRowWidget`: 라벨에 표시명을 쓴다.
+- rowName(저장 키)은 그대로 둔다.
+
+**메인 스틱 하나뿐인 장비로 테스트하기(Extreme 3D Pro: X/Y/비틀기/노브 + 햇)**: "H2 미니스틱" 행에 `Hat_0_X`/`Hat_0_Y`
+(Axis1D로 등록되어 축 행에서 고를 수 있음)나 노브 축을 배정한다. 아니면 모드를 바꿀 때마다 메인 스틱을 다시 배정한다.
+햇을 H2에 쓰면 디지털이라 RCWS가 최대 속도로만 돈다.
+
 ## 6. 빌드 후 테스트 포인트
 
 1. 모드 A
@@ -126,3 +157,8 @@ velocityone_tester_offline.tar.gz 내 joystick_reader.py 참고해서 입력 신
 5. Button_8은 자기방호축에서 무반응이어야 한다(로그 "[자체방호] 축전환 버튼 무시").
 6. UGV축 RCWS 조준 감도(데드존 0.1)가 괜찮은지.
 7. 2-PC(자체방호 = 클라이언트)에서 모드 A의 짐벌과 RCWS가 서버 쪽 화면/RTSP에 반영되는지.
+8. Input 탭
+   - 처음 열면 모든 칸이 비어 있는지(새 슬롯). 맨 위 안내표와 섹션 제목이 보이는지. "메인 스틱 (비행)" 행은 없는지.
+   - 메인 스틱을 한 번 배정한 뒤 모드 A(카메라)와 모드 B(비행)에서 둘 다 동작하는지.
+   - Negate를 켜면 두 모드에서 같이 뒤집히는지.
+   - Apply 후 재시작했을 때 배정이 유지되는지.

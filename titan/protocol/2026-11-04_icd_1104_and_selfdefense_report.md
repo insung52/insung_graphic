@@ -104,9 +104,58 @@ ICD 정본 `protocol/lig_icd_ugv_rc_full.md`(1104 반영), `protocol/protocol_ic
 - 자체방호축: `Saved/SelfDefenseReports/K051_*.jsonl` 1초 1줄, 콘솔 `titan.SD.DumpK051`, 드론 이동 방향과 `course` 일치, 자체방호 PC가 클라이언트여도 `speedKph`가 0이 아님.
 - 게임 레벨에서 `titan.Geo.CalibrateMsl` → 평균 오프셋/잔차 기록, `SceneZeroMslMeters` 교체 여부 결정.
 - 로비: 3필드 입력 → 재실행 시 값 유지.
+- (B1, §7) 60fps에서 `ugv_controller_demo` 로그 기준 `UGV_RCWS_Status` ≈20Hz, `UGV_Period_Basicinfo`/`NavigationInformation` ≈10Hz, `UGV_Period_BasicInformation` 1Hz.
+- (B5/B4, §7) 스틱 유지 시 RCWS 계속 회전(~60°/s)·중립/브레이크 시 정지·RC 끊기면 3초 후 정지 / 원격주행 중 RC 끊기면 0.5초 후 정지·브레이크, 재개 시 복구.
 
 ## 6. 미룬 에디터 작업
 
 1. **P6 IR 흑백** — `Content/Vehicles/UGV/Materials/M_PP_RCWS_IR`의 녹색 틴트 제거(흑백 white-hot). 트럭 RCWS도 같은 머티리얼(양 축 공통 변경).
 2. **P9 WBP** — 로비 WBP에 `EditableText`(Editable Text Box 아님) 3개 `ReportIPText`/`PositionReportPortText`/`DetectionReportPortText` 배치.
 3. ~~P7 실측~~ — **완료(2026-11-04)**: 실측 794.05 → `DefaultGame.ini` `SceneZeroMslMeters=794` 반영(§2 실측 결과와 결정).
+
+## 7. ICD 정합성 후속 (팀장 정리 `documents/feedback_1104/ICD_정합성_수정사항.md`) — B5·B4 구현, B1 분석
+
+### B5. `RC_Movement` 속도 지령화
+
+- 문제: ICD/SQ상 `RC_Movement`는 비주기(`[Joystick event occur]`) — LIG 통제기가 스틱 값이 바뀔 때만 보내면, 예전 코드(메시지 1건당 `AddPanTiltInput` 최대 3° 1회)는 스틱을 계속 밀어도 첫 3°만 돌고 멈춤. 우리 `ugv_controller_demo`는 20Hz 재송신(joystick_control.py:119)이라 가려져 있었다.
+- 수정(`UGVRemoteControlSubsystem`):
+  - `Handle_RC_Movement` — 마지막 `XAxis`/`YAxis`(clamp ±100)/`BrakeButton`만 저장.
+  - 신규 `TickRCWSMovement`(TickPoll에서 PollSocket 직후) — `값/100 × RCWSMovementMaxDegreesPerSecond × 실dt`(FPlatformTime, 0.25초 상한)로 `AddPanTiltInput`. 게이트는 기존과 동일(`bRCWSSteeringActivated` AND BrakeButton RELEASE). X=Y=0이면 정지.
+  - 링크 두절: 어떤 RC 메시지든 `RCLinkTimeoutSeconds`(3초 = BIT 1Hz 3회) 넘게 없으면 저장값을 0으로 지움(경고 1회). 소켓 정지 시에도 초기화.
+  - `RCWSMovementDegreesPerUnit`(3°/건) 제거 → Config `RCWSMovementMaxDegreesPerSecond = 60`(= 3°/건 × 데모 20Hz, 예전 체감 유지). 데모(20Hz 재송신)·LIG(변화 시만) 모두 같은 속도.
+  - 반동·자동조준 등 다른 `AddPanTiltInput` 경로는 안 건드림.
+
+### B4. `RC_RemoteDriving` 수신 타임아웃(안전)
+
+- 문제: RC가 꺼지거나 네트워크가 끊기면 마지막 `SetThrottleInput`/`SetSteeringInput`이 남아 UGV가 계속 주행.
+- 수정: `Handle_RC_RemoteDriving`이 적용 시점에 수신 시각 기록(+타임아웃 상태였으면 복구 로그). 신규 `TickRemoteDrivingWatchdog` — **RC 주행 문맥**(제어권 RC + 운용모드 REMOTE + 비상정지 아님 + DriveMode Manual)에서 `RemoteDrivingTimeoutSeconds`(Config, 0.5초 = 20Hz 10회) 넘게 안 오면 `DispatchSetManualControl(0,0)` + `DispatchSetBraking(true)`, 경고 1회. 다음 수신 시 그 핸들러의 `DispatchSetBraking(Brake != 0)`이 브레이크를 풀어 정상 재개.
+- 개입 안 하는 경우: 문맥 밖(로컬 키보드 주행 — 제어권이 RC 아님, 자율주행 Auto — DriveMode 조건, STAY/비상정지), 문맥 진입 후 아직 한 번도 RemoteDriving을 안 받은 경우(SetDriveMode(Manual)이 이미 입력 0).
+- 판정은 PollSocket 직후라 히치 중 쌓인 패킷이 먼저 반영돼 거짓 타임아웃 없음.
+
+### B1. 주기 송신 빈도 — 분석 후 수정(사용자 승인)
+
+**수정(`TickPoll`)**: 주기 송신 5블록(Basicinfo·RCWS_Status·ObjectDetection·Navigation·BasicInformation)이 콜백 DeltaTime 대신
+FPlatformTime **실시간 dt**(`LastPeriodicSendTickSeconds`, StopSockets에서 리셋)를 누적하고, 넘치면 `Accum = Min(Accum - Interval, Interval)`
+(나머지 보존, 밀려도 1회만 추가). 공용 람다 `IsDue`. 티커 지연(`PollIntervalSeconds` 0.02)은 그대로 — PollSocket·B5·B4 호출 주기 불변.
+60fps에서 티커가 33ms마다 돌아도 나머지 보존으로 평균이 맞는다(20Hz = 66.7/33.3ms 교대, 평균 50ms).
+확인: 60fps에서 `ugv_controller_demo` 로그 기준 RCWS_Status ≈20Hz, Basicinfo/Navigation ≈10Hz, BasicInformation 1Hz(ObjectDetection은 S2 설정 20Hz).
+fps가 목표Hz보다 낮으면(예: 17fps PIE) 틱당 1회 한계로 그 fps가 상한.
+
+아래는 수정 전 분석 기록.
+
+원인은 두 겹이다(UE 5.8 소스 확인):
+1. `FTSTicker::Tick`(Core/Private/Containers/Ticker.cpp)은 `FApp::GetDeltaTime()`(**그 프레임 길이**)을 받아 누적 `CurrentTime`으로 발화 여부만 정하고, 콜백에는 **그 프레임의 DeltaTime을 그대로** 넘긴다(`Element->Fire(DeltaTime)`) — 마지막 발화 이후 경과가 아니다. 지연 0.02초 티커는 60fps(16.7ms)에서 **2프레임마다** 발화하는데 매번 16.7ms만 더해진다 → 누적기가 실시간의 절반 속도로 찬다.
+2. 누적기가 넘치면 `Accum = 0.f`로 리셋해 나머지를 버린다.
+- dt 클램프 영향 없음: `MaxPhysicsDeltaTime` 클램프는 Chaos 물리 dt에만 걸리고 `FApp` 델타엔 안 걸림. `UGameEngine::MaxDeltaTime` 기본 0(미사용), 에디터 PIE는 UEditorEngine이라 해당 없음. 상한은 `t.MaxFPS=60`.
+
+예상 실제 Hz(정상 프레임 가정, 경계값은 프레임 지터로 두 값 사이):
+
+| 메시지(목표) | 60fps | 30fps | 17fps |
+|---|---|---|---|
+| `UGV_RCWS_Status`(20) | **10**(~7.5) | 15 | 17 |
+| `ObjectDetectionResult`(20, S2가 5→20) | **10**(~7.5) | 15 | 17 |
+| `Basicinfo`·`NavigationInformation`(10) | **5**(~4.3) | 10(~7.5) | 8.5 |
+| `BasicInformation`(1) | **0.5** | ~1 | ~1 |
+
+- 60fps(패키지 목표 프레임)에서 **목표의 절반**이 나온다 — 팀장 문서의 "20Hz → 약 15Hz"는 콜백 dt를 33ms로 본 계산이라 실제보다 낙관적. PIE 실측(13Hz/8.7Hz)은 저fps(약 13~17fps) 구간이라 표의 17fps 열과 대략 일치.
+- 수정안(위치: `Initialize`의 `AddTicker(..., PollIntervalSeconds)` + `TickPoll`의 누적기 5개 블록): ① 티커 지연 0(매 프레임 발화 → 콜백 dt = 실제 간격) 또는 FPlatformTime 실시간으로 dt 계산, ② `Accum -= Interval`(나머지 보존, 밀려도 1회만 — `Accum = FMath::Min(Accum - Interval, Interval)`). 그러면 fps ≥ 목표Hz에서 평균 정확(60fps 20Hz OK, 30fps 20Hz OK), fps < 목표면 틱당 1회 한계(17fps → 20Hz 메시지 17Hz)만 남는다.
