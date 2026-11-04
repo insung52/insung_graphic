@@ -121,12 +121,12 @@ ICD 원문은 0~100 Int% — §3.2 참고, 필드별로 ICD 값 우선), 시간 
 | cmd | src | 주기 | data 핵심 필드 |
 |---|---|---|---|
 | `UGV_Response_Connection` | UGV/UGV_ADU | 비주기 | `ResponseDevice` |
-| `UGV_Period_Basicinfo` | UGV | **10Hz** | `OperationMode`(Stay/Remote/FAD/HAD/5/6/Emergency), `ConrtrolRight`(원문 오타), `Speed`(0~100), `Gear`(Front/Back/Turn — **Turn은 LIG 확인상 이번 사업에서 안 보내도 됨, 2026-08-28**), `Batterry`(원문 오타, 0~100%) |
+| `UGV_Period_Basicinfo` | UGV | **10Hz** | `OperationMode`(Stay/Remote/FAD/HAD/5/6/Emergency), `ControlRight`(ICD 1104 정정, 예전 `ConrtrolRight`), `Speed`(0~100), `Gear`(Front/Back/Turn — **Turn은 LIG 확인상 이번 사업에서 안 보내도 됨, 2026-08-28**), `Battery`(ICD 1104 정정, 예전 `Batterry`, 0~100%) |
 | `UGV_Response_BIT` | UGV | 비주기 | `StatusVMU`, `CountValue` |
-| `UGV_RCWS_Status` | UGV_RCWS | **20Hz** | `RCWSStatus`(ON/OFF) |
+| `UGV_RCWS_Status` | UGV_RCWS | **20Hz** | `RCWSStatus`(ON/OFF), `Azimuth`(0~359, 진북)·`Elevation`(앙각+90, 0~180)·`TotalBullet`(잔탄) — 2026-11-04 ICD 1104 추가 |
 | `UGV_Period_ObjectDetectionResult` | UGV_RCWS 또는 UGV_ADU(동일 cmd, src로 구분) | — | `TotalObject`, `Objects[]`(BBox+UTM+속도+고도, §2) |
 | `UGV_Response_BIT_ADU` | UGV_ADU | 비주기 | `StatusADU`/`StatusVMU`/`StatusNavigation`/`Status3DLidar`/`StatusRadar`/`StatusOCS` |
-| `UGV_Period_BasicInformation` | UGV_ADU | — | `Odometer`(m) |
+| `UGV_Period_BasicInformation` | UGV_ADU | — | `Odometer`(m), `Runtime`(`HH-MM-SS`, 2026-11-04 ICD 1104 추가) |
 | `UGV_Period_NavigationInformation` | UGV_ADU | — | `East`/`North`/`Zone`/`Letter`, `Velocity`, `Heading`, `Altitude` |
 
 **RC→UGV (우리가 받아서 처리, 예전에 비어있던 부분 전부 확정됨)**:

@@ -4,6 +4,13 @@
 **이 문서가 UGV축 프로토콜의 최종 확정 스펙 — `protocol_icd.md` §3의 "우리 추정치"를 전부
 이걸로 교체.** LIG가 예고했던 "cmd 코드 목록/데이터 송수신 참조 모듈"이 바로 이 파일로 보임.
 
+> **2026-11-04 ICD 1104판 반영** (`documents/feedback_1104/UGV_RC_ICD_1104.xlsx`, 비번 titan) — 변경은 아래 표에
+> "1104"로 표시한 곳이 전부: 키 오타 3건 정정(`ControlRight`/`Battery`/`Letter`), `UGV_RCWS_Status`에
+> `Azimuth`/`Elevation`/`TotalBullet`, `UGV_Period_BasicInformation`에 `Runtime`, `Steering` 감도 피드백,
+> 셀 메모 2건(시트2 H44 ADU `ObjectClass` "값을 기존 claaified" / 시트3 I12 `SelectCameraButton` "IR 카메라 흑백 마스킹").
+> device `value` String→Int 변경은 LIG가 "현상태 유지"로 확정(시트1 F36 메모). 구현 기록:
+> `protocol/2026-11-04_icd_1104_and_selfdefense_report.md`.
+
 ---
 
 ## 시트1: 통신 프로토콜 (기존 확인 내용과 동일, 재확인만)
@@ -21,10 +28,10 @@
 |---|---|---|---|---|---|
 | `UGV_Response_Connection` | 연결 응답 | `ResponseDevice` | String | `1`: 원격통제기 | 비주기 |
 | `UGV_Period_Basicinfo` | 차량상태보고 | `OperationMode` | String | `Stay`:대기, `Remote`:원격주행, `FAD`:종속주행, `HAD`:자율주행, `5`:전원차단준비, `6`:충전, `Emergency`:비상 | **10Hz** |
-| | | `ConrtrolRight`(원문 오타) | String | `None`:없음, `Remote`:원격통제기 | |
+| | | `ControlRight` (1104 정정, 0806판 원문 `ConrtrolRight`) | String | `None`:없음, `Remote`:원격통제기 | |
 | | | `Speed` | Int | 0~100 | |
 | | | `Gear` | String | `Front`:전진, `Back`:후진, `Turn`:제자리선회 | |
-| | | `Batterry`(원문 오타) | Int | 0~100% | |
+| | | `Battery` (1104 정정, 0806판 원문 `Batterry`) | Int | 0~100% | |
 | `UGV_Response_BIT` | 차량 운용 정보 보고 | `StatusVMU` | String | `OFF`:해당무, `ON`:해당 | 비주기 |
 | | | `CountValue` | String | 원격통제기가 보낸 카운팅값을 그대로 응답 | |
 
@@ -33,6 +40,9 @@
 | cmd | 설명 | 필드 | 타입 | 값 | 주기 |
 |---|---|---|---|---|---|
 | `UGV_RCWS_Status` | RCWS 상태 | `RCWSStatus` | String | `OFF`:비접속, `ON`:접속 | **20Hz** |
+| | | `Azimuth` (1104 추가) | int | 0~360 (방위각) — 우리 송신: 진북 0° 시계방향, `CurrentData.AzimuthDegrees` 정수 | |
+| | | `Elevation` (1104 추가) | int | 0~180 "(-90로 보정해서 사용예정)" — 우리 송신: 수평 기준 앙각+90 | |
+| | | `TotalBullet` (1104 추가) | Int | MAX 200발 — 우리 송신: 현재 잔탄 | |
 | `UGV_Period_ObjectDetectionResult` | RCWS 객체 인식 결과 | `TotalObject` | Int | 0~10 | |
 | | | `Objects[]` | Array | 아래 객체 필드 참고 | |
 
@@ -49,7 +59,7 @@
 | `East` | 위치(UTM) East | Int | 8자리 |
 | `North` | 위치(UTM) North | Int | 10자리 |
 | `Zone` | 위치(UTM) Zone | Int | |
-| `Letter`(RCWS쪽 원문은 `Latter` 오타) | 위치(UTM) Letter | String | |
+| `Letter` (1104에서 RCWS쪽 `Latter` 오타 정정 — 이제 RCWS/ADU 동일) | 위치(UTM) Letter | String | |
 | `Velocity` | 속도 | Int | |
 | `Altitude` | 고도 | Int | |
 
@@ -68,6 +78,7 @@
 | | | `StatusRadar` | String | `On`:정상(Ethernet), `Off`:연결끊김 | |
 | | | `StatusOCS` | String | `On`:정상(Ethernet), `Off`:연결끊김 | |
 | `UGV_Period_BasicInformation` | 자율주행 기본정보 | `Odometer` | Int | 단위: m | |
+| | | `Runtime` (1104 추가) | String | `HH-MM-SS` 총 실행시간(UGV 에뮬레이터 구동시간) — 우리: 프로세스 기동 기준 누적 | |
 | `UGV_Period_NavigationInformation` | 자율주행 네비게이션 정보 | `East`/`North`/`Zone`/`Letter` | Int/Int/Int/String | UTM(8자리/10자리) | |
 | | | `Velocity` | Int | | |
 | | | `Heading` | Int | 자세(헤딩) | |
@@ -94,7 +105,7 @@
 | `RC_Control_Right` | 제어권 상태 | `ControlRight` | Int | `0`:None, `1`:원격통제기 | 비주기 |
 | **`RC_RemoteDriving`** | **차량 주행 명령** | `Acceleration` | Int | 0~100 | **20Hz** |
 | | | `Brake` | Int | -0~-100 | |
-| | | `Steering` | Int | `0`:None, `0<우조향`(0~100), `0>좌조향`(-0~-100) | |
+| | | `Steering` | Int | `0`:None, `0<우조향`(0~100), `0>좌조향`(-0~-100) — 1104 피드백 "좌/우 조향 감도 낮추는 걸로 조정 필요" | |
 | | | `Gear` | Int | `FRONT`:전진, `BACK`:후진 | |
 | `RC_EmergencyStop` | 비상정지 명령 | `CommandDevice` | Int | `1`==동작 | 비주기 |
 | `RC_EmergencyStopRelease` | 비상정지 해제 명령 | `CommandDevice` | Int | `1`==동작 | 비주기 |

@@ -6,6 +6,9 @@
 
 ## 0. 배경 및 스펙
 
+> **[2026-11-04] 탄약 600 → 200발 + 자동 재장전 + 총구 고각 제한** — LIG ICD 1104(`TotalBullet` MAX 200발)·
+> 11/04 메일 6-1/6-2. 현재 동작은 15절 참고(아래 "600발"은 최초 스펙 기록).
+
 `memo.md` 요구사항: RCWS(트럭/UGV 공용) 기관총 스펙 — 탄약 600발, 대인 사거리 2km(적군은
 일반 보병만 존재), 발사속도 분당 1200발. 필요한 것: 어느 정도 현실적인 탄도학(포물선),
 안정화(2축 안정기), 목표 자동 조준. (발사 이펙트/반동은 최초 스펙에선 범위 밖이었으나
@@ -736,7 +739,7 @@ RCWS 두 컴포넌트에는 각각 리셋 함수가 있다:
 
 | 함수 | 되돌리는 것 | 남기는 것 |
 |---|---|---|
-| `URCWSComponent::ResetForScenarioRestart` | 탄약 `AmmoMax` 리필, 마운트 원위치(`AddPanTiltInput` 델타), 줌·카메라 모드·발사 모드·장전 상태 → BeginPlay 때 찍은 초기값 | — |
+| `URCWSComponent::ResetForScenarioRestart` | 대기 중인 자동 재장전 타이머 해제(15.1, 2026-11-04), 탄약 `AmmoMax` 리필, 마운트 원위치(`AddPanTiltInput` 델타), 줌·카메라 모드·발사 모드·장전 상태 → BeginPlay 때 찍은 초기값 | — |
 | `URCWSFireControlComponent::ResetForScenarioRestart` | 조작 모드 초기값(**`Remote`** — 데모 UGV 는 `UGVArriveZone1` 에서 다시 AutoFire 로 켜진다), 표적/스티키 표적/락온 게이지/타겟 기억(3.2)/총성 조사/배럴 스핀/발사 사이클, **`bRespectEnemyTargetingExclusion` → 초기값(false)**(3.3 — 안 되돌리면 2회차부터 UGV 가 일부 적을 영영 안 쏨), ARM 초기값 | **`ShotsFiredCount` 는 유지**(시나리오 `UGVFireWatch` 가 기준선을 다시 잡으므로 리셋 불필요) |
 
 호출 순서(UGV): `AUGVAIController::ResetForScenarioRestart` → 스폰 트랜스폼 텔레포트 + Chaos
@@ -1168,3 +1171,38 @@ float AutoFireCycleIntervalSeconds = 1.f;   // 사이클 사이 간격
 `bManualFireHeld`면 이 로직을 타지 않음 — 수동은 조작자가 직접 떼었다 당기는 게 맞는 동작이라
 "쥐고 있으면 한 발만"이라는 의미를 그대로 유지해야 함. Auto 모드는 사이클 제한 자체가 없어
 무영향. 상세는 `rcws/2026-09-01_autofire_single_burst_stuck_bug.md`.
+
+## 15. 탄약·자동 재장전·고각 제한 (2026-11-04, LIG 11/04 피드백)
+
+상세 devlog: `rcws/2026-11-04_rcws_auto_reload_ammo200_muzzle_elevation_clamp.md`.
+
+### 15.1 탄약 200발 + 자동 재장전 (`URCWSComponent`)
+
+- `AmmoMax` = **200**(UGV·트럭 공통 — `RCWSComponent.h` 기본값, `FRCWSStatusData` 기본값,
+  `AUGVPawn`/`ATitanTruck` 생성자). 근거: ICD 1104 시트2 D13 `UGV_RCWS_Status.TotalBullet` "MAX 200발".
+  BP에서 `AmmoMax`를 따로 지정했다면 그 값이 이긴다.
+- `ConsumeAmmo`가 잔탄 0에 닿으면(서버, `bAutoReload=true`) `AutoReloadDelaySeconds`(기본 1.5 s) 타이머 →
+  `CompleteAutoReload`가 `AmmoCurrent = AmmoMax`. 애니메이션·입력 없음. **장전 상태(`bLoaded`/
+  `RC_ChargeWeapon`)·사격준비(`bFireReady`)는 건드리지 않는다.** `CurrentData` 리플리케이션으로
+  클라·UI·통제기 상태가 그대로 따라간다. 대기 중 여부는 `IsAutoReloadPending()`.
+- 타이머 해제: `ResetForScenarioRestart`(즉시 만탄), `EndPlay`.
+- 재장전 대기 중엔 `CanFire()` 실패 경고 로그(1 s 스로틀)를 남기지 않는다(정상 상황).
+
+### 15.2 소진 후 재격발 (`URCWSFireControlComponent::bManualRetriggerRequired`)
+
+수동 방아쇠를 쥔 채 잔탄 0이 되면 플래그가 켜지고, 방아쇠를 놓으면(RELEASE) 꺼진다. 켜져 있는 동안
+수동 격발 불가 → 재장전이 끝나도 쥐고 있던 연사가 저절로 재개되지 않고 **다시 눌러야** 나간다.
+자동사격(AutoFire, 데모)은 대상이 아니라 재장전 후 그대로 재개. 재시작 리셋에서 false.
+
+### 15.3 고각 제한 — 마운트와 총구 둘 다 차체 기준
+
+- 마운트(=카메라·포탑 본): `AddPanTiltInput`이 마운트 relative pitch를 `MinElevationDegrees(-20)`~
+  `MaxElevationDegrees(60)`로 clamp. **모든 입력 경로**(UDP `RC_Movement`, 조이스틱, 안정화, 자동조준,
+  탐색 스윕, 반동, 재시작 원위치)가 이 함수를 거친다 — UDP 우회 없음(2026-11-04 코드 확인).
+- 총구(탄 방향): `UpdateMuzzleBallisticAim`이 탄도해로 총구를 **월드 회전으로 따로** 돌려서 예전엔 이 제한
+  밖으로 쏠 수 있었다 → 2026-11-04부터 목표 회전을 차체 기준(`ActorQuat⁻¹ × 목표`)으로 바꿔 pitch를 같은
+  범위로 자른 뒤 월드로 되돌린다. 잘린 경우 `MuzzleBallisticElevationErrorDegrees`는 원래 목표 대비로 남아
+  **제한 밖 표적에는 락온/자동사격이 성립하지 않는다**(의도).
+- 표시값 `CurrentData.ElevationDegrees`는 여전히 **수평(월드) 기준**이라 경사에선 -20~60을 벗어나 보일 수
+  있다(통제기 `UGV_RCWS_Status.Elevation` = 이 값 + 90, S1 결정). 제한 범위 변경은 BP/기본값만 바꾸면 됨.
+- 트럭은 `RCWSSightCineCamera`가 마운트 아래 자체 pitch -6.1°라 카메라 기준 범위는 약 -26~+54°.

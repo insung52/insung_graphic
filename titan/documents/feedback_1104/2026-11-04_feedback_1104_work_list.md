@@ -1,76 +1,99 @@
-# LIG 피드백(11/04) 수정 작업 목록
+# LIG 피드백(11/04) 작업 목록
 
-2026-11-04 / 설계단계 / LIG 11/04 수정요청 전 항목을 작업 단위로 쪼개고 세션 배정·규모·선행 확인사항을 정리한 마스터 목록.
+2026-11-04 / 설계단계(구현 전) / LIG 11/04 수정요청을 세션별 작업으로 정리 — 4개 세션 코드 분석 결과와 사용자 결정 반영. 각 작업에 "LIG 답 없이 시작 가능 여부"를 표시.
 
-세부 문서(같은 폴더):
-- `2026-11-04_icd_1104_changes.md` — ICD 0806 → 1104 변경점
-- `2026-11-04_k051_position_report_spec.md` — 드론 위치보고(K05.1) 전문
-- `2026-11-04_drone_detection_json_spec.md` — 드론 객체탐지 BoundingBox JSON
-- `2026-11-04_lig_questions_feedback_1104.md` — LIG 역질문 목록
+원본: `email.md`, ICD 엑셀 0806/1104·`기동플랫폼_위치보고전문형식.xlsx`(비번 titan), `sample1_boxed_metadata.json`, `velocityone_tester_offline.tar.gz`.
+LIG 질문: `2026-11-04_lig_questions_feedback_1104.md` (질문 Q1~Q4, 이해 확인 B-1·B-2).
 
-> 메일 머리말: **UI 수정·카메라 시점 변경은 후순위**(디자이너 협의 후). 구현 항목 위주로 진행.
-> 규모는 빌드·검증 포함 거친 추정(사용자가 빌드). 확정 아님.
+> 메일 머리말: UI 수정·카메라 시점 변경은 후순위(디자이너 협의 후). 구현 항목 위주로 진행.
+> 규모는 빌드·검증 포함 추정. 빌드는 사용자가 한다.
 
 ---
 
-## 1. 전체 항목표
+## 0. 한눈에 보기
 
-| ID | 항목 | 구분 | 규모 | 세션 | LIG 답변 필요 | 비고 |
-|---|---|---|---|---|---|---|
-| W1 | ICD 오타 3건 수정 (`ControlRight`/`Battery`/`Letter`) | 프로토콜 | 극소 | S1 | 아니오 | 코드는 현재 원문 오타로 송신 중 |
-| W2 | `UGV_RCWS_Status`에 `Azimuth`/`Elevation`/`TotalBullet` 추가 | 프로토콜 | 소 | S1 | 정의 확인 필요 | 기준(상대/절대, 보정) 모호 |
-| W3 | `UGV_Period_BasicInformation`에 `Runtime` 추가 | 프로토콜 | 소 | S1 | 재시작 초기화 여부 | 재시작 훅(S4)과 연동 |
-| W4 | `Steering` 좌/우 조향 감도 낮추기 | UGV 주행 | 소 | S1 | 정량 기준 | `UGVRemoteControlSubsystem.cpp:488` 부근 |
-| W5 | 객체인식 결과 박스 위치 어긋남 조사/수정 | 버그 조사 | 중 | S2 | 재현 자료 | 드론 박스 투영과 같은 계열 |
-| W6 | `SelectCameraButton` IR "흑백 마스킹" | 렌더링 | 소 | S1 | 뜻 확인 필요 | 지금 IR은 초록 |
-| W7 | `ObjectClass` 메모("값을 기존 classified") | 프로토콜 | 불명 | S1 | 예 | 현재 6분류 확장 송신 중 |
-| W8 | 드론 위치보고(K05.1) 송신 | 신규 | 중 | S1 | **통신 구성**·경로·주기·빈 필드 | 전문 문서 참고. UGV ICD 채널과 별개 — 자체방호 통제기(우리)에서 외부로 새로 뚫는 통로 |
-| W9 | 드론 RTSP 출력 확인 | 확인 | 소 | S2 | 아니오 | `DronePawn.cpp`에 RTSP 컴포넌트 있음 |
-| W10 | 드론 객체탐지 BoundingBox JSON 출력 | 신규 | **대** | S2 | 경로·실시간 여부·classId | JSON 문서 참고 |
-| W11 | 시나리오 초기화 소요 시간 측정 | 측정 | 극소 | S4 | 측정 구간 확인 | 제자리 리셋이라 로그로 측정 |
-| W12 | 조이스틱: H2 스틱→RCWS, 메인 스틱→카메라, `joystick_reader.py` 기준 매핑 | 입력 | 중 | S3 | "UGV 카메라" 뜻 | 실장비 확인 필요 |
-| W13 | RCWS 상/하 각도 제한 (UDP 경로 확인) | 확인/수정 | 소 | S4 | 값·재현 상황 | 조이스틱 경로엔 -20~60° 이미 있음 |
-| W14 | RCWS 탄 소진 시 자동 재장전 (1~2초 후 잔탄 채움) | 신규 | 소 | S4 | 지연·탄수 | 애니메이션 없이 수치만 |
-| W15 | UI: 패널 테두리 `#363636` | UI | 소 | S5 (보류) | 아니오 | 디자이너 협의 후 |
-| W16 | UI: LIG 로고 변경 (LIG D&A→LIG) | UI | 극소 | S5 (보류) | 아니오 | |
-| W17 | UI: 자기방호 쿼터뷰 자리에 드론 영상, 기존 드론 패널 삭제 후 상태정보 패널 확장 | UI | 중 | S5 (보류) | CCTV RTSP 유지 여부 | |
-| W18 | UI: "UAV" → "자기방호 드론" 명칭 변경 | UI | 소 | S5 (보류) | 아니오 | 표시 문자열만 (내부 클래스명 `UAV*`는 유지 권장) |
-| W19 | 카메라: RCWS 카메라 위치 앞으로 (실제보다 뒤쪽) | 카메라 | 소 | S5 (보류) | 기준 치수 | |
-| W20 | 카메라: UGV 주행카메라(전/후/좌/우) 높이 올리기 | 카메라 | 소 | S5 (보류) | 목표 높이 | RTSP 영상 구도 변경 |
+| 세션 | 담당 | 규모 | 바로 시작 | LIG 답 대기 |
+|---|---|---|---|---|
+| **S1** 프로토콜 | UGV ICD 1104 반영, 드론 위치보고(K05.1), 해발 고도 | 약 1.5일 | P1~P7, P9 | P8 전송부(Q1·Q2) |
+| **S2** 드론 탐지 | 드론 BoundingBox JSON, RCWS 박스 어긋남, 드론 RTSP | 약 2~2.5일 | D1~D4 | D5 전송부(Q1·Q2) |
+| **S3** 조이스틱 | 수동 토글 2개 재편(모드 A: H2=트럭 RCWS + 메인 스틱=드론 카메라 / 모드 B: 드론 전체 수동) | 약 1일 | J1 코드 완료 | J2 에디터, J3 실장비 |
+| **S4** RCWS | 자동 재장전, 최대 탄수, 고각 제한, 초기화 시간 회신 | 반나절~1일 | R1~R4 | R3 범위(디자인팀 질문) |
+| S5 UI·카메라 (보류) | 패널 색·로고·드론 패널 이동·명칭·카메라 위치 | 약 1일 | — | 디자이너 협의 |
 
-## 2. 세션 구성
+---
 
-| 세션 | 담당 | 규모 | 비고 |
-|---|---|---|---|
-| **S1** 프로토콜 | W1~W4, W6, W7, W8 | 소~중, 약 1일 | W1~W7은 UGV 송신부(`Network/UGVRemoteControlSubsystem`). **W8(K05.1)은 UGV 채널이 아니라 별도 송신부** — 전송 경로 미정이라 직렬화까지만 먼저 |
-| **S2** 드론 카메라 | W5, W9, W10 | **대**, 약 3~3.5일 | 박스 투영 파이프라인 신규 |
-| **S3** 조이스틱 | W12 | 중, 약 1일 | 장비 실측 포함 |
-| **S4** RCWS/초기화 | W11, W13, W14 | 소, 반나절~1일 | 재시작 훅과 RCWS 컴포넌트 |
-| **S5** UI·카메라 (보류) | W15~W20 | 중, 약 1일 | 디자이너 협의 후 |
+## 1. S1 프로토콜 (`Network/UGVRemoteControlSubsystem`, 신규 자기방호 송신부)
 
-S1·S2·S3·S4는 서로 파일이 거의 겹치지 않아 병렬 가능(S1·S4는 W3 `Runtime` 초기화만 접점).
+| ID | 작업 | 원본 근거 | 진행 | 내용 |
+|---|---|---|---|---|
+| P1 | 키 오타 3건 | ICD 시트2 D4·D7·E24 | 바로 | `ConrtrolRight`→`ControlRight`(:833), `Batterry`→`Battery`(:836), `Latter`→`Letter`(`BuildDetectionObjectJson`의 `bUseLatterTypo` 제거). FireMode는 `BRUST`/`CONTINUS`와 정상 철자 둘 다 받게 |
+| P2 | `UGV_RCWS_Status`에 3필드 | ICD 시트2 D11~D13 | 바로 | `Azimuth` = 현재 RCWS 방위값 그대로(`CurrentData.AzimuthDegrees`, 진북 0°), `Elevation` = ICD 문구대로 고각+90(0~180), `TotalBullet` = 현재 잔탄 |
+| P3 | `Runtime` 추가 | ICD 시트2 D34 | 바로(기본안) | `UGV_Period_BasicInformation`에 `HH-MM-SS`, 프로세스 기동 기준 누적. Q3 답이 "초기화"면 재시작 훅에서 리셋 |
+| P4 | 조향 감도 하향 | ICD 시트3 I7 | 바로 | 원격 경로만 `sign·|x/100|^1.5 × 0.6`, 지수·배율은 설정값 |
+| P5 | ObjectClass 메모 | ICD 시트2 H44 메모 | 확정(작업 없음) | 현행 분류값 유지 |
+| P6 | IR 흑백 | ICD 시트3 I12 메모 | 바로(기본안) | `M_PP_RCWS_IR` 녹색 틴트 제거(에디터 작업). Q4 답이 "열상 강조"면 별도 작업으로 재산정 |
+| P7 | 해발 고도 헬퍼 | (K05.1·JSON 공용) | 바로 | 실제 지형 고도 자료(구글어스 등)로 기준점 몇 곳의 지표 해발을 구해 씬 Z→해발 오프셋 산출. `GeoCoordinateUtils`에 `GetAltitudeMslMeters()` = (씬Z/100)×`GetDistanceScaleFactor()`+오프셋. S2도 사용 |
+| P8 | 드론 위치보고 K05.1 | 위치보고전문형식.xlsx, 메일 2-1 | 생성부 바로 / 전송부 Q1·Q2 대기 | 신규 `Network/SelfDefenseReportSubsystem`(자기방호축 프로세스에서만). 엑셀 정의대로 직렬화(위경도 정수 인코딩, course 8방위, 고도 ft·속도 km/h 소수 둘째 자리, 실시간 KST). 수신 IP/포트는 **로비 화면 입력**(기존 RTSP/UDP 설정과 같은 방식). 답 전엔 로그·파일 출력 + 로컬 수신 스텁 검증 |
+| P9 | 로비 화면 송신 설정 | 사용자 결정 | 바로 | 축 선택 화면에 드론 보고 수신 IP/포트 입력란(K05.1·JSON 공용) |
 
-## 2-1. 통신 구성 전제 (2026-11-04 사용자 정정)
+수정 파일: `Network/UGVRemoteControlSubsystem.h/.cpp`, `Vehicles/RCWSComponent.h/.cpp`, `UI/GeoCoordinateUtils.h`, `Drone/DronePawn.h/.cpp`(`GetFlightVelocityMS()` 추가), 신규 `Network/SelfDefenseReportSubsystem.h/.cpp`, 로비(축 선택) 위젯, `M_PP_RCWS_IR`.
 
-- ICD의 IP/포트(UGV 192.168.10.10 / 원격통제기 192.168.10.20)는 **UGV 에뮬레이터 ↔ UGV 원격통제기** 구간이다.
-- `titan_example` 하나가 UGV/자체방호 축을 고르는 에뮬레이터이고, 두 PC가 리플리케이션으로 같은 레벨을 공유한다.
-- **UGV 축**: LIG의 UGV 통제기 프로그램과 UDP+RTSP로 연결(= ICD 구간).
-- **자체방호 축**: **우리가 WBP UI로 통제기 역할을 직접 구현**한다(드론 조작·트럭 RCWS 사격). 영상은 RTSP로 상위체계 방향 송출.
-- **상위체계**: 프로토콜을 받은 적이 없다(LIG 2026-08-06: 자체방호통제기→상위체계 ICD 미정). 그래서 지금은 자동 시나리오 시스템으로 대체해 구현.
-- 따라서 이번 피드백(W8 K05.1, W10 JSON)은 **상위체계를 만드는 일이 아니라, 자체방호 통제기(우리 프로그램)에서 외부로 통로를 뚫는 일**이다.
-  메시지 내용은 이번에 처음 받았지만 **수신 사양(목적지·프로토콜·래퍼)은 여전히 없음**(LIG 역질문 A-1의 0번).
-- 기존에 만든 상위체계 선제 설계(`protocol_icd.md` §5의 HQ_/RPT_ 메시지, `hq_stub/`)는 "확정 스펙 구현"이 아니라 선제안이다. 이번 K05.1/JSON과 별개이며 재사용 가능성은 LIG 답변 후 판단.
-- W12 조이스틱·W13~W14 RCWS는 우리 시뮬 내부 문제로, 통신 구성과 별개로 진행 가능.
+## 2. S2 드론 탐지 (`Drone/`, `Detection/`)
 
-## 3. 세션 공통 주의
+| ID | 작업 | 원본 근거 | 진행 | 내용 |
+|---|---|---|---|---|
+| D1 | 드론 RTSP 확인 | 메일 2-2 | 바로 | 이미 송출 중(`rtsp://<자기방호PC>:8554/selfdefense/uav_gimbal`). 실수신 확인 + 해상도 640×360 → **1024×576**(설정값). 레벨에 구 `BP_UAV`가 남아 마운트가 겹치는지 확인 |
+| D2 | RCWS 박스 어긋남 수정 | ICD 시트2 J14 | 바로 | 송신 시점에 현재 카메라(+사격 흔들림)로 박스 재투영, 송신 주기 5Hz → 10~30Hz. UDP 박스를 RTSP 영상에 겹쳐 그리는 검증 도구로 확인 |
+| D3 | 객체 분류 공용화 | (D5·P5 공용) | 바로 | `ClassifyDetectedObject`를 `Detection/DetectionClassification`으로 이동, enum 반환 + `ToIcdObjectClass()` / `ToDroneClassId()` 매핑 |
+| D4 | 드론 JSON 생성부 | sample1_boxed_metadata.json, 메일 2-3 | 바로 | 신규 `Drone/DroneDetectionReporterComponent`. 짐벌 캡처 직전 같은 카메라로 박스 투영(1024×576 픽셀). **그 프레임에 보이는 대상만**. 고도는 P7 해발 헬퍼, 키 철자는 샘플 그대로. 샘플과 키 구조·타입 비교 검증 |
+| D5 | 드론 JSON 전송부 | | Q1·Q2 대기 | 기본안 UDP·프레임당 1메시지. classId·라벨은 기존 UGV 객체 탐지 분류(D3)를 그대로 따름. 수신 주소는 P9 로비 설정 사용 |
 
-- 소스 수정은 Edit/Write 툴로만 (CLAUDE.md 코드 편집 규칙). 빌드는 사용자가 한다.
-- 파일은 Perforce 체크아웃 후 편집.
-- 완료 후 개발 문서는 `YYYY-MM-DD_주제.md`로 남기고, 동작이 바뀌면 `guide/` 해당 문서도 갱신.
-- ICD 엑셀 3개는 암호화 파일(비번 `titan`) — 세션이 읽을 수 없으므로 아래 문서들이 정본 대용.
+수정 파일: `Drone/DronePawn.h/.cpp`, 신규 `Drone/DroneDetectionReporterComponent.h/.cpp`, 신규 `Detection/DetectionClassification.h/.cpp`, `Network/UGVRemoteControlSubsystem.cpp`(D2·D3), 해상도 설정(ini).
 
-## 4. 진행 순서 제안
+## 3. S3 조이스틱 (`titan_examplePlayerController`, 입력 에셋)
 
-1. LIG 역질문 발송(우선순위: JSON 전송 방식 → K05.1 경로/주기 → 박스 어긋남 자료 → `Runtime`).
-2. 답을 기다리지 않아도 되는 것부터 착수: W1, W2(기준은 임시안), W4, W9, W11, W13, W14, W12.
-3. W10은 직렬화(메시지 생성)와 전송을 분리해 구현 → 경로 답이 늦어도 막히지 않게.
+| ID | 작업 | 원본 근거 | 진행 | 내용 |
+|---|---|---|---|---|
+| J1 | 수동 조종 토글 재편 (사용자 결정) | 메일 5 | **코드 완료** | 토글 2개, 서로 상호배타, 둘 다 끄면 전자동. **모드 A**(Monitor2 토글): 트럭 RCWS + 드론 카메라 동시 수동 — H2 미니스틱(ABS_RX/RY) = RCWS, 메인 스틱 = 드론 짐벌, RCWS 버튼은 전부 트럭. **모드 B**(Monitor1 토글): 드론 전체 수동 — 메인 스틱 = 비행, hat = 짐벌(명세 외 기능이나 유지). "짐벌만 수동" 토글 폐지(A에 흡수), 드론 줌은 조이스틱 미배정, 자기방호축에서 축전환(Button_8) 무시. 데드존 0.1. 상세 `ui/2026-11-04_joystick_velocityone_h2_rcws.md` |
+| J2 | 에디터 작업 | | 후순위 | `IA_DroneGimbalLook`(Axis2D) 생성(없으면 모드 A 짐벌 미동작), `DA_TitanInputSchema` "드론 카메라(메인 스틱)" 행 추가·CameraLook 표시명 변경, Monitor2 토글 라벨 변경·Monitor1 "짐벌만 수동" 체크박스 삭제 |
+| J3 | 실장비 매핑 | velocityone_tester | 장비 필요 | 키 배정은 패키지 인게임 Input 탭에서 PC별로. Joystick Viewer로 축·버튼 번호(예측: RCWS Axis_3/4, 드론 카메라·사이클릭 Axis_0/1, 요 Axis_2, 스로틀은 Axis_3 금지→레버 Axis_5, 짐벌 Hat_0), 극성, 드리프트, B20 확인 후 버튼표 LIG 회신 |
+
+수정 파일: `titan_examplePlayerController.cpp/.h`, `IMC_MouseLook`, `IMC_DroneManual`, `DA_TitanInputSchema`, `Config/DefaultInput.ini`, 조이스틱 가이드 문서.
+
+## 4. S4 RCWS / 초기화
+
+| ID | 작업 | 원본 근거 | 진행 | 내용 |
+|---|---|---|---|---|
+| R1 | 자동 재장전 [공통] | 메일 6-2 | 바로 | 잔탄 0 → 1.5초 뒤 최대 탄수로 보충(서버, 리플리케이션 자동 반영). 장전 상태 불변, 재시작 시 타이머 해제 |
+| R2 | 최대 탄수 200 | ICD 시트2 D13 | 바로(B-1 이해 기준) | UGV·트럭 600 → 200. 600 기준으로 튜닝된 시나리오 의존 확인 |
+| R3 | [UGV] 고각 제한 | 메일 6-1 | 바로(범위는 디자인팀 질문에서 확인) | 사격 중 총구 탄도 회전에도 차체 기준 제한 적용. 범위는 답 오면 설정값만 변경 |
+| R4 | 초기화 시간 회신 | 메일 3 | 바로 | 코드 수정 없음. 구간별 실측표(질문 문서 B절) 회신. 필요하면 구간 로그 3줄 추가 |
+
+수정 파일: `Vehicles/RCWSComponent.h/.cpp`, `Vehicles/RCWSFireControlComponent.cpp`, `UGVPawn.cpp`/`TitanTruck.cpp`(AmmoMax).
+
+## 5. S5 UI·카메라 (보류 — 디자이너 협의 후)
+
+| ID | 작업 | 원본 근거 |
+|---|---|---|
+| U1 | 패널 테두리 `#363636` [공통] | 메일 1 |
+| U2 | 로고 LIG D&A → LIG [공통] | 메일 1 |
+| U3 | [자기방호] 쿼터뷰 자리에 드론 영상 패널, 기존 드론 패널 삭제 후 상태정보 패널 확장 (패널은 16:9 유지 — RTSP 영상 비율) | 메일 1 |
+| U4 | [자기방호] "UAV" → "자기방호 드론" (표시 문자열만) | 메일 1 |
+| U5 | [공통] RCWS 카메라 위치 앞으로 | 메일 4 |
+| U6 | [UGV] 주행카메라(전/후/좌/우) 높이 올리기 | 메일 4 |
+
+---
+
+## 6. 세션 간 순서·접점
+
+1. **`UGVRemoteControlSubsystem.cpp`**: S2(D2 박스 재투영·D3 분류 이동) 먼저 → S1(P1~P4) 그 위에. S1 변경은 함수 몇 줄 단위라 충돌 작음.
+2. **해발 헬퍼(P7)**: S1이 만들고 S2(D4)가 사용. S2는 그 전까지 임시 오프셋으로 진행.
+3. **분류 공용화(D3)**: S2가 만들고 S1(P5)이 사용.
+4. **최대 탄수(R2) ↔ TotalBullet(P2)**: S4가 값 변경, S1은 현재 잔탄만 읽으므로 순서 무관.
+5. **로비 송신 설정(P9)**: S1이 만들고 P8·D5가 공용 사용.
+
+## 7. 공통 규칙
+
+- 소스 수정은 Edit/Write 툴로만, Perforce 체크아웃 후 편집(`-c insung_laptop1 -C utf8`). 읽기 전용 파일이면 사용자에게 체크아웃 요청.
+- 빌드는 사용자가 한다(Live Coding 세션과 충돌).
+- 완료 후 해당 시스템 폴더에 `YYYY-MM-DD_주제.md` devlog, 동작이 바뀌면 `guide/` 갱신. ICD 정본 `protocol/lig_icd_ugv_rc_full.md`·`protocol_icd.md`도 갱신.

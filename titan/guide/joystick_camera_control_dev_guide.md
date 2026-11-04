@@ -95,6 +95,16 @@ void DoCameraLook(const FInputActionValue& Value)
 > 기준 — 기체가 가감속으로 기울어도 카메라가 보던 방향이 유지된다. 요는 기체 헤딩을 따른다
 > (0 = 진행 방향). 롤은 리그에 본이 없어 상쇄 안 함. 상세는 드론 가이드 12.4절.
 
+> **[2026-11-04 갱신] 자기방호 수동 조종 재편 (LIG 11/04 피드백 5번, VelocityOne).** 토글은 2개이고 서로 상호배타다.
+> - **모드 A**(이동형지휘소 RCWS 화면 토글, `TruckRCWSAndUAVGimbal`): H2 미니스틱(`CameraLookAction`)은 트럭 RCWS,
+>   메인 스틱(신규 `DroneGimbalLookAction`)은 드론 짐벌. 두 대상을 **동시에** 조작한다. RCWS 버튼은 전부 트럭으로 간다.
+> - **모드 B**(드론 화면 토글, `UAV`): 메인 스틱은 비행, hat은 짐벌. H2 입력은 버린다.
+> - 위에 적힌 "짐벌만 수동(`UAVGimbal`)" 토글과 사이클릭→짐벌 우회, `bInvertDroneGimbalOnlyTilt`는 폐지됐다.
+>   `IMC_DroneManual`은 모드 B에서만 올라간다.
+> - `CameraLookDeadZone`(원형 데드존, 기본 0.1)이 추가됐고, 자기방호축에서는 Button_8 축전환을 무시한다.
+>
+> 상세(모드별 입력표, IMC 충돌 회피 규칙, 입력 탭 행 구성)는 `ui/2026-11-04_joystick_velocityone_h2_rcws.md`.
+
 바인딩은 `Atitan_examplePlayerController::SetupInputComponent`에서 하고(possess
 여부 무관하게 항상 활성 — UGV 수동조작과 같은 이유, 11.3절 참고), `Triggered`
 이벤트만 바인딩 — 조이스틱이 중앙으로 돌아오면 그냥 값이 0이 되어 회전이 멈출
@@ -208,8 +218,17 @@ Viewer" 버튼 — 연결된 디바이스의 축/버튼/햇스위치 실시간 �
 **FKey 네이밍 규칙** (`JoystickInputDevice.cpp`, `EKeys::AddKey`로 **디바이스가
 연결된 시점에 동적으로 등록**):
 ```
-Joystick_{디바이스이름}_Axis_{번호}   (1부터 시작, "Joystick" 카테고리)
+Joystick_{디바이스이름}_Axis_{번호}   (0부터 시작, "Joystick" 카테고리)
 ```
+> **[2026-11-04 정정]** 예전에는 "1부터 시작"으로 적혀 있었는데 틀렸다. 플러그인 설정
+> `ZeroBasedIndexing`의 기본값이 `true`(`JoystickInputSettings.cpp`)라서 축·버튼 모두 **0부터**
+> 번호가 붙는다(`Axis_0`, `Button_0`, `Hat_0_...`). 디바이스 이름은 SDL이 보고하는 값을 그대로 쓰는데,
+> 윈도우와 리눅스에서 이름이 다르다(`ui/ingame_settings_input_system.md` §0). 그래서 장비를 바꾸면
+> 기존 IMC 키가 하나도 맞지 않는다. 인게임 Input 탭에서 다시 배정할 것.
+>
+> 리눅스(SDL2 evdev)에서 축 번호는 장치가 보고하는 ABS 코드를 오름차순으로 매긴 값이다. hat은 축이
+> 아니라 `Hat_N`으로 따로 나온다. VelocityOne 기준 예측은 X=0, Y=1, Z(비틀기)=2, RX=3, RY=4(H2 미니스틱),
+> RZ=5, THROTTLE=6, RUDDER=7이다. **실장비 실측 전 값**이다.
 정확한 문자열은 디바이스 이름이 그대로 들어가므로, IMC 키 선택창에서 "Joystick"으로
 검색해서 눈으로 확인하는 게 제일 확실함 (조이스틱 뷰어에서 반응한 축 번호와
 매칭해서 X/Y 고르면 됨).
